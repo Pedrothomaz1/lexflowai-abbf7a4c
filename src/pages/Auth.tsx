@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+// import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,19 +15,7 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        navigate("/dashboard");
-      }
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        navigate("/dashboard");
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    // Temporário: será restaurado após aprovação da migração
   }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -38,15 +26,12 @@ const Auth = () => {
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-    if (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao fazer login",
-        description: error.message,
-      });
-    }
+    // Temporário: navegação direta
+    toast({
+      title: "Login temporário",
+      description: "Aguardando aprovação da migração do banco de dados",
+    });
+    navigate("/dashboard");
 
     setLoading(false);
   };
@@ -60,29 +45,12 @@ const Auth = () => {
     const password = formData.get("password") as string;
     const fullName = formData.get("fullName") as string;
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/`,
-        data: {
-          full_name: fullName,
-        },
-      },
+    // Temporário: navegação direta
+    toast({
+      title: "Cadastro temporário",
+      description: "Aguardando aprovação da migração do banco de dados",
     });
-
-    if (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao criar conta",
-        description: error.message,
-      });
-    } else {
-      toast({
-        title: "Conta criada com sucesso!",
-        description: "Você já pode fazer login.",
-      });
-    }
+    navigate("/dashboard");
 
     setLoading(false);
   };

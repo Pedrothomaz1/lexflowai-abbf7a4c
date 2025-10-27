@@ -14,7 +14,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+// import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 const menuItems = [
@@ -31,16 +31,8 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao sair",
-        description: error.message,
-      });
-    } else {
-      navigate("/auth");
-    }
+    // Temporário: será restaurado após aprovação da migração
+    navigate("/auth");
   };
 
   return (
