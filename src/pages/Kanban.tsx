@@ -151,6 +151,38 @@ const Kanban = () => {
       toast({
         title: "Status atualizado com sucesso!",
       });
+
+      // Se mudou para "em_aprovacao", enviar notificação WhatsApp
+      if (newStatus === "em_aprovacao" && contratoAtual) {
+        try {
+          const { error: notifError } = await supabase.functions.invoke(
+            'enviar-notificacao-whatsapp',
+            {
+              body: {
+                contratoId: contratoId,
+                contratoNumero: contratoAtual.numero_contrato,
+                contratoTitulo: contratoAtual.titulo,
+                novoStatus: newStatus,
+              },
+            }
+          );
+
+          if (notifError) {
+            console.error('Erro ao enviar notificação WhatsApp:', notifError);
+            toast({
+              title: "Status atualizado",
+              description: "Porém não foi possível enviar a notificação via WhatsApp.",
+            });
+          } else {
+            toast({
+              title: "Aprovadores notificados!",
+              description: "Mensagem enviada via WhatsApp.",
+            });
+          }
+        } catch (notifError) {
+          console.error('Erro ao enviar notificação:', notifError);
+        }
+      }
     }
 
     setActiveId(null);

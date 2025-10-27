@@ -2,3 +2,6 @@ project_id = "dxllojjazxizuylbmezc"
 
 [functions.analisar-contrato]
 verify_jwt = true
+
+[functions.enviar-notificacao-whatsapp]
+verify_jwt = true
