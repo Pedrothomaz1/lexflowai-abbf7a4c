@@ -38,7 +38,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Calendar, Eye } from "lucide-react";
+import { Plus, FileText, Calendar, Eye, Download } from "lucide-react";
+import { exportContratosPDF } from "@/utils/pdfExport";
 
 type Contrato = {
   id: string;
@@ -174,6 +175,10 @@ const Contratos = () => {
     return <Badge variant="outline">{labels[tipo] || tipo}</Badge>;
   };
 
+  const handleExportPDF = () => {
+    exportContratosPDF(contratos, fornecedores);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -183,7 +188,12 @@ const Contratos = () => {
             Gerencie todos os seus contratos
           </p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExportPDF}>
+            <Download className="h-4 w-4 mr-2" />
+            Exportar PDF
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -342,7 +352,8 @@ const Contratos = () => {
               </DialogFooter>
             </form>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       <Card>

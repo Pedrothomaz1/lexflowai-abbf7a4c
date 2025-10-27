@@ -37,7 +37,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Users, Mail, Phone, MapPin } from "lucide-react";
+import { Plus, Users, Mail, Phone, MapPin, Download } from "lucide-react";
+import { exportFornecedoresPDF } from "@/utils/pdfExport";
 
 type Fornecedor = {
   id: string;
@@ -140,6 +141,10 @@ const Fornecedores = () => {
     }
   };
 
+  const handleExportPDF = () => {
+    exportFornecedoresPDF(fornecedores);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -149,7 +154,12 @@ const Fornecedores = () => {
             Gerencie seus fornecedores e parceiros
           </p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExportPDF}>
+            <Download className="h-4 w-4 mr-2" />
+            Exportar PDF
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -314,7 +324,8 @@ const Fornecedores = () => {
               </DialogFooter>
             </form>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       <Card>

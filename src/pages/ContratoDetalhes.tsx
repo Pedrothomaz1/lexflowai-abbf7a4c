@@ -33,7 +33,9 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
+  Download,
 } from "lucide-react";
+import { exportContratoDetalhePDF } from "@/utils/pdfExport";
 
 type Contrato = {
   id: string;
@@ -264,6 +266,12 @@ const ContratoDetalhes = () => {
     );
   };
 
+  const handleExportPDF = () => {
+    if (contrato) {
+      exportContratoDetalhePDF(contrato, fornecedor, aprovacoes);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -292,7 +300,13 @@ const ContratoDetalhes = () => {
             Contrato Nº {contrato.numero_contrato}
           </p>
         </div>
-        <div>{getStatusBadge(contrato.status)}</div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleExportPDF}>
+            <Download className="h-4 w-4 mr-2" />
+            Exportar PDF
+          </Button>
+          {getStatusBadge(contrato.status)}
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
