@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useUserRole } from "@/hooks/useUserRole";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -74,6 +75,7 @@ const ContratoDetalhes = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { canApprove } = useUserRole();
   const [contrato, setContrato] = useState<Contrato | null>(null);
   const [fornecedor, setFornecedor] = useState<Fornecedor | null>(null);
   const [aprovacoes, setAprovacoes] = useState<Aprovacao[]>([]);
@@ -455,47 +457,60 @@ const ContratoDetalhes = () => {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Nova Aprovação</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select
-                  value={novaAprovacao.status}
-                  onValueChange={(value) =>
-                    setNovaAprovacao({ ...novaAprovacao, status: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="aprovado">Aprovado</SelectItem>
-                    <SelectItem value="rejeitado">Rejeitado</SelectItem>
-                    <SelectItem value="pendente">Pendente</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+          {canApprove ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Nova Aprovação</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select
+                    value={novaAprovacao.status}
+                    onValueChange={(value) =>
+                      setNovaAprovacao({ ...novaAprovacao, status: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="aprovado">Aprovado</SelectItem>
+                      <SelectItem value="rejeitado">Rejeitado</SelectItem>
+                      <SelectItem value="pendente">Pendente</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div className="space-y-2">
-                <Label>Comentário</Label>
-                <Textarea
-                  value={novaAprovacao.comentario}
-                  onChange={(e) =>
-                    setNovaAprovacao({ ...novaAprovacao, comentario: e.target.value })
-                  }
-                  rows={3}
-                  placeholder="Adicione um comentário..."
-                />
-              </div>
+                <div className="space-y-2">
+                  <Label>Comentário</Label>
+                  <Textarea
+                    value={novaAprovacao.comentario}
+                    onChange={(e) =>
+                      setNovaAprovacao({ ...novaAprovacao, comentario: e.target.value })
+                    }
+                    rows={3}
+                    placeholder="Adicione um comentário..."
+                  />
+                </div>
 
-              <Button onClick={handleAddAprovacao} className="w-full">
-                Registrar Aprovação
-              </Button>
-            </CardContent>
-          </Card>
+                <Button onClick={handleAddAprovacao} className="w-full">
+                  Registrar Aprovação
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="border-muted">
+              <CardHeader>
+                <CardTitle className="text-muted-foreground">Aprovação de Contratos</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Apenas usuários com perfil de <strong>Consultoria Jurídica</strong> ou <strong>Administrador</strong> podem aprovar contratos.
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 

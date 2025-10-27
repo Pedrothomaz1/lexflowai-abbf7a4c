@@ -11,6 +11,7 @@ import Contratos from "./pages/Contratos";
 import ContratoDetalhes from "./pages/ContratoDetalhes";
 import Kanban from "./pages/Kanban";
 import Fornecedores from "./pages/Fornecedores";
+import Usuarios from "./pages/Usuarios";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -30,6 +31,7 @@ const App = () => (
           <Route path="/contratos/:id" element={<DashboardLayout><ContratoDetalhes /></DashboardLayout>} />
           <Route path="/kanban" element={<DashboardLayout><Kanban /></DashboardLayout>} />
           <Route path="/fornecedores" element={<DashboardLayout><Fornecedores /></DashboardLayout>} />
+          <Route path="/usuarios" element={<DashboardLayout><Usuarios /></DashboardLayout>} />
           <Route path="/settings" element={<DashboardLayout><Settings /></DashboardLayout>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

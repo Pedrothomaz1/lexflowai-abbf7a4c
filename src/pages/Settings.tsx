@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useUserRole } from "@/hooks/useUserRole";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -12,9 +14,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { User } from "@supabase/supabase-js";
+import { Shield, CheckCircle2 } from "lucide-react";
 
 const Settings = () => {
   const { toast } = useToast();
+  const { userRole, isAnalista, isConsultor, isAdmin } = useUserRole();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -78,6 +82,18 @@ const Settings = () => {
     }
 
     setLoading(false);
+  };
+
+  const getRoleBadge = () => {
+    const config: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
+      analista_juridico: { label: "Analista Jurídico", variant: "secondary" },
+      consultoria_juridica: { label: "Consultoria Jurídica", variant: "default" },
+      administrador: { label: "Administrador", variant: "outline" },
+    };
+
+    if (!userRole) return null;
+    const { label, variant } = config[userRole];
+    return <Badge variant={variant}>{label}</Badge>;
   };
 
   return (
@@ -153,6 +169,68 @@ const Settings = () => {
               {loading ? "Salvando..." : "Salvar Alterações"}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            Perfil de Permissões
+          </CardTitle>
+          <CardDescription>
+            Suas permissões de acesso no sistema
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-3">
+            <span className="text-muted-foreground">Perfil Atual:</span>
+            {getRoleBadge()}
+          </div>
+
+          <div className="space-y-2 pt-4 border-t">
+            <h4 className="font-semibold text-sm">Permissões do seu perfil:</h4>
+            <ul className="space-y-2">
+              <li className="flex items-center gap-2 text-sm">
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+                Visualizar contratos e fornecedores
+              </li>
+              <li className="flex items-center gap-2 text-sm">
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+                Cadastrar contratos e fornecedores
+              </li>
+              {isAnalista && (
+                <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Editar apenas contratos em rascunho criados por você
+                </li>
+              )}
+              {(isConsultor || isAdmin) && (
+                <>
+                  <li className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
+                    Aprovar contratos
+                  </li>
+                  <li className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
+                    Editar qualquer contrato
+                  </li>
+                </>
+              )}
+              {isAdmin && (
+                <li className="flex items-center gap-2 text-sm">
+                  <CheckCircle2 className="h-4 w-4 text-primary" />
+                  Gerenciar usuários e permissões
+                </li>
+              )}
+            </ul>
+          </div>
+
+          {isAnalista && (
+            <p className="text-xs text-muted-foreground pt-2 border-t">
+              Para solicitar alteração de perfil, entre em contato com um administrador.
+            </p>
+          )}
         </CardContent>
       </Card>
 

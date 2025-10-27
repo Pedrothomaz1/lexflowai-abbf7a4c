@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, Users, Settings, LogOut, Scale, Kanban } from "lucide-react";
+import { LayoutDashboard, FileText, Users, Settings, LogOut, Scale, Kanban, Shield } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   Sidebar,
@@ -16,19 +16,22 @@ import {
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useUserRole } from "@/hooks/useUserRole";
 
 const menuItems = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Contratos", url: "/contratos", icon: FileText },
-  { title: "Kanban", url: "/kanban", icon: Kanban },
-  { title: "Fornecedores", url: "/fornecedores", icon: Users },
-  { title: "Configurações", url: "/settings", icon: Settings },
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: ["all"] },
+  { title: "Contratos", url: "/contratos", icon: FileText, roles: ["all"] },
+  { title: "Kanban", url: "/kanban", icon: Kanban, roles: ["all"] },
+  { title: "Fornecedores", url: "/fornecedores", icon: Users, roles: ["all"] },
+  { title: "Usuários", url: "/usuarios", icon: Shield, roles: ["administrador"] },
+  { title: "Configurações", url: "/settings", icon: Settings, roles: ["all"] },
 ];
 
 export function AppSidebar() {
   const { state } = useSidebar();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { userRole } = useUserRole();
   const collapsed = state === "collapsed";
 
   const handleLogout = async () => {
@@ -43,6 +46,12 @@ export function AppSidebar() {
       navigate("/auth");
     }
   };
+
+  // Filtrar itens do menu baseado no role do usuário
+  const visibleMenuItems = menuItems.filter(item => 
+    item.roles.includes("all") || 
+    (userRole && item.roles.includes(userRole))
+  );
 
   return (
     <Sidebar className={collapsed ? "w-14" : "w-60"}>
@@ -60,7 +69,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => {
+              {visibleMenuItems.map((item) => {
                 const Icon = item.icon;
                 return (
                   <SidebarMenuItem key={item.title}>
