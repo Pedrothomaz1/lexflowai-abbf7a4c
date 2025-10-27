@@ -85,7 +85,30 @@ const Contratos = () => {
   useEffect(() => {
     fetchContratos();
     fetchFornecedores();
+    generateNextContractNumber();
   }, []);
+
+  const generateNextContractNumber = async () => {
+    const { data } = await supabase
+      .from("contratos")
+      .select("numero_contrato")
+      .order("created_at", { ascending: false })
+      .limit(1);
+    
+    if (data && data.length > 0) {
+      const lastNumber = data[0].numero_contrato;
+      const match = lastNumber.match(/(\d+)$/);
+      if (match) {
+        const nextNum = parseInt(match[1]) + 1;
+        const prefix = lastNumber.substring(0, lastNumber.length - match[1].length);
+        setFormData(prev => ({ ...prev, numero_contrato: `${prefix}${nextNum.toString().padStart(match[1].length, '0')}` }));
+      } else {
+        setFormData(prev => ({ ...prev, numero_contrato: `CT-${new Date().getFullYear()}-001` }));
+      }
+    } else {
+      setFormData(prev => ({ ...prev, numero_contrato: `CT-${new Date().getFullYear()}-001` }));
+    }
+  };
 
   const fetchContratos = async () => {
     setLoading(true);
@@ -215,25 +238,30 @@ const Contratos = () => {
       });
       setUploadedFile(null);
       fetchContratos();
+      generateNextContractNumber();
     }
   };
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       rascunho: "secondary",
-      ativo: "default",
-      suspenso: "outline",
+      em_aprovacao: "outline",
+      aprovado: "default",
+      assinado: "default",
+      vigente: "default",
+      encerrado: "outline",
       cancelado: "destructive",
-      concluido: "outline",
     };
-    return <Badge variant={variants[status] || "default"}>{status}</Badge>;
+    return <Badge variant={variants[status] || "default"}>{status.replace(/_/g, " ")}</Badge>;
   };
 
   const getTipoBadge = (tipo: string) => {
     const labels: Record<string, string> = {
-      prestacao_servico: "Prestação de Serviço",
+      prestacao_servicos: "Prestação de Serviço",
       fornecimento: "Fornecimento",
       locacao: "Locação",
+      confidencialidade: "Confidencialidade",
+      parceria: "Parceria",
       outro: "Outro",
     };
     return <Badge variant="outline">{labels[tipo] || tipo}</Badge>;
@@ -298,9 +326,11 @@ const Contratos = () => {
                       <SelectValue placeholder="Selecione o tipo" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="prestacao_servico">Prestação de Serviço</SelectItem>
+                      <SelectItem value="prestacao_servicos">Prestação de Serviço</SelectItem>
                       <SelectItem value="fornecimento">Fornecimento</SelectItem>
                       <SelectItem value="locacao">Locação</SelectItem>
+                      <SelectItem value="confidencialidade">Confidencialidade</SelectItem>
+                      <SelectItem value="parceria">Parceria</SelectItem>
                       <SelectItem value="outro">Outro</SelectItem>
                     </SelectContent>
                   </Select>

@@ -219,7 +219,7 @@ const ContratoDetalhes = () => {
       if (novaAprovacao.status === "aprovado") {
         await supabase
           .from("contratos")
-          .update({ status: "ativo" })
+          .update({ status: "vigente" })
           .eq("id", contrato.id);
         fetchContrato();
       }
@@ -251,17 +251,19 @@ const ContratoDetalhes = () => {
   const getStatusBadge = (status: string) => {
     const config: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; icon: any }> = {
       rascunho: { variant: "secondary", icon: Clock },
-      ativo: { variant: "default", icon: CheckCircle2 },
-      suspenso: { variant: "outline", icon: Clock },
+      em_aprovacao: { variant: "outline", icon: Clock },
+      aprovado: { variant: "default", icon: CheckCircle2 },
+      assinado: { variant: "default", icon: CheckCircle2 },
+      vigente: { variant: "default", icon: CheckCircle2 },
+      encerrado: { variant: "outline", icon: CheckCircle2 },
       cancelado: { variant: "destructive", icon: XCircle },
-      concluido: { variant: "outline", icon: CheckCircle2 },
     };
 
     const { variant, icon: Icon } = config[status] || config.rascunho;
     return (
       <Badge variant={variant} className="gap-1">
         <Icon className="h-3 w-3" />
-        {status}
+        {status.replace(/_/g, " ")}
       </Badge>
     );
   };
@@ -412,10 +414,12 @@ const ContratoDetalhes = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="rascunho">Rascunho</SelectItem>
-                    <SelectItem value="ativo">Ativo</SelectItem>
-                    <SelectItem value="suspenso">Suspenso</SelectItem>
+                    <SelectItem value="em_aprovacao">Em Aprovação</SelectItem>
+                    <SelectItem value="aprovado">Aprovado</SelectItem>
+                    <SelectItem value="assinado">Assinado</SelectItem>
+                    <SelectItem value="vigente">Vigente</SelectItem>
+                    <SelectItem value="encerrado">Encerrado</SelectItem>
                     <SelectItem value="cancelado">Cancelado</SelectItem>
-                    <SelectItem value="concluido">Concluído</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
