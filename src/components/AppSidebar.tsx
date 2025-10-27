@@ -1,5 +1,6 @@
 import { LayoutDashboard, FileText, Users, Settings, LogOut, Scale, Kanban, Shield } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
+import logoVeridiana from "@/assets/logo-veridiana.png";
 import {
   Sidebar,
   SidebarContent,
@@ -56,11 +57,12 @@ export function AppSidebar() {
   return (
     <Sidebar className={collapsed ? "w-14" : "w-60"}>
       <SidebarHeader className="border-b border-sidebar-border p-4">
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
-            <Scale className="h-5 w-5 text-primary-foreground" />
-          </div>
-          {!collapsed && <span className="font-bold text-lg text-sidebar-foreground">LexFlow</span>}
+        <div className="flex items-center justify-center">
+          <img 
+            src={logoVeridiana} 
+            alt="VERI - Por Veridiana Quirino" 
+            className="h-10 w-auto object-contain"
+          />
         </div>
       </SidebarHeader>
 

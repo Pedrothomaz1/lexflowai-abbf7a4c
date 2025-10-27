@@ -12,6 +12,44 @@ interface NotificacaoRequest {
   novoStatus: string
 }
 
+// Função para enviar mensagem via Evolution API
+async function enviarWhatsAppEvolution(
+  apiUrl: string,
+  apiKey: string,
+  instanceName: string,
+  numero: string,
+  mensagem: string
+): Promise<boolean> {
+  try {
+    const url = `${apiUrl}/message/sendText/${instanceName}`
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': apiKey,
+      },
+      body: JSON.stringify({
+        number: numero,
+        text: mensagem,
+      }),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Erro na Evolution API:', errorText)
+      return false
+    }
+
+    const result = await response.json()
+    console.log('Resposta Evolution API:', result)
+    return true
+  } catch (error: any) {
+    console.error('Erro ao enviar WhatsApp:', error)
+    return false
+  }
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -58,27 +96,29 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Configurar a API de WhatsApp (exemplo genérico)
-    const whatsappApiUrl = Deno.env.get('WHATSAPP_API_URL')
-    const whatsappApiKey = Deno.env.get('WHATSAPP_API_KEY')
+    // Configurar Evolution API
+    const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL')
+    const evolutionApiKey = Deno.env.get('EVOLUTION_API_KEY')
+    const evolutionInstance = Deno.env.get('EVOLUTION_INSTANCE_NAME')
 
-    if (!whatsappApiUrl || !whatsappApiKey) {
-      console.error('Credenciais do WhatsApp não configuradas')
+    if (!evolutionApiUrl || !evolutionApiKey || !evolutionInstance) {
+      console.error('Credenciais da Evolution API não configuradas')
       return new Response(
         JSON.stringify({ 
           success: false, 
-          message: 'Credenciais do WhatsApp não configuradas. Configure WHATSAPP_API_URL e WHATSAPP_API_KEY.' 
+          message: 'Credenciais da Evolution API não configuradas. Configure EVOLUTION_API_URL, EVOLUTION_API_KEY e EVOLUTION_INSTANCE_NAME.' 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       )
     }
 
     // Mensagem personalizada
-    const mensagem = `🔔 *Novo Contrato para Aprovação*\n\n` +
+    const mensagem = `🔔 *Novo Contrato para Aprovação - VERI*\n\n` +
       `📄 *Contrato:* ${contratoNumero}\n` +
       `📋 *Título:* ${contratoTitulo}\n` +
       `📊 *Status:* ${novoStatus.replace(/_/g, ' ')}\n\n` +
-      `Por favor, acesse o sistema LexFlow para revisar e aprovar este contrato.`
+      `Por favor, acesse o sistema LexFlow para revisar e aprovar este contrato.\n\n` +
+      `_VERI - Por Veridiana Quirino_`
 
     const notificacoesEnviadas = []
 
@@ -86,23 +126,22 @@ Deno.serve(async (req) => {
     for (const aprovador of aprovadoresComTelefone) {
       try {
         const profile = aprovador.profiles as any
-        const telefone = profile.phone.replace(/\D/g, '') // Remove formatação
+        let telefone = profile.phone.replace(/\D/g, '') // Remove formatação
         
-        // Exemplo de chamada genérica - adaptar conforme a API escolhida
-        const response = await fetch(whatsappApiUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${whatsappApiKey}`,
-          },
-          body: JSON.stringify({
-            phone: telefone,
-            message: mensagem,
-            // Adicionar campos específicos da API conforme necessário
-          }),
-        })
+        // Adicionar código do país se não tiver (Brasil = 55)
+        if (!telefone.startsWith('55')) {
+          telefone = '55' + telefone
+        }
 
-        if (response.ok) {
+        const sucesso = await enviarWhatsAppEvolution(
+          evolutionApiUrl,
+          evolutionApiKey,
+          evolutionInstance,
+          telefone,
+          mensagem
+        )
+
+        if (sucesso) {
           notificacoesEnviadas.push({
             nome: profile.full_name,
             telefone: telefone,
@@ -110,13 +149,11 @@ Deno.serve(async (req) => {
           })
           console.log(`Notificação enviada para ${profile.full_name}`)
         } else {
-          const errorText = await response.text()
-          console.error(`Erro ao enviar para ${profile.full_name}:`, errorText)
           notificacoesEnviadas.push({
             nome: profile.full_name,
             telefone: telefone,
             status: 'erro',
-            erro: errorText,
+            erro: 'Falha ao enviar pela Evolution API',
           })
         }
       } catch (error: any) {
