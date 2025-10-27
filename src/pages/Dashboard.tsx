@@ -188,8 +188,8 @@ const Dashboard = () => {
       title: "Fornecedores",
       value: stats.fornecedores.toString(),
       icon: Users,
-      color: "text-blue-600",
-      bgColor: "bg-blue-600/10",
+      color: "text-primary",
+      bgColor: "bg-primary/20",
     },
     {
       title: "Vencendo em 30 dias",
@@ -202,12 +202,12 @@ const Dashboard = () => {
       title: "Aprovações Pendentes",
       value: stats.aprovacoesPendentes.toString(),
       icon: CheckCircle2,
-      color: "text-green-600",
-      bgColor: "bg-green-600/10",
+      color: "text-primary",
+      bgColor: "bg-primary/15",
     },
   ];
 
-  const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
+  const COLORS = ["#7F9C90", "#9CB8AC", "#668879", "#4D6B60", "#B3CCC3"];
 
   return (
     <div className="space-y-6">
