@@ -144,36 +144,17 @@ const Contratos = () => {
         return;
       }
 
-      // Analisar documento com IA
+      // Salvar URL do arquivo
+      setFormData(prev => ({
+        ...prev,
+        arquivo_url: fileName
+      }));
+      
       toast({
-        title: "Analisando documento...",
-        description: "Extraindo datas automaticamente",
+        title: "Arquivo enviado com sucesso!",
+        description: "Preencha as datas de início e término do contrato",
       });
 
-      const { data: analysisData, error: analysisError } = await supabase.functions.invoke('analisar-contrato', {
-        body: { fileUrl: fileName }
-      });
-
-      if (analysisError) {
-        console.error('Erro na análise:', analysisError);
-        toast({
-          variant: "destructive",
-          title: "Erro ao analisar documento",
-          description: "As datas não foram extraídas automaticamente",
-        });
-      } else if (analysisData?.success) {
-        setFormData(prev => ({
-          ...prev,
-          data_inicio: analysisData.data_inicio || prev.data_inicio,
-          data_fim: analysisData.data_fim || prev.data_fim,
-          arquivo_url: fileName
-        }));
-        
-        toast({
-          title: "Documento analisado!",
-          description: "Datas extraídas automaticamente",
-        });
-      }
     } catch (error) {
       console.error('Erro:', error);
       toast({
@@ -361,12 +342,12 @@ const Contratos = () => {
                 />
                 {isAnalyzing && (
                   <p className="text-sm text-muted-foreground">
-                    Analisando documento e extraindo datas...
+                    Enviando arquivo...
                   </p>
                 )}
                 {uploadedFile && !isAnalyzing && (
-                  <p className="text-sm text-muted-foreground">
-                    Arquivo: {uploadedFile.name}
+                  <p className="text-sm text-green-600">
+                    ✓ Arquivo anexado: {uploadedFile.name}
                   </p>
                 )}
               </div>
