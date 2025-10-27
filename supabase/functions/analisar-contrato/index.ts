@@ -28,27 +28,25 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY não configurada");
     }
 
-    // Buscar o arquivo do storage
+    // Obter URL pública do arquivo
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { data: fileData, error: downloadError } = await supabase
+    const { data: urlData } = await supabase
       .storage
       .from('contratos-documentos')
-      .download(fileUrl);
+      .createSignedUrl(fileUrl, 60); // URL válida por 60 segundos
 
-    if (downloadError) {
-      console.error('Erro ao baixar arquivo:', downloadError);
+    if (!urlData?.signedUrl) {
+      console.error('Erro ao gerar URL do arquivo');
       return new Response(
-        JSON.stringify({ error: 'Erro ao baixar arquivo do storage' }),
+        JSON.stringify({ error: 'Erro ao acessar arquivo do storage' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Converter arquivo para base64
-    const arrayBuffer = await fileData.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    console.log('URL gerada para análise');
 
     // Chamar Lovable AI para analisar o documento
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -61,12 +59,19 @@ serve(async (req) => {
         model: "google/gemini-2.5-flash",
         messages: [
           {
-            role: "system",
-            content: "Você é um assistente especializado em análise de contratos. Sua função é extrair informações-chave de documentos de contrato, especialmente as datas de início e término da vigência."
-          },
-          {
             role: "user",
-            content: "Analise este documento de contrato e extraia a data de início e a data de término da vigência. Retorne APENAS no formato JSON: {\"data_inicio\": \"YYYY-MM-DD\", \"data_fim\": \"YYYY-MM-DD\"}. Se não encontrar as datas, retorne null para os campos correspondentes."
+            content: [
+              {
+                type: "text",
+                text: "Analise este documento de contrato e extraia a data de início (vigência inicial) e a data de término (vigência final) do contrato. Procure por termos como 'vigência', 'prazo', 'início', 'término', 'validade', etc. Retorne as datas no formato YYYY-MM-DD."
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: urlData.signedUrl
+                }
+              }
+            ]
           }
         ],
         tools: [

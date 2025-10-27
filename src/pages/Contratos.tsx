@@ -191,11 +191,21 @@ const Contratos = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    // Validar campos obrigatórios
+    if (!formData.fornecedor_id || !formData.data_inicio || !formData.data_fim) {
+      toast({
+        variant: "destructive",
+        title: "Campos obrigatórios",
+        description: "Preencha todos os campos marcados com *",
+      });
+      return;
+    }
+
     const { error } = await supabase.from("contratos").insert([
       {
         ...formData,
         valor_total: formData.valor_total ? parseFloat(formData.valor_total) : null,
-        fornecedor_id: formData.fornecedor_id || null,
+        fornecedor_id: formData.fornecedor_id,
         created_by: user.id,
       },
     ]);
@@ -291,18 +301,20 @@ const Contratos = () => {
                       setFormData({ ...formData, numero_contrato: e.target.value })
                     }
                     required
+                    placeholder="Ex: CT-2024-001"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="tipo">Tipo</Label>
+                  <Label htmlFor="tipo">Tipo *</Label>
                   <Select
                     value={formData.tipo}
                     onValueChange={(value) =>
                       setFormData({ ...formData, tipo: value })
                     }
+                    required
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Selecione o tipo" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="prestacao_servico">Prestação de Serviço</SelectItem>
@@ -360,12 +372,13 @@ const Contratos = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="fornecedor">Fornecedor</Label>
+                <Label htmlFor="fornecedor">Fornecedor *</Label>
                 <Select
                   value={formData.fornecedor_id}
                   onValueChange={(value) =>
                     setFormData({ ...formData, fornecedor_id: value })
                   }
+                  required
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um fornecedor" />
@@ -415,7 +428,7 @@ const Contratos = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="data_inicio">Data de Início</Label>
+                  <Label htmlFor="data_inicio">Data de Início *</Label>
                   <Input
                     id="data_inicio"
                     type="date"
@@ -423,10 +436,11 @@ const Contratos = () => {
                     onChange={(e) =>
                       setFormData({ ...formData, data_inicio: e.target.value })
                     }
+                    required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="data_fim">Data de Término</Label>
+                  <Label htmlFor="data_fim">Data de Término *</Label>
                   <Input
                     id="data_fim"
                     type="date"
@@ -434,6 +448,7 @@ const Contratos = () => {
                     onChange={(e) =>
                       setFormData({ ...formData, data_fim: e.target.value })
                     }
+                    required
                   />
                 </div>
               </div>

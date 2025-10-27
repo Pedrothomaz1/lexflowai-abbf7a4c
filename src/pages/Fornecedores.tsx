@@ -104,6 +104,25 @@ const Fornecedores = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    // Validar campos obrigatórios
+    if (formData.tipo_pessoa === "juridica" && !formData.cnpj) {
+      toast({
+        variant: "destructive",
+        title: "CNPJ obrigatório",
+        description: "Para pessoa jurídica, o CNPJ é obrigatório",
+      });
+      return;
+    }
+
+    if (formData.tipo_pessoa === "fisica" && !formData.cpf) {
+      toast({
+        variant: "destructive",
+        title: "CPF obrigatório",
+        description: "Para pessoa física, o CPF é obrigatório",
+      });
+      return;
+    }
+
     const { error } = await supabase.from("fornecedores").insert([
       {
         ...formData,
@@ -188,12 +207,13 @@ const Fornecedores = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="tipo_pessoa">Tipo de Pessoa</Label>
+                  <Label htmlFor="tipo_pessoa">Tipo de Pessoa *</Label>
                   <Select
                     value={formData.tipo_pessoa}
                     onValueChange={(value) =>
                       setFormData({ ...formData, tipo_pessoa: value })
                     }
+                    required
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -207,7 +227,7 @@ const Fornecedores = () => {
 
                 {formData.tipo_pessoa === "juridica" ? (
                   <div className="space-y-2">
-                    <Label htmlFor="cnpj">CNPJ</Label>
+                    <Label htmlFor="cnpj">CNPJ *</Label>
                     <Input
                       id="cnpj"
                       value={formData.cnpj}
@@ -215,11 +235,12 @@ const Fornecedores = () => {
                         setFormData({ ...formData, cnpj: e.target.value })
                       }
                       placeholder="00.000.000/0000-00"
+                      required={formData.tipo_pessoa === "juridica"}
                     />
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <Label htmlFor="cpf">CPF</Label>
+                    <Label htmlFor="cpf">CPF *</Label>
                     <Input
                       id="cpf"
                       value={formData.cpf}
@@ -227,6 +248,7 @@ const Fornecedores = () => {
                         setFormData({ ...formData, cpf: e.target.value })
                       }
                       placeholder="000.000.000-00"
+                      required={formData.tipo_pessoa === "fisica"}
                     />
                   </div>
                 )}
