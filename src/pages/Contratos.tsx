@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -60,6 +61,7 @@ type Fornecedor = {
 };
 
 const Contratos = () => {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
@@ -403,7 +405,11 @@ const Contratos = () => {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => navigate(`/contratos/${contrato.id}`)}
+                      >
                         <Eye className="h-4 w-4" />
                       </Button>
                     </TableCell>
