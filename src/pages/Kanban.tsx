@@ -39,8 +39,8 @@ type Fornecedor = {
 };
 
 const statusColumns = [
-  { id: "rascunho", label: "Rascunho", color: "bg-gray-100 dark:bg-gray-800" },
-  { id: "em_aprovacao", label: "Em Aprovação", color: "bg-yellow-100 dark:bg-yellow-900/30" },
+  { id: "rascunho", label: "Rascunho", color: "bg-muted" },
+  { id: "em_aprovacao", label: "Em Aprovação", color: "bg-accent" },
   { id: "aprovado", label: "Aprovado", color: "bg-primary/20" },
   { id: "assinado", label: "Assinado", color: "bg-primary/30" },
   { id: "vigente", label: "Vigente", color: "bg-primary/40" },
