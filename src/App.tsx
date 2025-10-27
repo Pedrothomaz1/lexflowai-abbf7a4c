@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Contratos from "./pages/Contratos";
 import ContratoDetalhes from "./pages/ContratoDetalhes";
+import Kanban from "./pages/Kanban";
 import Fornecedores from "./pages/Fornecedores";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/dashboard" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
           <Route path="/contratos" element={<DashboardLayout><Contratos /></DashboardLayout>} />
           <Route path="/contratos/:id" element={<DashboardLayout><ContratoDetalhes /></DashboardLayout>} />
+          <Route path="/kanban" element={<DashboardLayout><Kanban /></DashboardLayout>} />
           <Route path="/fornecedores" element={<DashboardLayout><Fornecedores /></DashboardLayout>} />
           <Route path="/settings" element={<DashboardLayout><Settings /></DashboardLayout>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

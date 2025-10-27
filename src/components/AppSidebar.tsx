@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, Users, Settings, LogOut, Scale } from "lucide-react";
+import { LayoutDashboard, FileText, Users, Settings, LogOut, Scale, Kanban } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   Sidebar,
@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 const menuItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Contratos", url: "/contratos", icon: FileText },
+  { title: "Kanban", url: "/kanban", icon: Kanban },
   { title: "Fornecedores", url: "/fornecedores", icon: Users },
   { title: "Configurações", url: "/settings", icon: Settings },
 ];
