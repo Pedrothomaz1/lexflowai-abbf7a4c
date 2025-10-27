@@ -79,6 +79,8 @@ const Contratos = () => {
     data_fim: "",
     fornecedor_id: "",
   });
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   useEffect(() => {
     fetchContratos();
@@ -111,6 +113,76 @@ const Contratos = () => {
       .order("nome");
     
     setFornecedores(data || []);
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadedFile(file);
+    setIsAnalyzing(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Upload do arquivo
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('contratos-documentos')
+        .upload(fileName, file);
+
+      if (uploadError) {
+        toast({
+          variant: "destructive",
+          title: "Erro ao enviar arquivo",
+          description: uploadError.message,
+        });
+        setIsAnalyzing(false);
+        return;
+      }
+
+      // Analisar documento com IA
+      toast({
+        title: "Analisando documento...",
+        description: "Extraindo datas automaticamente",
+      });
+
+      const { data: analysisData, error: analysisError } = await supabase.functions.invoke('analisar-contrato', {
+        body: { fileUrl: fileName }
+      });
+
+      if (analysisError) {
+        console.error('Erro na análise:', analysisError);
+        toast({
+          variant: "destructive",
+          title: "Erro ao analisar documento",
+          description: "As datas não foram extraídas automaticamente",
+        });
+      } else if (analysisData?.success) {
+        setFormData(prev => ({
+          ...prev,
+          data_inicio: analysisData.data_inicio || prev.data_inicio,
+          data_fim: analysisData.data_fim || prev.data_fim,
+          arquivo_url: fileName
+        }));
+        
+        toast({
+          title: "Documento analisado!",
+          description: "Datas extraídas automaticamente",
+        });
+      }
+    } catch (error) {
+      console.error('Erro:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao processar arquivo",
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -150,6 +222,7 @@ const Contratos = () => {
         data_fim: "",
         fornecedor_id: "",
       });
+      setUploadedFile(null);
       fetchContratos();
     }
   };
@@ -263,6 +336,27 @@ const Contratos = () => {
                   }
                   rows={3}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="arquivo">Anexar Contrato (PDF)</Label>
+                <Input
+                  id="arquivo"
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  onChange={handleFileUpload}
+                  disabled={isAnalyzing}
+                />
+                {isAnalyzing && (
+                  <p className="text-sm text-muted-foreground">
+                    Analisando documento e extraindo datas...
+                  </p>
+                )}
+                {uploadedFile && !isAnalyzing && (
+                  <p className="text-sm text-muted-foreground">
+                    Arquivo: {uploadedFile.name}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
