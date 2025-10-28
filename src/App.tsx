@@ -13,6 +13,9 @@ import Kanban from "./pages/Kanban";
 import Fornecedores from "./pages/Fornecedores";
 import Usuarios from "./pages/Usuarios";
 import Settings from "./pages/Settings";
+import Templates from "./pages/Templates";
+import Alertas from "./pages/Alertas";
+import Calendario from "./pages/Calendario";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +35,9 @@ const App = () => (
           <Route path="/kanban" element={<DashboardLayout><Kanban /></DashboardLayout>} />
           <Route path="/fornecedores" element={<DashboardLayout><Fornecedores /></DashboardLayout>} />
           <Route path="/usuarios" element={<DashboardLayout><Usuarios /></DashboardLayout>} />
+          <Route path="/templates" element={<DashboardLayout><Templates /></DashboardLayout>} />
+          <Route path="/alertas" element={<DashboardLayout><Alertas /></DashboardLayout>} />
+          <Route path="/calendario" element={<DashboardLayout><Calendario /></DashboardLayout>} />
           <Route path="/settings" element={<DashboardLayout><Settings /></DashboardLayout>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
