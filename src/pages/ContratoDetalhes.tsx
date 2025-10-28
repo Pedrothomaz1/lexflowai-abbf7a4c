@@ -35,6 +35,8 @@ import {
   CheckCircle2,
   XCircle,
   Download,
+  Brain,
+  AlertTriangle,
 } from "lucide-react";
 import { exportContratoDetalhePDF } from "@/utils/pdfExport";
 
@@ -85,11 +87,15 @@ const ContratoDetalhes = () => {
     status: "aprovado",
     comentario: "",
   });
+  const [analise, setAnalise] = useState<any>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showAnalise, setShowAnalise] = useState(false);
 
   useEffect(() => {
     if (id) {
       fetchContrato();
       fetchAprovacoes();
+      fetchAnalise();
     }
   }, [id]);
 
@@ -138,6 +144,63 @@ const ContratoDetalhes = () => {
 
     if (data) {
       setAprovacoes(data);
+    }
+  };
+
+  const fetchAnalise = async () => {
+    if (!id) return;
+    
+    const { data } = await supabase
+      .from("contract_analysis")
+      .select("*")
+      .eq("contrato_id", id)
+      .order("analisado_em", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    
+    if (data) {
+      setAnalise(data);
+    }
+  };
+
+  const handleAnalisarIA = async () => {
+    if (!contrato) return;
+
+    setIsAnalyzing(true);
+    try {
+      const conteudo = `
+        Contrato: ${contrato.numero_contrato}
+        Título: ${contrato.titulo}
+        Tipo: ${contrato.tipo}
+        Valor: R$ ${contrato.valor_total?.toLocaleString("pt-BR") || "N/A"}
+        Descrição: ${contrato.descricao || ""}
+        Observações: ${contrato.observacoes || ""}
+      `;
+
+      const { data, error } = await supabase.functions.invoke("analisar-contrato-ia", {
+        body: { contratoId: contrato.id, conteudo },
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast({
+          title: "Análise concluída!",
+          description: "O contrato foi analisado com sucesso pela IA.",
+        });
+        setAnalise(data.analise);
+        setShowAnalise(true);
+      } else {
+        throw new Error(data.error || "Erro na análise");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro na análise",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -454,6 +517,30 @@ const ContratoDetalhes = () => {
                   </div>
                 )}
               </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <Label>Análise com IA</Label>
+                <Button 
+                  variant="outline" 
+                  className="w-full" 
+                  onClick={handleAnalisarIA}
+                  disabled={isAnalyzing}
+                >
+                  <Brain className="h-4 w-4 mr-2" />
+                  {isAnalyzing ? "Analisando..." : analise ? "Reanalisar Contrato" : "Analisar Contrato"}
+                </Button>
+                {analise && (
+                  <Button 
+                    variant="ghost" 
+                    className="w-full text-xs" 
+                    onClick={() => setShowAnalise(!showAnalise)}
+                  >
+                    {showAnalise ? "Ocultar" : "Ver"} Análise
+                  </Button>
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -513,6 +600,98 @@ const ContratoDetalhes = () => {
           )}
         </div>
       </div>
+
+      {showAnalise && analise && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Brain className="h-5 w-5" />
+                  Análise com Inteligência Artificial
+                </CardTitle>
+                <CardDescription>
+                  Análise realizada em {new Date(analise.analisado_em).toLocaleString("pt-BR")}
+                </CardDescription>
+              </div>
+              {analise.score_risco !== null && (
+                <Badge 
+                  variant={
+                    analise.score_risco >= 7 ? "destructive" : 
+                    analise.score_risco >= 4 ? "outline" : 
+                    "default"
+                  }
+                  className="text-lg px-4 py-2"
+                >
+                  Score: {Number(analise.score_risco).toFixed(1)}/10
+                </Badge>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {analise.riscos_identificados && analise.riscos_identificados.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-destructive" />
+                  Riscos Identificados
+                </h3>
+                <div className="space-y-2">
+                  {analise.riscos_identificados.map((risco: any, i: number) => (
+                    <div key={i} className="p-3 border rounded-lg bg-destructive/5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">{risco.tipo}</p>
+                          <p className="text-sm text-muted-foreground mt-1">{risco.descricao}</p>
+                        </div>
+                        <Badge variant="destructive" className="shrink-0">
+                          {risco.gravidade}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {analise.clausulas_importantes && analise.clausulas_importantes.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Cláusulas Importantes
+                </h3>
+                <div className="space-y-2">
+                  {analise.clausulas_importantes.map((clausula: any, i: number) => (
+                    <div key={i} className="p-3 border rounded-lg">
+                      <p className="font-medium text-sm">{clausula.titulo}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{clausula.descricao}</p>
+                      {clausula.atencao && (
+                        <p className="text-sm text-amber-600 mt-2">⚠️ {clausula.atencao}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {analise.sugestoes_melhoria && analise.sugestoes_melhoria.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-primary" />
+                  Sugestões de Melhoria
+                </h3>
+                <ul className="space-y-2">
+                  {analise.sugestoes_melhoria.map((sugestao: string, i: number) => (
+                    <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                      <span className="text-primary mt-0.5">•</span>
+                      <span>{sugestao}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

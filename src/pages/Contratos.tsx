@@ -40,6 +40,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Plus, FileText, Calendar, Eye, Download } from "lucide-react";
 import { exportContratosPDF } from "@/utils/pdfExport";
+import { BuscaAvancada, FiltrosAvancados } from "@/components/BuscaAvancada";
 
 type Contrato = {
   id: string;
@@ -81,12 +82,13 @@ const Contratos = () => {
   });
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [filtros, setFiltros] = useState<FiltrosAvancados>({});
 
   useEffect(() => {
     fetchContratos();
     fetchFornecedores();
     generateNextContractNumber();
-  }, []);
+  }, [filtros]);
 
   const generateNextContractNumber = async () => {
     const { data } = await supabase
@@ -112,10 +114,46 @@ const Contratos = () => {
 
   const fetchContratos = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    
+    let query = supabase
       .from("contratos")
-      .select("*")
-      .order("created_at", { ascending: false });
+      .select("*");
+
+    // Aplicar filtros
+    if (filtros.busca) {
+      query = query.or(`numero_contrato.ilike.%${filtros.busca}%,titulo.ilike.%${filtros.busca}%,descricao.ilike.%${filtros.busca}%`);
+    }
+    if (filtros.tipo) {
+      query = query.eq("tipo", filtros.tipo);
+    }
+    if (filtros.status) {
+      query = query.eq("status", filtros.status);
+    }
+    if (filtros.fornecedor) {
+      query = query.eq("fornecedor_id", filtros.fornecedor);
+    }
+    if (filtros.valorMin) {
+      query = query.gte("valor_total", parseFloat(filtros.valorMin));
+    }
+    if (filtros.valorMax) {
+      query = query.lte("valor_total", parseFloat(filtros.valorMax));
+    }
+    if (filtros.dataInicioMin) {
+      query = query.gte("data_inicio", filtros.dataInicioMin);
+    }
+    if (filtros.dataInicioMax) {
+      query = query.lte("data_inicio", filtros.dataInicioMax);
+    }
+    if (filtros.dataFimMin) {
+      query = query.gte("data_fim", filtros.dataFimMin);
+    }
+    if (filtros.dataFimMax) {
+      query = query.lte("data_fim", filtros.dataFimMax);
+    }
+
+    query = query.order("created_at", { ascending: false });
+
+    const { data, error } = await query;
 
     if (error) {
       toast({
@@ -475,6 +513,12 @@ const Contratos = () => {
           </Dialog>
         </div>
       </div>
+
+      <BuscaAvancada 
+        filtros={filtros} 
+        onFiltrosChange={setFiltros}
+        fornecedores={fornecedores}
+      />
 
       <Card>
         <CardHeader>

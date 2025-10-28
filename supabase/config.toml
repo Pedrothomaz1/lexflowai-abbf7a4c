@@ -8,3 +8,6 @@ verify_jwt = true
 
 [functions.enviar-notificacao-whatsapp]
 verify_jwt = true
+
+[functions.verificar-alertas]
+verify_jwt = false
