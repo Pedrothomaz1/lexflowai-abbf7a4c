@@ -14,6 +14,127 @@ export type Database = {
   }
   public: {
     Tables: {
+      approval_workflows: {
+        Row: {
+          aprovacao_paralela: boolean | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          niveis: Json
+          nome: string
+          tipo_contrato: Database["public"]["Enums"]["contract_type"]
+        }
+        Insert: {
+          aprovacao_paralela?: boolean | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          niveis: Json
+          nome: string
+          tipo_contrato: Database["public"]["Enums"]["contract_type"]
+        }
+        Update: {
+          aprovacao_paralela?: boolean | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          niveis?: Json
+          nome?: string
+          tipo_contrato?: Database["public"]["Enums"]["contract_type"]
+        }
+        Relationships: []
+      }
+      contract_alerts: {
+        Row: {
+          contrato_id: string | null
+          created_at: string
+          data_alerta: string
+          data_envio: string | null
+          dias_antecedencia: number | null
+          enviado: boolean | null
+          id: string
+          mensagem: string | null
+          tipo_alerta: string
+          titulo: string
+          usuarios_notificados: string[] | null
+        }
+        Insert: {
+          contrato_id?: string | null
+          created_at?: string
+          data_alerta: string
+          data_envio?: string | null
+          dias_antecedencia?: number | null
+          enviado?: boolean | null
+          id?: string
+          mensagem?: string | null
+          tipo_alerta: string
+          titulo: string
+          usuarios_notificados?: string[] | null
+        }
+        Update: {
+          contrato_id?: string | null
+          created_at?: string
+          data_alerta?: string
+          data_envio?: string | null
+          dias_antecedencia?: number | null
+          enviado?: boolean | null
+          id?: string
+          mensagem?: string | null
+          tipo_alerta?: string
+          titulo?: string
+          usuarios_notificados?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_alerts_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_analysis: {
+        Row: {
+          analisado_em: string
+          analisado_por: string | null
+          clausulas_importantes: Json | null
+          contrato_id: string | null
+          id: string
+          riscos_identificados: Json | null
+          score_risco: number | null
+          sugestoes_melhoria: Json | null
+        }
+        Insert: {
+          analisado_em?: string
+          analisado_por?: string | null
+          clausulas_importantes?: Json | null
+          contrato_id?: string | null
+          id?: string
+          riscos_identificados?: Json | null
+          score_risco?: number | null
+          sugestoes_melhoria?: Json | null
+        }
+        Update: {
+          analisado_em?: string
+          analisado_por?: string | null
+          clausulas_importantes?: Json | null
+          contrato_id?: string | null
+          id?: string
+          riscos_identificados?: Json | null
+          score_risco?: number | null
+          sugestoes_melhoria?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_analysis_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_approvals: {
         Row: {
           aprovador_id: string | null
@@ -45,6 +166,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "contract_approvals_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_attachments: {
+        Row: {
+          arquivo_url: string
+          contrato_id: string | null
+          created_at: string
+          id: string
+          mime_type: string | null
+          nome_arquivo: string
+          tamanho_bytes: number | null
+          tipo_documento: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          arquivo_url: string
+          contrato_id?: string | null
+          created_at?: string
+          id?: string
+          mime_type?: string | null
+          nome_arquivo: string
+          tamanho_bytes?: number | null
+          tipo_documento?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          arquivo_url?: string
+          contrato_id?: string | null
+          created_at?: string
+          id?: string
+          mime_type?: string | null
+          nome_arquivo?: string
+          tamanho_bytes?: number | null
+          tipo_documento?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_attachments_contrato_id_fkey"
             columns: ["contrato_id"]
             isOneToOne: false
             referencedRelation: "contratos"
@@ -92,6 +257,95 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      contract_obligations: {
+        Row: {
+          concluido_em: string | null
+          contrato_id: string | null
+          created_at: string
+          data_vencimento: string
+          descricao: string | null
+          id: string
+          responsavel_id: string | null
+          status: string | null
+          tipo: string | null
+          titulo: string
+          valor: number | null
+        }
+        Insert: {
+          concluido_em?: string | null
+          contrato_id?: string | null
+          created_at?: string
+          data_vencimento: string
+          descricao?: string | null
+          id?: string
+          responsavel_id?: string | null
+          status?: string | null
+          tipo?: string | null
+          titulo: string
+          valor?: number | null
+        }
+        Update: {
+          concluido_em?: string | null
+          contrato_id?: string | null
+          created_at?: string
+          data_vencimento?: string
+          descricao?: string | null
+          id?: string
+          responsavel_id?: string | null
+          status?: string | null
+          tipo?: string | null
+          titulo?: string
+          valor?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_obligations_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_templates: {
+        Row: {
+          campos_variaveis: Json | null
+          conteudo_template: string
+          created_at: string
+          created_by: string | null
+          descricao: string | null
+          id: string
+          is_active: boolean | null
+          nome: string
+          tipo: Database["public"]["Enums"]["contract_type"]
+          updated_at: string
+        }
+        Insert: {
+          campos_variaveis?: Json | null
+          conteudo_template: string
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          id?: string
+          is_active?: boolean | null
+          nome: string
+          tipo: Database["public"]["Enums"]["contract_type"]
+          updated_at?: string
+        }
+        Update: {
+          campos_variaveis?: Json | null
+          conteudo_template?: string
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          id?: string
+          is_active?: boolean | null
+          nome?: string
+          tipo?: Database["public"]["Enums"]["contract_type"]
+          updated_at?: string
+        }
+        Relationships: []
       }
       contratos: {
         Row: {
