@@ -100,27 +100,57 @@ const ContratoDetalhes = () => {
   }, [id]);
 
   const fetchContrato = async () => {
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
-    const { data, error } = await supabase
-      .from("contratos")
-      .select("*")
-      .eq("id", id)
-      .maybeSingle();
+    try {
+      const { data, error } = await supabase
+        .from("contratos")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
 
-    if (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao carregar contrato",
-        description: error.message,
-      });
-      navigate("/contratos");
-    } else if (data) {
+      if (error) {
+        console.error("Erro ao buscar contrato:", error);
+        toast({
+          variant: "destructive",
+          title: "Erro ao carregar contrato",
+          description: error.message,
+        });
+        navigate("/contratos");
+        return;
+      }
+      
+      if (!data) {
+        console.error("Contrato não encontrado para ID:", id);
+        toast({
+          variant: "destructive",
+          title: "Contrato não encontrado",
+          description: "O contrato solicitado não existe.",
+        });
+        setLoading(false);
+        return;
+      }
+      
+      console.log("Contrato carregado:", data);
       setContrato(data);
+      
       if (data.fornecedor_id) {
         fetchFornecedor(data.fornecedor_id);
       }
+    } catch (error: any) {
+      console.error("Erro ao buscar contrato:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: error.message,
+      });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const fetchFornecedor = async (fornecedorId: string) => {

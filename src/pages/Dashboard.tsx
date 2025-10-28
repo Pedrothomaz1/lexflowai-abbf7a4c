@@ -61,11 +61,11 @@ const Dashboard = () => {
   }, [navigate]);
 
   const fetchStats = async () => {
-    // Buscar contratos ativos
+    // Buscar contratos ativos (vigentes)
     const { data: contratos } = await supabase
       .from("contratos")
       .select("*")
-      .eq("status", "ativo");
+      .eq("status", "vigente");
 
     // Buscar fornecedores
     const { data: fornecedores } = await supabase
@@ -99,10 +99,10 @@ const Dashboard = () => {
     // Contratos vencendo (para alertas)
     setContratosVencendo(vencendo || []);
 
-    // Dados para gráfico de linha (últimos 6 meses)
+      // Dados para gráfico de linha (últimos 6 meses)
     const { data: todosContratos } = await supabase
       .from("contratos")
-      .select("created_at, status")
+      .select("created_at, status, tipo")
       .order("created_at", { ascending: true });
 
     if (todosContratos) {

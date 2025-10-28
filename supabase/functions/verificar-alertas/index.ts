@@ -25,7 +25,7 @@ serve(async (req) => {
     const { data: contratos, error: contratosError } = await supabase
       .from('contratos')
       .select('*')
-      .eq('status', 'ativo')
+      .eq('status', 'vigente')
       .not('data_fim', 'is', null);
 
     if (contratosError) {
