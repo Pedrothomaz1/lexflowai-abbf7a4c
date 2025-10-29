@@ -83,7 +83,6 @@ const ContratoDetalhes = () => {
   const [aprovacoes, setAprovacoes] = useState<Aprovacao[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [notFound, setNotFound] = useState(false);
   const [novaAprovacao, setNovaAprovacao] = useState({
     status: "aprovado",
     comentario: "",
@@ -103,15 +102,11 @@ const ContratoDetalhes = () => {
   const fetchContrato = async () => {
     if (!id) {
       setLoading(false);
-      setNotFound(true);
       return;
     }
     
-    setLoading(true);
-    setNotFound(false);
-    
     try {
-      console.log("Buscando contrato com ID:", id);
+      setLoading(true);
       const { data, error } = await supabase
         .from("contratos")
         .select("*")
@@ -125,7 +120,6 @@ const ContratoDetalhes = () => {
           title: "Erro ao carregar contrato",
           description: error.message,
         });
-        setNotFound(true);
         return;
       }
       
@@ -136,27 +130,22 @@ const ContratoDetalhes = () => {
           title: "Contrato não encontrado",
           description: "O contrato solicitado não existe.",
         });
-        setNotFound(true);
         return;
       }
       
-      console.log("Contrato carregado com sucesso:", data);
       setContrato(data);
-      setNotFound(false);
       
       if (data.fornecedor_id) {
         fetchFornecedor(data.fornecedor_id);
       }
     } catch (error: any) {
-      console.error("Erro exceção ao buscar contrato:", error);
+      console.error("Erro ao buscar contrato:", error);
       toast({
         variant: "destructive",
         title: "Erro",
         description: error.message,
       });
-      setNotFound(true);
     } finally {
-      console.log("Finalizando fetchContrato. Loading:", false, "Contrato existe:", !!contrato);
       setLoading(false);
     }
   };
@@ -385,7 +374,7 @@ const ContratoDetalhes = () => {
     );
   }
 
-  if (notFound || !contrato) {
+  if (!contrato) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center space-y-4">
