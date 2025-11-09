@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, Users, Settings, LogOut, Scale, Kanban, Shield, FileStack, Bell, Calendar } from "lucide-react";
+import { LayoutDashboard, FileText, Users, Settings, LogOut, Scale, Kanban, Shield, FileStack, Bell, Calendar, GitBranch } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   Sidebar,
@@ -22,6 +22,7 @@ const menuItems = [
   { title: "Contratos", url: "/contratos", icon: FileText, roles: ["all"] },
   { title: "Kanban", url: "/kanban", icon: Kanban, roles: ["all"] },
   { title: "Templates", url: "/templates", icon: FileStack, roles: ["all"] },
+  { title: "Workflows", url: "/workflows", icon: GitBranch, roles: ["administrador"] },
   { title: "Alertas", url: "/alertas", icon: Bell, roles: ["all"] },
   { title: "Calendário", url: "/calendario", icon: Calendar, roles: ["all"] },
   { title: "Fornecedores", url: "/fornecedores", icon: Users, roles: ["all"] },
