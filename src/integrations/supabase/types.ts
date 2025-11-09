@@ -217,6 +217,60 @@ export type Database = {
           },
         ]
       }
+      contract_comments: {
+        Row: {
+          conteudo: string
+          contrato_id: string
+          created_at: string
+          id: string
+          parent_id: string | null
+          secao: string | null
+          status: string
+          tipo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          conteudo: string
+          contrato_id: string
+          created_at?: string
+          id?: string
+          parent_id?: string | null
+          secao?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          conteudo?: string
+          contrato_id?: string
+          created_at?: string
+          id?: string
+          parent_id?: string | null
+          secao?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_comments_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "contract_comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_history: {
         Row: {
           alterado_em: string

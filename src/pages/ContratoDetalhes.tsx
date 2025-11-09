@@ -39,6 +39,8 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { exportContratoDetalhePDF } from "@/utils/pdfExport";
+import { ContractComments } from "@/components/ContractComments";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type Contrato = {
   id: string;
@@ -725,56 +727,69 @@ const ContratoDetalhes = () => {
         </Card>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Histórico de Aprovações</CardTitle>
-          <CardDescription>
-            {aprovacoes.length} aprovação(ões) registrada(s)
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {aprovacoes.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Nenhuma aprovação registrada ainda
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {aprovacoes.map((aprovacao) => (
-                <div
-                  key={aprovacao.id}
-                  className="flex items-start gap-4 p-4 border rounded-lg"
-                >
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant={
-                          aprovacao.status === "aprovado"
-                            ? "default"
-                            : aprovacao.status === "rejeitado"
-                            ? "destructive"
-                            : "secondary"
-                        }
-                      >
-                        {aprovacao.status}
-                      </Badge>
-                      {aprovacao.data_aprovacao && (
-                        <span className="text-sm text-muted-foreground">
-                          {new Date(aprovacao.data_aprovacao).toLocaleString("pt-BR")}
-                        </span>
-                      )}
-                    </div>
-                    {aprovacao.comentario && (
-                      <p className="text-sm text-muted-foreground">
-                        {aprovacao.comentario}
-                      </p>
-                    )}
-                  </div>
+      <Tabs defaultValue="aprovacoes" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="aprovacoes">Aprovações</TabsTrigger>
+          <TabsTrigger value="comentarios">Comentários Colaborativos</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="aprovacoes">
+          <Card>
+            <CardHeader>
+              <CardTitle>Histórico de Aprovações</CardTitle>
+              <CardDescription>
+                {aprovacoes.length} aprovação(ões) registrada(s)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {aprovacoes.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Nenhuma aprovação registrada ainda
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              ) : (
+                <div className="space-y-4">
+                  {aprovacoes.map((aprovacao) => (
+                    <div
+                      key={aprovacao.id}
+                      className="flex items-start gap-4 p-4 border rounded-lg"
+                    >
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant={
+                              aprovacao.status === "aprovado"
+                                ? "default"
+                                : aprovacao.status === "rejeitado"
+                                ? "destructive"
+                                : "secondary"
+                            }
+                          >
+                            {aprovacao.status}
+                          </Badge>
+                          {aprovacao.data_aprovacao && (
+                            <span className="text-sm text-muted-foreground">
+                              {new Date(aprovacao.data_aprovacao).toLocaleString("pt-BR")}
+                            </span>
+                          )}
+                        </div>
+                        {aprovacao.comentario && (
+                          <p className="text-sm text-muted-foreground">
+                            {aprovacao.comentario}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="comentarios">
+          <ContractComments contratoId={contrato.id} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
