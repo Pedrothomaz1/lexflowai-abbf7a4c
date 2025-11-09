@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import { exportContratoDetalhePDF } from "@/utils/pdfExport";
 import { ContractComments } from "@/components/ContractComments";
+import { ContractSignature } from "@/components/ContractSignature";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type Contrato = {
@@ -728,9 +729,10 @@ const ContratoDetalhes = () => {
       )}
 
       <Tabs defaultValue="aprovacoes" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="aprovacoes">Aprovações</TabsTrigger>
-          <TabsTrigger value="comentarios">Comentários Colaborativos</TabsTrigger>
+          <TabsTrigger value="assinaturas">Assinaturas</TabsTrigger>
+          <TabsTrigger value="comentarios">Comentários</TabsTrigger>
         </TabsList>
 
         <TabsContent value="aprovacoes">
@@ -784,6 +786,14 @@ const ContratoDetalhes = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="assinaturas">
+          <ContractSignature 
+            contratoId={contrato.id} 
+            contratoTitulo={contrato.titulo}
+            arquivoUrl={contrato.arquivo_url}
+          />
         </TabsContent>
 
         <TabsContent value="comentarios">

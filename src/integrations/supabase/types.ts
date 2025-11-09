@@ -362,6 +362,65 @@ export type Database = {
           },
         ]
       }
+      contract_signatures: {
+        Row: {
+          completed_at: string | null
+          contrato_id: string
+          created_at: string
+          created_by: string | null
+          document_url: string | null
+          external_id: string
+          id: string
+          metadata: Json | null
+          provider: string
+          sent_at: string | null
+          signed_document_url: string | null
+          signers: Json
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          contrato_id: string
+          created_at?: string
+          created_by?: string | null
+          document_url?: string | null
+          external_id: string
+          id?: string
+          metadata?: Json | null
+          provider: string
+          sent_at?: string | null
+          signed_document_url?: string | null
+          signers?: Json
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          contrato_id?: string
+          created_at?: string
+          created_by?: string | null
+          document_url?: string | null
+          external_id?: string
+          id?: string
+          metadata?: Json | null
+          provider?: string
+          sent_at?: string | null
+          signed_document_url?: string | null
+          signers?: Json
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_signatures_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_templates: {
         Row: {
           campos_variaveis: Json | null

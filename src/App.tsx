@@ -17,6 +17,7 @@ import Templates from "./pages/Templates";
 import Alertas from "./pages/Alertas";
 import Calendario from "./pages/Calendario";
 import WorkflowAprovacoes from "./pages/WorkflowAprovacoes";
+import SignatureSettings from "./pages/SignatureSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,6 +41,7 @@ const App = () => (
           <Route path="/alertas" element={<DashboardLayout><Alertas /></DashboardLayout>} />
           <Route path="/calendario" element={<DashboardLayout><Calendario /></DashboardLayout>} />
           <Route path="/workflows" element={<DashboardLayout><WorkflowAprovacoes /></DashboardLayout>} />
+          <Route path="/signature-settings" element={<DashboardLayout><SignatureSettings /></DashboardLayout>} />
           <Route path="/settings" element={<DashboardLayout><Settings /></DashboardLayout>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

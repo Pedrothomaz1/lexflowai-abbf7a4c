@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -14,11 +15,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { User } from "@supabase/supabase-js";
-import { Shield, CheckCircle2 } from "lucide-react";
+import { Shield, CheckCircle2, FileSignature } from "lucide-react";
 
 const Settings = () => {
   const { toast } = useToast();
   const { userRole, isAnalista, isConsultor, isAdmin } = useUserRole();
+  const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -231,6 +233,25 @@ const Settings = () => {
               Para solicitar alteração de perfil, entre em contato com um administrador.
             </p>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Assinatura Eletrônica</CardTitle>
+          <CardDescription>
+            Configure provedores de assinatura digital
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button 
+            variant="outline" 
+            className="w-full sm:w-auto"
+            onClick={() => navigate('/signature-settings')}
+          >
+            <FileSignature className="h-4 w-4 mr-2" />
+            Configurar Provedores de Assinatura
+          </Button>
         </CardContent>
       </Card>
 

@@ -11,3 +11,6 @@ verify_jwt = true
 
 [functions.verificar-alertas]
 verify_jwt = false
+
+[functions.signature-webhook]
+verify_jwt = false
