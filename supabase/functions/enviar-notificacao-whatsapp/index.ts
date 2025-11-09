@@ -67,21 +67,45 @@ Deno.serve(async (req) => {
     console.log('Processando notificação para contrato:', contratoNumero)
 
     // Buscar aprovadores (consultoria_juridica e administrador)
-    const { data: aprovadores, error: aprovadoresError } = await supabaseClient
+    const { data: userRoles, error: rolesError } = await supabaseClient
       .from('user_roles')
-      .select('user_id, profiles!inner(full_name, phone)')
+      .select('user_id')
       .in('role', ['consultoria_juridica', 'administrador'])
 
-    if (aprovadoresError) {
-      console.error('Erro ao buscar aprovadores:', aprovadoresError)
-      throw aprovadoresError
+    if (rolesError) {
+      console.error('Erro ao buscar roles:', rolesError)
+      throw rolesError
     }
 
-    console.log('Aprovadores encontrados:', aprovadores?.length)
+    if (!userRoles || userRoles.length === 0) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          message: 'Nenhum aprovador encontrado' 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const userIds = userRoles.map(r => r.user_id)
+
+    // Buscar profiles dos aprovadores
+    const { data: profiles, error: profilesError } = await supabaseClient
+      .from('profiles')
+      .select('id, full_name, phone')
+      .in('id', userIds)
+      .not('phone', 'is', null)
+
+    if (profilesError) {
+      console.error('Erro ao buscar profiles:', profilesError)
+      throw profilesError
+    }
+
+    console.log('Aprovadores encontrados:', profiles?.length || 0)
 
     // Filtrar apenas aprovadores com telefone cadastrado
-    const aprovadoresComTelefone = aprovadores?.filter(
-      (aprovador: any) => aprovador.profiles && (aprovador.profiles as any).phone
+    const aprovadoresComTelefone = profiles?.filter(
+      (profile: any) => profile.phone && profile.phone.trim() !== ''
     ) || []
 
     console.log('Aprovadores com telefone:', aprovadoresComTelefone.length)
@@ -123,9 +147,8 @@ Deno.serve(async (req) => {
     const notificacoesEnviadas = []
 
     // Enviar notificação para cada aprovador
-    for (const aprovador of aprovadoresComTelefone) {
+    for (const profile of aprovadoresComTelefone) {
       try {
-        const profile = aprovador.profiles as any
         let telefone = profile.phone.replace(/\D/g, '') // Remove formatação
         
         // Adicionar código do país se não tiver (Brasil = 55)
@@ -157,7 +180,6 @@ Deno.serve(async (req) => {
           })
         }
       } catch (error: any) {
-        const profile = aprovador.profiles as any
         console.error(`Erro ao enviar notificação para ${profile?.full_name || 'aprovador'}:`, error)
         notificacoesEnviadas.push({
           nome: profile?.full_name || 'Desconhecido',
