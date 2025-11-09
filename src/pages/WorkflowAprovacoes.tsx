@@ -256,7 +256,7 @@ export default function WorkflowAprovacoes() {
               </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="nome">Nome do Workflow</Label>
                   <Input
@@ -288,7 +288,7 @@ export default function WorkflowAprovacoes() {
                 </div>
               </div>
 
-              <div className="flex items-center space-x-2">
+              <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
                 <Switch
                   id="aprovacao_paralela"
                   checked={formData.aprovacao_paralela}
@@ -296,12 +296,12 @@ export default function WorkflowAprovacoes() {
                     setFormData({ ...formData, aprovacao_paralela: checked })
                   }
                 />
-                <Label htmlFor="aprovacao_paralela" className="cursor-pointer">
+                <Label htmlFor="aprovacao_paralela" className="cursor-pointer text-sm">
                   Aprovação Paralela (todos os níveis simultaneamente)
                 </Label>
               </div>
 
-              <div className="flex items-center space-x-2">
+              <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
                 <Switch
                   id="is_active"
                   checked={formData.is_active}
@@ -309,7 +309,7 @@ export default function WorkflowAprovacoes() {
                     setFormData({ ...formData, is_active: checked })
                   }
                 />
-                <Label htmlFor="is_active" className="cursor-pointer">
+                <Label htmlFor="is_active" className="cursor-pointer text-sm">
                   Workflow Ativo
                 </Label>
               </div>
@@ -353,13 +353,15 @@ export default function WorkflowAprovacoes() {
                             }
                           }}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Adicionar aprovador" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="z-50 bg-popover">
                             {profiles.map((profile) => (
                               <SelectItem key={profile.id} value={profile.id}>
-                                {profile.full_name} ({profile.email})
+                                <div className="max-w-[250px] truncate">
+                                  {profile.full_name}
+                                </div>
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -368,11 +370,11 @@ export default function WorkflowAprovacoes() {
                           {nivel.aprovadores.map((aprovadorId) => {
                             const profile = profiles.find(p => p.id === aprovadorId);
                             return (
-                              <Badge key={aprovadorId} variant="secondary">
-                                {profile?.full_name || aprovadorId}
+                              <Badge key={aprovadorId} variant="secondary" className="max-w-[200px]">
+                                <span className="truncate">{profile?.full_name || 'Usuário'}</span>
                                 <button
                                   type="button"
-                                  className="ml-2"
+                                  className="ml-2 hover:text-destructive"
                                   onClick={() => {
                                     updateNivel(
                                       index,
@@ -443,10 +445,10 @@ export default function WorkflowAprovacoes() {
           workflows.map((workflow) => (
             <Card key={workflow.id}>
               <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <CardTitle>{workflow.nome}</CardTitle>
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+                  <div className="space-y-1 flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <CardTitle className="text-lg">{workflow.nome}</CardTitle>
                       <Badge variant={workflow.is_active ? "default" : "secondary"}>
                         {workflow.is_active ? "Ativo" : "Inativo"}
                       </Badge>
@@ -454,17 +456,18 @@ export default function WorkflowAprovacoes() {
                         <Badge variant="outline">Paralelo</Badge>
                       )}
                     </div>
-                    <CardDescription>
+                    <CardDescription className="text-sm">
                       Tipo: {getTipoLabel(workflow.tipo_contrato)}
                     </CardDescription>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-shrink-0">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleEdit(workflow)}
                     >
                       <Edit className="h-4 w-4" />
+                      <span className="sr-only sm:not-sr-only sm:ml-2">Editar</span>
                     </Button>
                     <Button
                       variant="outline"
@@ -472,15 +475,16 @@ export default function WorkflowAprovacoes() {
                       onClick={() => handleDelete(workflow.id)}
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
+                      <span className="sr-only sm:not-sr-only sm:ml-2">Excluir</span>
                     </Button>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-start gap-4">
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-4 overflow-x-auto pb-2">
                     {workflow.niveis.map((nivel, index) => (
-                      <div key={nivel.nivel} className="flex items-center">
+                      <div key={nivel.nivel} className="flex items-center min-w-[200px]">
                         <div className="flex-1">
                           <Card>
                             <CardHeader className="pb-3">
@@ -499,9 +503,9 @@ export default function WorkflowAprovacoes() {
                           </Card>
                         </div>
                         {index < workflow.niveis.length - 1 && (
-                          <div className="mx-2">
+                          <div className="mx-2 flex-shrink-0">
                             {workflow.aprovacao_paralela ? (
-                              <ArrowDown className="h-4 w-4 text-muted-foreground" />
+                              <ArrowDown className="h-4 w-4 text-muted-foreground sm:hidden" />
                             ) : (
                               <ArrowRight className="h-4 w-4 text-muted-foreground" />
                             )}

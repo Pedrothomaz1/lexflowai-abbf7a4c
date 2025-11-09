@@ -102,4 +102,17 @@
   .transition-smooth {
     transition: var(--transition-smooth);
   }
+
+  /* Garantir que dropdowns tenham z-index alto e background correto */
+  [data-radix-popper-content-wrapper] {
+    z-index: 50 !important;
+  }
+  
+  [role="listbox"],
+  [role="menu"],
+  [data-radix-select-content],
+  [data-radix-dropdown-menu-content] {
+    @apply z-50 bg-popover border border-border shadow-lg;
+  }
 }
+

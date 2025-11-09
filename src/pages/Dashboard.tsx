@@ -401,7 +401,7 @@ const Dashboard = () => {
       )}
 
       {/* KPIs */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {statsData.map((stat, index) => {
           const Icon = stat.icon;
           return (
@@ -433,7 +433,7 @@ const Dashboard = () => {
       </div>
 
       {/* Gráficos Principais */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -553,7 +553,7 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="md:col-span-2">
+        <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Contratos por Status</CardTitle>
             <CardDescription>Situação atual dos contratos</CardDescription>
@@ -592,24 +592,24 @@ const Dashboard = () => {
                 const urgencia = dias <= 7 ? 'urgent' : dias <= 30 ? 'warning' : 'normal';
                 
                 return (
-                  <div key={contrato.id} className="flex items-center gap-4">
-                    <div className="flex-shrink-0 w-16 text-center">
+                  <div key={contrato.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                    <div className="flex-shrink-0 w-16">
                       <Badge 
                         variant={urgencia === 'urgent' ? 'destructive' : urgencia === 'warning' ? 'default' : 'secondary'}
-                        className="w-full"
+                        className="w-full justify-center"
                       >
                         {dias}d
                       </Badge>
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">{contrato.titulo}</p>
+                    <div className="flex-1 w-full">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium truncate">{contrato.titulo}</p>
                           <p className="text-sm text-muted-foreground">
                             Vence em {new Date(contrato.data_fim).toLocaleDateString("pt-BR")}
                           </p>
                         </div>
-                        <div className="text-right">
+                        <div className="text-left sm:text-right flex-shrink-0">
                           <p className="font-semibold">{formatCurrency(contrato.valor_total || 0)}</p>
                         </div>
                       </div>

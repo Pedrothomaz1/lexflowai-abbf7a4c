@@ -293,15 +293,15 @@ export function ContractComments({ contratoId, secao }: ContractCommentsProps) {
       <div key={comment.id} className={`${isReply ? 'ml-12 mt-4' : ''}`}>
         <Card className={isReply ? 'bg-muted/30' : ''}>
           <CardHeader className="pb-3">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-8 w-8">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <Avatar className="h-8 w-8 flex-shrink-0">
                   <AvatarFallback className="text-xs">
                     {profile?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || '?'}
                   </AvatarFallback>
                 </Avatar>
-                <div>
-                  <p className="text-sm font-medium">{profile?.full_name || 'Usuário'}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium truncate">{profile?.full_name || 'Usuário'}</p>
                   <p className="text-xs text-muted-foreground">
                     {formatDistanceToNow(new Date(comment.created_at), {
                       addSuffix: true,
@@ -310,14 +310,14 @@ export function ContractComments({ contratoId, secao }: ContractCommentsProps) {
                   </p>
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Badge variant={typeBadge.variant} className="gap-1">
                   {getTypeIcon(comment.tipo)}
-                  {typeBadge.label}
+                  <span className="hidden sm:inline">{typeBadge.label}</span>
                 </Badge>
                 <Badge variant={statusBadge.variant} className="gap-1">
                   <StatusIcon className="h-3 w-3" />
-                  {statusBadge.label}
+                  <span className="hidden sm:inline">{statusBadge.label}</span>
                 </Badge>
               </div>
             </div>
@@ -325,48 +325,50 @@ export function ContractComments({ contratoId, secao }: ContractCommentsProps) {
           <CardContent className="space-y-3">
             <p className="text-sm whitespace-pre-wrap">{comment.conteudo}</p>
             
-            <div className="flex items-center gap-2 pt-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setReplyingTo(comment.id);
-                  setEditingId(null);
-                }}
-              >
-                <Reply className="h-3 w-3 mr-1" />
-                Responder
-              </Button>
-              
-              {isOwner && (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEdit(comment)}
-                  >
-                    <Edit className="h-3 w-3 mr-1" />
-                    Editar
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDelete(comment.id)}
-                  >
-                    <Trash2 className="h-3 w-3 mr-1" />
-                    Excluir
-                  </Button>
-                </>
-              )}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 pt-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setReplyingTo(comment.id);
+                    setEditingId(null);
+                  }}
+                >
+                  <Reply className="h-3 w-3 mr-1" />
+                  <span className="hidden sm:inline">Responder</span>
+                </Button>
+                
+                {isOwner && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEdit(comment)}
+                    >
+                      <Edit className="h-3 w-3 mr-1" />
+                      <span className="hidden sm:inline">Editar</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(comment.id)}
+                    >
+                      <Trash2 className="h-3 w-3 mr-1 text-destructive" />
+                      <span className="hidden sm:inline">Excluir</span>
+                    </Button>
+                  </>
+                )}
+              </div>
 
               <Select
                 value={comment.status}
                 onValueChange={(value) => handleStatusChange(comment.id, value)}
               >
-                <SelectTrigger className="w-[140px] h-8">
+                <SelectTrigger className="w-full sm:w-[140px] h-8">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-50 bg-popover">
                   <SelectItem value="aberto">Aberto</SelectItem>
                   <SelectItem value="em_analise">Em Análise</SelectItem>
                   <SelectItem value="resolvido">Resolvido</SelectItem>
@@ -409,15 +411,15 @@ export function ContractComments({ contratoId, secao }: ContractCommentsProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Select
                 value={commentType}
                 onValueChange={(value: any) => setCommentType(value)}
               >
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-50 bg-popover">
                   <SelectItem value="comentario">
                     <div className="flex items-center gap-2">
                       <MessageSquare className="h-4 w-4" />
@@ -487,7 +489,7 @@ export function ContractComments({ contratoId, secao }: ContractCommentsProps) {
               className="resize-none"
             />
 
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2">
               {(replyingTo || editingId) && (
                 <Button
                   type="button"
@@ -497,11 +499,12 @@ export function ContractComments({ contratoId, secao }: ContractCommentsProps) {
                     setEditingId(null);
                     setNewComment("");
                   }}
+                  className="w-full sm:w-auto"
                 >
                   Cancelar
                 </Button>
               )}
-              <Button type="submit">
+              <Button type="submit" className="w-full sm:w-auto">
                 <Send className="h-4 w-4 mr-2" />
                 {editingId ? 'Atualizar' : replyingTo ? 'Responder' : 'Enviar'}
               </Button>
