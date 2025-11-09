@@ -288,6 +288,15 @@ const Dashboard = () => {
     }).format(value);
   };
 
+  const formatCompactCurrency = (value: number) => {
+    if (value >= 1000000) {
+      return `R$ ${(value / 1000000).toFixed(1)}M`;
+    } else if (value >= 1000) {
+      return `R$ ${(value / 1000).toFixed(0)}K`;
+    }
+    return formatCurrency(value);
+  };
+
   const statsData = [
     {
       title: "Contratos Ativos",
@@ -300,7 +309,7 @@ const Dashboard = () => {
     },
     {
       title: "Valor Total",
-      value: formatCurrency(stats.valorTotal),
+      value: formatCompactCurrency(stats.valorTotal),
       icon: DollarSign,
       color: "text-green-600",
       bgColor: "bg-green-600/10",
@@ -334,7 +343,7 @@ const Dashboard = () => {
     },
     {
       title: "Valor Médio",
-      value: formatCurrency(stats.valorMedio),
+      value: formatCompactCurrency(stats.valorMedio),
       icon: Activity,
       color: "text-cyan-600",
       bgColor: "bg-cyan-600/10",
@@ -414,11 +423,13 @@ const Dashboard = () => {
                   <Icon className={`h-5 w-5 ${stat.color}`} />
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="flex items-baseline justify-between">
-                  <div className="text-2xl font-bold">{stat.value}</div>
+              <CardContent className="pt-0">
+                <div className="flex items-baseline justify-between gap-2">
+                  <div className="text-xl sm:text-2xl font-bold break-words overflow-hidden flex-1 min-w-0">
+                    {stat.value}
+                  </div>
                   {stat.trend && (
-                    <div className={`flex items-center text-xs font-medium ${
+                    <div className={`flex items-center text-xs font-medium whitespace-nowrap flex-shrink-0 ${
                       stat.trendUp ? 'text-green-600' : 'text-red-600'
                     }`}>
                       {stat.trendUp ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
