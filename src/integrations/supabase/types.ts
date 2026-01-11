@@ -51,6 +51,8 @@ export type Database = {
           data_alerta: string
           data_envio: string | null
           dias_antecedencia: number | null
+          email_enviado: boolean | null
+          email_enviado_em: string | null
           enviado: boolean | null
           id: string
           mensagem: string | null
@@ -64,6 +66,8 @@ export type Database = {
           data_alerta: string
           data_envio?: string | null
           dias_antecedencia?: number | null
+          email_enviado?: boolean | null
+          email_enviado_em?: string | null
           enviado?: boolean | null
           id?: string
           mensagem?: string | null
@@ -77,6 +81,8 @@ export type Database = {
           data_alerta?: string
           data_envio?: string | null
           dias_antecedencia?: number | null
+          email_enviado?: boolean | null
+          email_enviado_em?: string | null
           enviado?: boolean | null
           id?: string
           mensagem?: string | null
@@ -597,6 +603,47 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_preferences: {
+        Row: {
+          alert_types: string[]
+          created_at: string
+          email_enabled: boolean
+          frequency: Database["public"]["Enums"]["notification_frequency"]
+          id: string
+          updated_at: string
+          user_id: string
+          whatsapp_enabled: boolean
+        }
+        Insert: {
+          alert_types?: string[]
+          created_at?: string
+          email_enabled?: boolean
+          frequency?: Database["public"]["Enums"]["notification_frequency"]
+          id?: string
+          updated_at?: string
+          user_id: string
+          whatsapp_enabled?: boolean
+        }
+        Update: {
+          alert_types?: string[]
+          created_at?: string
+          email_enabled?: boolean
+          frequency?: Database["public"]["Enums"]["notification_frequency"]
+          id?: string
+          updated_at?: string
+          user_id?: string
+          whatsapp_enabled?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -689,6 +736,7 @@ export type Database = {
         | "confidencialidade"
         | "parceria"
         | "outro"
+      notification_frequency: "immediate" | "daily" | "weekly"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -834,6 +882,7 @@ export const Constants = {
         "parceria",
         "outro",
       ],
+      notification_frequency: ["immediate", "daily", "weekly"],
     },
   },
 } as const

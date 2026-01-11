@@ -139,20 +139,22 @@ serve(async (req) => {
       }
     }
 
-    // Buscar alertas pendentes para enviar notificações WhatsApp
+    // Buscar alertas pendentes para enviar notificações
     const { data: alertasPendentes } = await supabase
       .from('contract_alerts')
       .select(`
         *,
         contratos (
           numero_contrato,
-          titulo
+          titulo,
+          data_fim
         )
       `)
       .eq('enviado', false)
       .lte('data_alerta', dataHoje);
 
     let notificacoesEnviadas = 0;
+    let emailsEnviados = 0;
 
     for (const alerta of alertasPendentes || []) {
       try {
@@ -165,29 +167,58 @@ serve(async (req) => {
         });
 
         if (!whatsappError) {
-          // Marcar como enviado
-          await supabase
-            .from('contract_alerts')
-            .update({
-              enviado: true,
-              data_envio: new Date().toISOString(),
-            })
-            .eq('id', alerta.id);
-
           notificacoesEnviadas++;
         }
+
+        // Tentar enviar notificação por Email (se ainda não foi enviado)
+        if (!alerta.email_enviado) {
+          const dataVencimento = alerta.contratos?.data_fim 
+            ? new Date(alerta.contratos.data_fim).toLocaleDateString('pt-BR')
+            : alerta.data_alerta;
+
+          const { error: emailError } = await supabase.functions.invoke('enviar-notificacao-email', {
+            body: {
+              alertaId: alerta.id,
+              contratoId: alerta.contrato_id,
+              tipo: alerta.tipo_alerta,
+              titulo: alerta.titulo,
+              mensagem: alerta.mensagem,
+              diasAntecedencia: alerta.dias_antecedencia,
+              numeroContrato: alerta.contratos?.numero_contrato || 'N/A',
+              dataVencimento: dataVencimento,
+            },
+          });
+
+          if (!emailError) {
+            emailsEnviados++;
+            console.log(`Email enviado para alerta ${alerta.id}`);
+          } else {
+            console.error(`Erro ao enviar email para alerta ${alerta.id}:`, emailError);
+          }
+        }
+
+        // Marcar como enviado
+        await supabase
+          .from('contract_alerts')
+          .update({
+            enviado: true,
+            data_envio: new Date().toISOString(),
+          })
+          .eq('id', alerta.id);
+
       } catch (error) {
         console.error(`Erro ao enviar notificação para alerta ${alerta.id}:`, error);
       }
     }
 
-    console.log(`Verificação concluída. ${alertasCriados.length} alertas criados, ${notificacoesEnviadas} notificações enviadas.`);
+    console.log(`Verificação concluída. ${alertasCriados.length} alertas criados, ${notificacoesEnviadas} WhatsApp, ${emailsEnviados} emails enviados.`);
 
     return new Response(
       JSON.stringify({
         success: true,
         alertasCriados: alertasCriados.length,
-        notificacoesEnviadas,
+        notificacoesWhatsApp: notificacoesEnviadas,
+        notificacoesEmail: emailsEnviados,
         mensagem: 'Verificação de alertas concluída com sucesso',
       }),
       {
