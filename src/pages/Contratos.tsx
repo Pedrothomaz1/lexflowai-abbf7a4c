@@ -1,18 +1,11 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -29,18 +22,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Calendar, Eye, Download } from "lucide-react";
+import { Plus, Download, Calendar, Eye, FileText, ArrowUpRight } from "lucide-react";
 import { exportContratosPDF } from "@/utils/pdfExport";
 import { BuscaAvancada, FiltrosAvancados } from "@/components/BuscaAvancada";
+import { DataTable, Column } from "@/components/ui/data-table";
+import { StatusBadge, ContractTypeBadge } from "@/components/ui/status-badge";
+import { PageHeader } from "@/components/ui/page-header";
+import { cn } from "@/lib/utils";
 
 type Contrato = {
   id: string;
@@ -64,6 +52,7 @@ type Fornecedor = {
 
 const Contratos = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
@@ -82,7 +71,9 @@ const Contratos = () => {
   });
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [filtros, setFiltros] = useState<FiltrosAvancados>({});
+  const [filtros, setFiltros] = useState<FiltrosAvancados>({
+    busca: searchParams.get("search") || "",
+  });
 
   useEffect(() => {
     fetchContratos();
@@ -115,11 +106,8 @@ const Contratos = () => {
   const fetchContratos = async () => {
     setLoading(true);
     
-    let query = supabase
-      .from("contratos")
-      .select("*");
+    let query = supabase.from("contratos").select("*");
 
-    // Aplicar filtros
     if (filtros.busca) {
       query = query.or(`numero_contrato.ilike.%${filtros.busca}%,titulo.ilike.%${filtros.busca}%,descricao.ilike.%${filtros.busca}%`);
     }
@@ -187,7 +175,6 @@ const Contratos = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Upload do arquivo
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
       
@@ -205,12 +192,6 @@ const Contratos = () => {
         return;
       }
 
-      // Salvar URL do arquivo
-      setFormData(prev => ({
-        ...prev,
-        arquivo_url: fileName
-      }));
-      
       toast({
         title: "Arquivo enviado com sucesso!",
         description: "Preencha as datas de início e término do contrato",
@@ -233,7 +214,6 @@ const Contratos = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Validar campos obrigatórios
     if (!formData.fornecedor_id || !formData.data_inicio || !formData.data_fim) {
       toast({
         variant: "destructive",
@@ -280,239 +260,304 @@ const Contratos = () => {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      rascunho: "secondary",
-      em_aprovacao: "outline",
-      aprovado: "default",
-      assinado: "default",
-      vigente: "default",
-      encerrado: "outline",
-      cancelado: "destructive",
-    };
-    return <Badge variant={variants[status] || "default"}>{status.replace(/_/g, " ")}</Badge>;
-  };
-
-  const getTipoBadge = (tipo: string) => {
-    const labels: Record<string, string> = {
-      prestacao_servicos: "Prestação de Serviço",
-      fornecimento: "Fornecimento",
-      locacao: "Locação",
-      confidencialidade: "Confidencialidade",
-      parceria: "Parceria",
-      outro: "Outro",
-    };
-    return <Badge variant="outline">{labels[tipo] || tipo}</Badge>;
-  };
-
   const handleExportPDF = () => {
     exportContratosPDF(contratos, fornecedores);
   };
 
+  const formatCurrency = (value: number | null, moeda: string | null) => {
+    if (value === null) return "-";
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: moeda || "BRL",
+    }).format(value);
+  };
+
+  const columns: Column<Contrato>[] = [
+    {
+      key: "numero_contrato",
+      header: "Número",
+      cell: (contrato) => (
+        <span className="font-mono text-sm font-medium">{contrato.numero_contrato}</span>
+      ),
+      className: "w-[120px]",
+    },
+    {
+      key: "titulo",
+      header: "Título",
+      cell: (contrato) => (
+        <div className="min-w-0">
+          <p className="font-medium truncate max-w-[250px]">{contrato.titulo}</p>
+          {contrato.descricao && (
+            <p className="text-xs text-muted-foreground truncate max-w-[250px]">
+              {contrato.descricao}
+            </p>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "tipo",
+      header: "Tipo",
+      cell: (contrato) => <ContractTypeBadge type={contrato.tipo} />,
+      className: "w-[140px]",
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (contrato) => <StatusBadge status={contrato.status} />,
+      className: "w-[120px]",
+    },
+    {
+      key: "valor_total",
+      header: "Valor",
+      cell: (contrato) => (
+        <span className="font-medium tabular-nums">
+          {formatCurrency(contrato.valor_total, contrato.moeda)}
+        </span>
+      ),
+      className: "w-[130px] text-right",
+    },
+    {
+      key: "vigencia",
+      header: "Vigência",
+      cell: (contrato) => (
+        contrato.data_inicio && contrato.data_fim ? (
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Calendar className="h-3.5 w-3.5" />
+            <span>
+              {new Date(contrato.data_inicio).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
+              {" - "}
+              {new Date(contrato.data_fim).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "2-digit" })}
+            </span>
+          </div>
+        ) : (
+          <span className="text-muted-foreground">-</span>
+        )
+      ),
+      className: "w-[180px]",
+    },
+    {
+      key: "acoes",
+      header: "",
+      cell: (contrato) => (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/contratos/${contrato.id}`);
+          }}
+        >
+          <Eye className="h-4 w-4" />
+        </Button>
+      ),
+      className: "w-[50px]",
+    },
+  ];
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Contratos</h1>
-          <p className="text-muted-foreground mt-1">
-            Gerencie todos os seus contratos
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleExportPDF}>
-            <Download className="h-4 w-4 mr-2" />
-            Exportar PDF
-          </Button>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Contrato
+    <div className="space-y-6 animate-fade-in">
+      <PageHeader
+        title="Contratos"
+        description={`${contratos.length} contrato(s) cadastrado(s)`}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleExportPDF}>
+              <Download className="h-4 w-4 mr-1.5" />
+              Exportar
             </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Novo Contrato</DialogTitle>
-              <DialogDescription>
-                Preencha os dados do contrato
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="numero_contrato">Número do Contrato *</Label>
-                  <Input
-                    id="numero_contrato"
-                    value={formData.numero_contrato}
-                    onChange={(e) =>
-                      setFormData({ ...formData, numero_contrato: e.target.value })
-                    }
-                    required
-                    placeholder="Ex: CT-2024-001"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="tipo">Tipo *</Label>
-                  <Select
-                    value={formData.tipo}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, tipo: value })
-                    }
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="prestacao_servicos">Prestação de Serviço</SelectItem>
-                      <SelectItem value="fornecimento">Fornecimento</SelectItem>
-                      <SelectItem value="locacao">Locação</SelectItem>
-                      <SelectItem value="confidencialidade">Confidencialidade</SelectItem>
-                      <SelectItem value="parceria">Parceria</SelectItem>
-                      <SelectItem value="outro">Outro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="titulo">Título *</Label>
-                <Input
-                  id="titulo"
-                  value={formData.titulo}
-                  onChange={(e) =>
-                    setFormData({ ...formData, titulo: e.target.value })
-                  }
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="descricao">Descrição</Label>
-                <Textarea
-                  id="descricao"
-                  value={formData.descricao}
-                  onChange={(e) =>
-                    setFormData({ ...formData, descricao: e.target.value })
-                  }
-                  rows={3}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="arquivo">Anexar Contrato (PDF)</Label>
-                <Input
-                  id="arquivo"
-                  type="file"
-                  accept=".pdf,.doc,.docx"
-                  onChange={handleFileUpload}
-                  disabled={isAnalyzing}
-                />
-                {isAnalyzing && (
-                  <p className="text-sm text-muted-foreground">
-                    Enviando arquivo...
-                  </p>
-                )}
-                {uploadedFile && !isAnalyzing && (
-                  <p className="text-sm text-green-600">
-                    ✓ Arquivo anexado: {uploadedFile.name}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="fornecedor">Fornecedor *</Label>
-                <Select
-                  value={formData.fornecedor_id}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, fornecedor_id: value })
-                  }
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um fornecedor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {fornecedores.map((fornecedor) => (
-                      <SelectItem key={fornecedor.id} value={fornecedor.id}>
-                        {fornecedor.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="valor_total">Valor Total</Label>
-                  <Input
-                    id="valor_total"
-                    type="number"
-                    step="0.01"
-                    value={formData.valor_total}
-                    onChange={(e) =>
-                      setFormData({ ...formData, valor_total: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="moeda">Moeda</Label>
-                  <Select
-                    value={formData.moeda}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, moeda: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="BRL">BRL (R$)</SelectItem>
-                      <SelectItem value="USD">USD ($)</SelectItem>
-                      <SelectItem value="EUR">EUR (€)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="data_inicio">Data de Início *</Label>
-                  <Input
-                    id="data_inicio"
-                    type="date"
-                    value={formData.data_inicio}
-                    onChange={(e) =>
-                      setFormData({ ...formData, data_inicio: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="data_fim">Data de Término *</Label>
-                  <Input
-                    id="data_fim"
-                    type="date"
-                    value={formData.data_fim}
-                    onChange={(e) =>
-                      setFormData({ ...formData, data_fim: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-              </div>
-
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                  Cancelar
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm">
+                  <Plus className="h-4 w-4 mr-1.5" />
+                  Novo Contrato
                 </Button>
-                <Button type="submit">Criar Contrato</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-          </Dialog>
-        </div>
-      </div>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Novo Contrato</DialogTitle>
+                  <DialogDescription>
+                    Preencha os dados do contrato
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="numero_contrato">Número do Contrato *</Label>
+                      <Input
+                        id="numero_contrato"
+                        value={formData.numero_contrato}
+                        onChange={(e) =>
+                          setFormData({ ...formData, numero_contrato: e.target.value })
+                        }
+                        required
+                        placeholder="Ex: CT-2024-001"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="tipo">Tipo *</Label>
+                      <Select
+                        value={formData.tipo}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, tipo: value })
+                        }
+                        required
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="prestacao_servicos">Prestação de Serviço</SelectItem>
+                          <SelectItem value="fornecimento">Fornecimento</SelectItem>
+                          <SelectItem value="locacao">Locação</SelectItem>
+                          <SelectItem value="confidencialidade">Confidencialidade</SelectItem>
+                          <SelectItem value="parceria">Parceria</SelectItem>
+                          <SelectItem value="outro">Outro</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="titulo">Título *</Label>
+                    <Input
+                      id="titulo"
+                      value={formData.titulo}
+                      onChange={(e) =>
+                        setFormData({ ...formData, titulo: e.target.value })
+                      }
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="descricao">Descrição</Label>
+                    <Textarea
+                      id="descricao"
+                      value={formData.descricao}
+                      onChange={(e) =>
+                        setFormData({ ...formData, descricao: e.target.value })
+                      }
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="arquivo">Anexar Contrato (PDF)</Label>
+                    <Input
+                      id="arquivo"
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      onChange={handleFileUpload}
+                      disabled={isAnalyzing}
+                    />
+                    {isAnalyzing && (
+                      <p className="text-sm text-muted-foreground">
+                        Enviando arquivo...
+                      </p>
+                    )}
+                    {uploadedFile && !isAnalyzing && (
+                      <p className="text-sm text-success flex items-center gap-1">
+                        ✓ Arquivo anexado: {uploadedFile.name}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="fornecedor">Fornecedor *</Label>
+                    <Select
+                      value={formData.fornecedor_id}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, fornecedor_id: value })
+                      }
+                      required
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um fornecedor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {fornecedores.map((fornecedor) => (
+                          <SelectItem key={fornecedor.id} value={fornecedor.id}>
+                            {fornecedor.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="valor_total">Valor Total</Label>
+                      <Input
+                        id="valor_total"
+                        type="number"
+                        step="0.01"
+                        value={formData.valor_total}
+                        onChange={(e) =>
+                          setFormData({ ...formData, valor_total: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="moeda">Moeda</Label>
+                      <Select
+                        value={formData.moeda}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, moeda: value })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="BRL">BRL (R$)</SelectItem>
+                          <SelectItem value="USD">USD ($)</SelectItem>
+                          <SelectItem value="EUR">EUR (€)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="data_inicio">Data de Início *</Label>
+                      <Input
+                        id="data_inicio"
+                        type="date"
+                        value={formData.data_inicio}
+                        onChange={(e) =>
+                          setFormData({ ...formData, data_inicio: e.target.value })
+                        }
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="data_fim">Data de Término *</Label>
+                      <Input
+                        id="data_fim"
+                        type="date"
+                        value={formData.data_fim}
+                        onChange={(e) =>
+                          setFormData({ ...formData, data_fim: e.target.value })
+                        }
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                      Cancelar
+                    </Button>
+                    <Button type="submit">Criar Contrato</Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
+        }
+      />
 
       <BuscaAvancada 
         filtros={filtros} 
@@ -520,81 +565,20 @@ const Contratos = () => {
         fornecedores={fornecedores}
       />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista de Contratos</CardTitle>
-          <CardDescription>
-            {contratos.length} contrato(s) cadastrado(s)
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Carregando...
-            </div>
-          ) : contratos.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Nenhum contrato cadastrado ainda.</p>
-              <p className="text-sm mt-2">Clique em "Novo Contrato" para começar.</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Número</TableHead>
-                  <TableHead>Título</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead>Vigência</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {contratos.map((contrato) => (
-                  <TableRow key={contrato.id}>
-                    <TableCell className="font-medium">
-                      {contrato.numero_contrato}
-                    </TableCell>
-                    <TableCell>{contrato.titulo}</TableCell>
-                    <TableCell>{getTipoBadge(contrato.tipo)}</TableCell>
-                    <TableCell>{getStatusBadge(contrato.status)}</TableCell>
-                    <TableCell>
-                      {contrato.valor_total
-                        ? new Intl.NumberFormat("pt-BR", {
-                            style: "currency",
-                            currency: contrato.moeda || "BRL",
-                          }).format(contrato.valor_total)
-                        : "-"}
-                    </TableCell>
-                    <TableCell>
-                      {contrato.data_inicio && contrato.data_fim ? (
-                        <div className="flex items-center gap-2 text-sm">
-                          <Calendar className="h-3 w-3" />
-                          {new Date(contrato.data_inicio).toLocaleDateString("pt-BR")} -{" "}
-                          {new Date(contrato.data_fim).toLocaleDateString("pt-BR")}
-                        </div>
-                      ) : (
-                        "-"
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigate(`/contratos/${contrato.id}`)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      <DataTable
+        data={contratos}
+        columns={columns}
+        loading={loading}
+        onRowClick={(contrato) => navigate(`/contratos/${contrato.id}`)}
+        emptyState={{
+          title: "Nenhum contrato encontrado",
+          description: "Clique em 'Novo Contrato' para começar",
+          action: {
+            label: "Novo Contrato",
+            onClick: () => setDialogOpen(true),
+          },
+        }}
+      />
     </div>
   );
 };
