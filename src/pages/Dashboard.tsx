@@ -7,26 +7,30 @@ import {
   FileText, 
   Users, 
   Clock, 
-  CheckCircle2, 
   TrendingUp, 
   AlertCircle, 
   DollarSign, 
   AlertTriangle,
-  TrendingDown,
   Activity,
   Calendar as CalendarIcon,
   Timer,
   Target,
   RefreshCcw,
-  Building2
+  Building2,
+  ArrowUpRight,
+  ArrowDownRight
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { StatCard, StatCardGrid } from "@/components/ui/stat-card";
+import { PageHeader } from "@/components/ui/page-header";
+import { PageSkeleton } from "@/components/ui/skeleton-loaders";
+import { EmptyState } from "@/components/ui/empty-state";
 import { 
-  LineChart, 
-  Line, 
+  AreaChart,
+  Area,
   BarChart, 
   Bar, 
   PieChart, 
@@ -39,6 +43,7 @@ import {
   Legend, 
   ResponsiveContainer 
 } from "recharts";
+import { cn } from "@/lib/utils";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -52,7 +57,6 @@ const Dashboard = () => {
     valorTotal: 0,
     valorMedio: 0,
     riscosAltos: 0,
-    // SLAs
     tempoMedioAprovacao: 0,
     taxaAprovacaoNoPrazo: 0,
     contratosRenovados: 0,
@@ -66,7 +70,6 @@ const Dashboard = () => {
   const [valorMensalData, setValorMensalData] = useState<any[]>([]);
   const [timelineVencimentos, setTimelineVencimentos] = useState<any[]>([]);
   const [topFornecedores, setTopFornecedores] = useState<any[]>([]);
-  const [slaData, setSlaData] = useState<any[]>([]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -92,24 +95,20 @@ const Dashboard = () => {
   }, [navigate]);
 
   const fetchStats = async () => {
-    // Buscar todos os contratos
     const { data: todosContratos } = await supabase
       .from("contratos")
       .select("*")
       .order("created_at", { ascending: true });
 
-    // Buscar contratos ativos (vigentes)
     const { data: contratos } = await supabase
       .from("contratos")
       .select("*")
       .eq("status", "vigente");
 
-    // Buscar fornecedores
     const { data: fornecedores } = await supabase
       .from("fornecedores")
       .select("id");
 
-    // Buscar contratos vencendo em 30 dias
     const hoje = new Date();
     const data30Dias = new Date();
     data30Dias.setDate(hoje.getDate() + 30);
@@ -121,7 +120,6 @@ const Dashboard = () => {
       .lte("data_fim", data30Dias.toISOString().split("T")[0])
       .eq("status", "vigente");
 
-    // Buscar aprovações pendentes e completas
     const { data: aprovacoes } = await supabase
       .from("contract_approvals")
       .select("*");
@@ -129,7 +127,6 @@ const Dashboard = () => {
     const aprovacoesPendentes = aprovacoes?.filter(a => !a.data_aprovacao) || [];
     const aprovacoesCompletas = aprovacoes?.filter(a => a.data_aprovacao) || [];
 
-    // Calcular tempo médio de aprovação (em dias)
     let tempoMedioAprovacao = 0;
     if (aprovacoesCompletas.length > 0) {
       const tempos = aprovacoesCompletas.map(a => {
@@ -140,7 +137,6 @@ const Dashboard = () => {
       tempoMedioAprovacao = tempos.reduce((sum, t) => sum + t, 0) / tempos.length;
     }
 
-    // Taxa de aprovação no prazo (< 5 dias é considerado no prazo)
     const aprovacoesNoPrazo = aprovacoesCompletas.filter(a => {
       const criado = new Date(a.created_at);
       const aprovado = new Date(a.data_aprovacao);
@@ -151,19 +147,14 @@ const Dashboard = () => {
       ? (aprovacoesNoPrazo.length / aprovacoesCompletas.length) * 100 
       : 0;
 
-    // Buscar análises de risco
     const { data: analises } = await supabase
       .from("contract_analysis")
       .select("*, contratos(titulo)");
 
-    // Calcular valor total e médio
     const valorTotal = contratos?.reduce((sum, c) => sum + (Number(c.valor_total) || 0), 0) || 0;
     const valorMedio = contratos && contratos.length > 0 ? valorTotal / contratos.length : 0;
-
-    // Contar riscos altos (score >= 7)
     const riscosAltos = analises?.filter((a: any) => (a.score_risco || 0) >= 7).length || 0;
 
-    // Calcular taxa de renovação
     const contratosEncerrados = todosContratos?.filter(c => c.status === 'encerrado') || [];
     const contratosRenovados = todosContratos?.filter(c => 
       c.observacoes?.toLowerCase().includes('renovado') || 
@@ -173,11 +164,10 @@ const Dashboard = () => {
       ? (contratosRenovados / contratosEncerrados.length) * 100 
       : 0;
 
-    // Top fornecedores por valor
     const valorPorFornecedor: Record<string, { nome: string; valor: number; count: number }> = {};
     
-    const { data: fornecedoresList } = await supabase.from("fornecedores").select("id, razao_social");
-    const fornecedoresMap = new Map(fornecedoresList?.map(f => [f.id, f.razao_social]) || []);
+    const { data: fornecedoresList } = await supabase.from("fornecedores").select("id, nome");
+    const fornecedoresMap = new Map(fornecedoresList?.map(f => [f.id, f.nome]) || []);
 
     todosContratos?.forEach((c: any) => {
       if (c.fornecedor_id) {
@@ -196,13 +186,6 @@ const Dashboard = () => {
     
     setTopFornecedores(topFornecedoresList);
 
-    // Dados de SLA
-    const slaMetrics = [
-      { name: 'Aprovação < 5 dias', value: taxaAprovacaoNoPrazo, target: 80 },
-      { name: 'Contratos no prazo', value: Math.min(100, 100 - (stats.vencendo30Dias / (stats.contratosAtivos || 1)) * 100), target: 90 },
-    ];
-    setSlaData(slaMetrics);
-
     setStats({
       contratosAtivos: contratos?.length || 0,
       fornecedores: fornecedores?.length || 0,
@@ -217,10 +200,8 @@ const Dashboard = () => {
       taxaRenovacao,
     });
 
-    // Contratos vencendo (para alertas)
     setContratosVencendo(vencendo || []);
 
-    // Timeline de vencimentos (próximos 90 dias)
     const data90Dias = new Date();
     data90Dias.setDate(hoje.getDate() + 90);
     const { data: vencimentos90 } = await supabase
@@ -233,34 +214,32 @@ const Dashboard = () => {
 
     setTimelineVencimentos(vencimentos90 || []);
 
-    // Processar dados para gráficos
     if (todosContratos) {
-      const monthlyData: Record<string, number> = {};
-      const hoje = new Date();
+      const monthlyData: Record<string, { contratos: number; valor: number }> = {};
       
-      // Inicializar últimos 6 meses
       for (let i = 5; i >= 0; i--) {
         const mes = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
-        const mesKey = mes.toLocaleDateString("pt-BR", { month: "short", year: "numeric" });
-        monthlyData[mesKey] = 0;
+        const mesKey = mes.toLocaleDateString("pt-BR", { month: "short" }).replace('.', '');
+        monthlyData[mesKey] = { contratos: 0, valor: 0 };
       }
 
-      // Contar contratos por mês
       todosContratos.forEach((contrato) => {
         const data = new Date(contrato.created_at);
-        const mesKey = data.toLocaleDateString("pt-BR", { month: "short", year: "numeric" });
+        const mesKey = data.toLocaleDateString("pt-BR", { month: "short" }).replace('.', '');
         if (monthlyData.hasOwnProperty(mesKey)) {
-          monthlyData[mesKey]++;
+          monthlyData[mesKey].contratos++;
+          monthlyData[mesKey].valor += Number(contrato.valor_total) || 0;
         }
       });
 
-      const chartData = Object.entries(monthlyData).map(([mes, total]) => ({
-        mes,
-        contratos: total,
+      const chartData = Object.entries(monthlyData).map(([mes, data]) => ({
+        mes: mes.charAt(0).toUpperCase() + mes.slice(1),
+        contratos: data.contratos,
+        valor: data.valor / 1000,
       }));
       setChartData(chartData);
+      setValorMensalData(chartData);
 
-      // Dados por tipo de contrato
       const tipoCount: Record<string, number> = {};
       todosContratos.forEach((contrato: any) => {
         const tipo = contrato.tipo || "outro";
@@ -268,9 +247,11 @@ const Dashboard = () => {
       });
 
       const tipoLabels: Record<string, string> = {
-        prestacao_servico: "Prestação de Serviço",
+        prestacao_servicos: "Serviços",
         fornecimento: "Fornecimento",
         locacao: "Locação",
+        confidencialidade: "NDA",
+        parceria: "Parceria",
         outro: "Outro",
       };
 
@@ -281,7 +262,6 @@ const Dashboard = () => {
         }))
       );
 
-      // Dados por status
       const statusCount: Record<string, number> = {};
       todosContratos.forEach((contrato: any) => {
         const status = contrato.status || "rascunho";
@@ -290,7 +270,9 @@ const Dashboard = () => {
 
       const statusLabels: Record<string, string> = {
         rascunho: "Rascunho",
-        em_analise: "Em Análise",
+        em_aprovacao: "Em Aprovação",
+        aprovado: "Aprovado",
+        assinado: "Assinado",
         vigente: "Vigente",
         encerrado: "Encerrado",
         cancelado: "Cancelado",
@@ -302,46 +284,22 @@ const Dashboard = () => {
           value,
         }))
       );
-
-      // Dados de valor por mês
-      const valorMensal: Record<string, number> = {};
-      for (let i = 5; i >= 0; i--) {
-        const mes = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
-        const mesKey = mes.toLocaleDateString("pt-BR", { month: "short", year: "numeric" });
-        valorMensal[mesKey] = 0;
-      }
-
-      todosContratos.forEach((contrato: any) => {
-        const data = new Date(contrato.created_at);
-        const mesKey = data.toLocaleDateString("pt-BR", { month: "short", year: "numeric" });
-        if (valorMensal.hasOwnProperty(mesKey)) {
-          valorMensal[mesKey] += Number(contrato.valor_total) || 0;
-        }
-      });
-
-      setValorMensalData(
-        Object.entries(valorMensal).map(([mes, valor]) => ({
-          mes,
-          valor: valor / 1000, // Converter para milhares
-        }))
-      );
     }
 
-    // Dados de análise de risco
     if (analises && analises.length > 0) {
       const riskCategories = {
-        "Baixo (0-3)": 0,
-        "Médio (4-6)": 0,
-        "Alto (7-8)": 0,
-        "Crítico (9-10)": 0,
+        "Baixo": 0,
+        "Médio": 0,
+        "Alto": 0,
+        "Crítico": 0,
       };
 
       analises.forEach((analise: any) => {
         const score = analise.score_risco || 0;
-        if (score <= 3) riskCategories["Baixo (0-3)"]++;
-        else if (score <= 6) riskCategories["Médio (4-6)"]++;
-        else if (score <= 8) riskCategories["Alto (7-8)"]++;
-        else riskCategories["Crítico (9-10)"]++;
+        if (score <= 3) riskCategories["Baixo"]++;
+        else if (score <= 6) riskCategories["Médio"]++;
+        else if (score <= 8) riskCategories["Alto"]++;
+        else riskCategories["Crítico"]++;
       });
 
       setRiskData(
@@ -353,11 +311,7 @@ const Dashboard = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-muted-foreground">Carregando...</div>
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   const formatCurrency = (value: number) => {
@@ -376,488 +330,427 @@ const Dashboard = () => {
     return formatCurrency(value);
   };
 
-  const statsData = [
-    {
-      title: "Contratos Ativos",
-      value: stats.contratosAtivos.toString(),
-      icon: FileText,
-      color: "text-blue-600",
-      bgColor: "bg-blue-600/10",
-      trend: "+12%",
-      trendUp: true,
-    },
-    {
-      title: "Valor Total",
-      value: formatCompactCurrency(stats.valorTotal),
-      icon: DollarSign,
-      color: "text-green-600",
-      bgColor: "bg-green-600/10",
-      trend: "+8%",
-      trendUp: true,
-    },
-    {
-      title: "Vencendo em 30 dias",
-      value: stats.vencendo30Dias.toString(),
-      icon: Clock,
-      color: "text-amber-600",
-      bgColor: "bg-amber-600/10",
-      trend: "-5%",
-      trendUp: false,
-    },
-    {
-      title: "Riscos Altos",
-      value: stats.riscosAltos.toString(),
-      icon: AlertTriangle,
-      color: "text-red-600",
-      bgColor: "bg-red-600/10",
-      trend: "+3",
-      trendUp: false,
-    },
-    {
-      title: "Fornecedores",
-      value: stats.fornecedores.toString(),
-      icon: Users,
-      color: "text-purple-600",
-      bgColor: "bg-purple-600/10",
-    },
-    {
-      title: "Valor Médio",
-      value: formatCompactCurrency(stats.valorMedio),
-      icon: Activity,
-      color: "text-cyan-600",
-      bgColor: "bg-cyan-600/10",
-    },
-    {
-      title: "Aprovações Pendentes",
-      value: stats.aprovacoesPendentes.toString(),
-      icon: CheckCircle2,
-      color: "text-orange-600",
-      bgColor: "bg-orange-600/10",
-    },
-    {
-      title: "Tempo Médio Aprovação",
-      value: `${stats.tempoMedioAprovacao.toFixed(1)}d`,
-      icon: Timer,
-      color: "text-indigo-600",
-      bgColor: "bg-indigo-600/10",
-    },
+  const CHART_COLORS = [
+    "hsl(var(--chart-1))",
+    "hsl(var(--chart-2))",
+    "hsl(var(--chart-3))",
+    "hsl(var(--chart-4))",
+    "hsl(var(--chart-5))",
+    "hsl(var(--chart-6))",
   ];
 
-  const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
-  const RISK_COLORS = ["#10b981", "#f59e0b", "#ef4444", "#991b1b"];
+  const RISK_COLORS = {
+    "Baixo": "hsl(var(--success))",
+    "Médio": "hsl(var(--warning))",
+    "Alto": "hsl(var(--destructive))",
+    "Crítico": "hsl(0 72% 35%)",
+  };
 
   const getDaysUntil = (date: string) => {
     const diff = new Date(date).getTime() - new Date().getTime();
     return Math.ceil(diff / (1000 * 60 * 60 * 24));
   };
 
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Dashboard Executivo</h1>
-          <p className="text-muted-foreground mt-1">
-            Visão geral e análise de contratos
-          </p>
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-popover border border-border rounded-lg shadow-lg p-3">
+          <p className="text-sm font-medium mb-1">{label}</p>
+          {payload.map((entry: any, index: number) => (
+            <p key={index} className="text-sm text-muted-foreground">
+              {entry.name}: <span className="font-medium text-foreground">{entry.value}</span>
+            </p>
+          ))}
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => navigate("/contratos")}>
-            Ver Todos os Contratos
-          </Button>
-        </div>
-      </div>
+      );
+    }
+    return null;
+  };
 
-      {/* Alertas de Contratos Vencendo */}
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <PageHeader
+        title="Dashboard Executivo"
+        description="Visão geral e análise de contratos"
+        actions={
+          <Button onClick={() => navigate("/contratos")} variant="outline" size="sm">
+            Ver Todos os Contratos
+            <ArrowUpRight className="ml-1.5 h-4 w-4" />
+          </Button>
+        }
+      />
+
+      {/* Alert */}
       {contratosVencendo.length > 0 && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="animate-slide-up">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Atenção: Contratos Vencendo!</AlertTitle>
           <AlertDescription>
-            Você tem {contratosVencendo.length} contrato(s) vencendo nos próximos 30 dias:
-            <ul className="mt-2 space-y-1">
-              {contratosVencendo.slice(0, 3).map((contrato) => (
-                <li key={contrato.id} className="text-sm">
-                  • {contrato.titulo} - Vence em{" "}
-                  {new Date(contrato.data_fim).toLocaleDateString("pt-BR")}
-                </li>
-              ))}
-            </ul>
-            {contratosVencendo.length > 3 && (
-              <Button
-                variant="link"
-                className="mt-2 p-0 h-auto text-destructive-foreground"
-                onClick={() => navigate("/contratos")}
-              >
-                Ver todos os {contratosVencendo.length} contratos
-              </Button>
-            )}
+            <span>{contratosVencendo.length} contrato(s) vencendo nos próximos 30 dias.</span>
+            <Button
+              variant="link"
+              className="p-0 h-auto ml-2 text-destructive-foreground underline"
+              onClick={() => navigate("/alertas")}
+            >
+              Ver detalhes →
+            </Button>
           </AlertDescription>
         </Alert>
       )}
 
-      {/* KPIs */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        {statsData.map((stat, index) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={index} className="transition-all hover:shadow-lg">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {stat.title}
-                </CardTitle>
-                <div className={`h-10 w-10 rounded-lg ${stat.bgColor} flex items-center justify-center`}>
-                  <Icon className={`h-5 w-5 ${stat.color}`} />
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="flex items-baseline justify-between gap-2">
-                  <div className="text-xl sm:text-2xl font-bold break-words overflow-hidden flex-1 min-w-0">
-                    {stat.value}
-                  </div>
-                  {stat.trend && (
-                    <div className={`flex items-center text-xs font-medium whitespace-nowrap flex-shrink-0 ${
-                      stat.trendUp ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {stat.trendUp ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
-                      {stat.trend}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+      {/* KPI Cards */}
+      <StatCardGrid columns={4}>
+        <StatCard
+          title="Contratos Ativos"
+          value={stats.contratosAtivos}
+          icon={FileText}
+          variant="primary"
+          trend={{ value: 12, label: "vs mês anterior" }}
+        />
+        <StatCard
+          title="Valor Total"
+          value={formatCompactCurrency(stats.valorTotal)}
+          icon={DollarSign}
+          variant="success"
+          trend={{ value: 8, label: "vs mês anterior" }}
+        />
+        <StatCard
+          title="Vencendo em 30 dias"
+          value={stats.vencendo30Dias}
+          icon={Clock}
+          variant="warning"
+        />
+        <StatCard
+          title="Riscos Altos"
+          value={stats.riscosAltos}
+          icon={AlertTriangle}
+          variant="destructive"
+        />
+      </StatCardGrid>
+
+      {/* Secondary Stats */}
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Fornecedores"
+          value={stats.fornecedores}
+          icon={Users}
+          subtitle="Cadastrados"
+        />
+        <StatCard
+          title="Valor Médio"
+          value={formatCompactCurrency(stats.valorMedio)}
+          icon={Activity}
+          subtitle="Por contrato"
+        />
+        <StatCard
+          title="Aprovações Pendentes"
+          value={stats.aprovacoesPendentes}
+          icon={Timer}
+          subtitle="Aguardando ação"
+        />
+        <StatCard
+          title="Tempo Médio Aprovação"
+          value={`${stats.tempoMedioAprovacao.toFixed(1)}d`}
+          icon={Target}
+          subtitle={stats.tempoMedioAprovacao <= 5 ? "✓ Dentro da meta" : "⚠ Acima da meta"}
+        />
       </div>
 
-      {/* SLAs e Performance */}
-      <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
-        {/* Card de SLAs */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5" />
+      {/* Main Charts Grid */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* SLA Card */}
+        <Card className="card-elevated">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Target className="h-4 w-4 text-primary" />
               Indicadores de SLA
             </CardTitle>
-            <CardDescription>Performance vs Metas</CardDescription>
+            <CardDescription className="text-xs">Performance vs Metas</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-5">
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span>Aprovações no prazo (&lt; 5 dias)</span>
-                <span className={stats.taxaAprovacaoNoPrazo >= 80 ? 'text-green-600' : 'text-amber-600'}>
+                <span className="text-muted-foreground">Aprovações no prazo</span>
+                <span className={cn(
+                  "font-medium",
+                  stats.taxaAprovacaoNoPrazo >= 80 ? "text-success" : "text-warning"
+                )}>
                   {stats.taxaAprovacaoNoPrazo.toFixed(0)}%
                 </span>
               </div>
-              <Progress 
-                value={stats.taxaAprovacaoNoPrazo} 
-                className="h-2"
-              />
+              <Progress value={stats.taxaAprovacaoNoPrazo} className="h-2" />
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>Meta: 80%</span>
-                <span>{stats.taxaAprovacaoNoPrazo >= 80 ? '✓ Atingida' : '⚠ Abaixo'}</span>
+                <span>{stats.taxaAprovacaoNoPrazo >= 80 ? "✓ Atingida" : "⚠ Abaixo"}</span>
               </div>
             </div>
 
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span>Taxa de Renovação</span>
-                <span className={stats.taxaRenovacao >= 70 ? 'text-green-600' : 'text-amber-600'}>
+                <span className="text-muted-foreground">Taxa de Renovação</span>
+                <span className={cn(
+                  "font-medium",
+                  stats.taxaRenovacao >= 70 ? "text-success" : "text-warning"
+                )}>
                   {stats.taxaRenovacao.toFixed(0)}%
                 </span>
               </div>
-              <Progress 
-                value={stats.taxaRenovacao} 
-                className="h-2"
-              />
+              <Progress value={stats.taxaRenovacao} className="h-2" />
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>Meta: 70%</span>
-                <span>{stats.taxaRenovacao >= 70 ? '✓ Atingida' : '⚠ Abaixo'}</span>
+                <span>{stats.taxaRenovacao >= 70 ? "✓ Atingida" : "⚠ Abaixo"}</span>
               </div>
             </div>
 
-            <div className="pt-4 border-t space-y-3">
+            <div className="pt-3 border-t border-border space-y-2.5">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Timer className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">Tempo médio aprovação</span>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <RefreshCcw className="h-3.5 w-3.5" />
+                  <span>Contratos renovados</span>
                 </div>
-                <Badge variant={stats.tempoMedioAprovacao <= 5 ? "default" : "secondary"}>
-                  {stats.tempoMedioAprovacao.toFixed(1)} dias
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <RefreshCcw className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">Contratos renovados</span>
-                </div>
-                <Badge variant="outline">{stats.contratosRenovados}</Badge>
+                <Badge variant="secondary" className="text-xs">{stats.contratosRenovados}</Badge>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Top Fornecedores */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5" />
-              Top Fornecedores por Valor
+        <Card className="card-elevated lg:col-span-2">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Building2 className="h-4 w-4 text-primary" />
+              Top Fornecedores
             </CardTitle>
-            <CardDescription>Maiores volumes de contratos</CardDescription>
+            <CardDescription className="text-xs">Por valor de contratos</CardDescription>
           </CardHeader>
           <CardContent>
             {topFornecedores.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {topFornecedores.map((fornecedor, index) => {
                   const maxValor = topFornecedores[0]?.valor || 1;
                   const percentual = (fornecedor.valor / maxValor) * 100;
                   
                   return (
-                    <div key={index} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                            index === 0 ? 'bg-amber-500/20 text-amber-600' :
-                            index === 1 ? 'bg-zinc-400/20 text-zinc-600' :
-                            index === 2 ? 'bg-orange-600/20 text-orange-700' :
-                            'bg-muted text-muted-foreground'
-                          }`}>
+                    <div key={index} className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className={cn(
+                            "h-7 w-7 rounded-full flex items-center justify-center text-xs font-semibold shrink-0",
+                            index === 0 ? "bg-warning/20 text-warning" :
+                            index === 1 ? "bg-muted text-muted-foreground" :
+                            "bg-muted/50 text-muted-foreground"
+                          )}>
                             {index + 1}
                           </div>
-                          <div>
-                            <p className="font-medium text-sm truncate max-w-[200px]">
-                              {fornecedor.nome}
-                            </p>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{fornecedor.nome}</p>
                             <p className="text-xs text-muted-foreground">
-                              {fornecedor.count} contrato{fornecedor.count > 1 ? 's' : ''}
+                              {fornecedor.count} contrato{fornecedor.count > 1 ? "s" : ""}
                             </p>
                           </div>
                         </div>
-                        <span className="font-semibold text-sm">
+                        <span className="text-sm font-semibold shrink-0">
                           {formatCompactCurrency(fornecedor.valor)}
                         </span>
                       </div>
-                      <Progress value={percentual} className="h-1.5" />
+                      <Progress value={percentual} className="h-1" />
                     </div>
                   );
                 })}
               </div>
             ) : (
-              <div className="flex items-center justify-center h-[200px] text-muted-foreground">
-                Nenhum fornecedor com contratos
-              </div>
+              <EmptyState
+                title="Sem dados"
+                description="Nenhum fornecedor com contratos ainda"
+              />
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Gráficos Principais */}
-      <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              Contratos Criados por Mês
+      {/* Charts Row */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card className="card-elevated">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <TrendingUp className="h-4 w-4 text-primary" />
+              Evolução de Contratos
             </CardTitle>
-            <CardDescription>Últimos 6 meses</CardDescription>
+            <CardDescription className="text-xs">Últimos 6 meses</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="mes" className="text-xs" />
-                <YAxis className="text-xs" />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
-                />
-                <Legend />
-                <Line 
+            <ResponsiveContainer width="100%" height={260}>
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id="colorContratos" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                <XAxis dataKey="mes" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+                <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+                <Tooltip content={<CustomTooltip />} />
+                <Area 
                   type="monotone" 
                   dataKey="contratos" 
-                  stroke="#3b82f6" 
-                  strokeWidth={3}
+                  stroke="hsl(var(--primary))" 
+                  strokeWidth={2}
+                  fill="url(#colorContratos)"
                   name="Contratos"
-                  dot={{ fill: "#3b82f6", r: 4 }}
                 />
-              </LineChart>
+              </AreaChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
-              Valor dos Contratos por Mês
+        <Card className="card-elevated">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <DollarSign className="h-4 w-4 text-primary" />
+              Valor por Mês
             </CardTitle>
-            <CardDescription>Em milhares (R$)</CardDescription>
+            <CardDescription className="text-xs">Em milhares (R$)</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={260}>
               <BarChart data={valorMensalData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="mes" className="text-xs" />
-                <YAxis className="text-xs" />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
-                  formatter={(value: number) => `R$ ${value.toFixed(2)}k`}
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                <XAxis dataKey="mes" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+                <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar 
+                  dataKey="valor" 
+                  fill="hsl(var(--success))" 
+                  name="Valor (mil)" 
+                  radius={[4, 4, 0, 0]} 
                 />
-                <Legend />
-                <Bar dataKey="valor" fill="#10b981" name="Valor Total (mil)" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Contratos por Tipo</CardTitle>
-            <CardDescription>Distribuição por categoria</CardDescription>
+        <Card className="card-elevated">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Contratos por Tipo</CardTitle>
+            <CardDescription className="text-xs">Distribuição atual</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={260}>
               <PieChart>
                 <Pie
                   data={tipoContratoData}
                   cx="50%"
                   cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => 
-                    `${name}: ${(percent * 100).toFixed(0)}%`
-                  }
-                  outerRadius={100}
-                  fill="#8884d8"
+                  innerRadius={50}
+                  outerRadius={90}
+                  paddingAngle={2}
                   dataKey="value"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  labelLine={false}
                 >
                   {tipoContratoData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip content={<CustomTooltip />} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5" />
+        <Card className="card-elevated">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <AlertTriangle className="h-4 w-4 text-primary" />
               Análise de Riscos
             </CardTitle>
-            <CardDescription>Distribuição por nível de risco</CardDescription>
+            <CardDescription className="text-xs">Por nível de risco</CardDescription>
           </CardHeader>
           <CardContent>
             {riskData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={260}>
                 <BarChart data={riskData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis type="number" className="text-xs" />
-                  <YAxis dataKey="name" type="category" width={100} className="text-xs" />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
-                  />
-                  <Bar dataKey="value" name="Contratos" radius={[0, 8, 8, 0]}>
-                    {riskData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={RISK_COLORS[index % RISK_COLORS.length]} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+                  <YAxis dataKey="name" type="category" width={60} tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="value" name="Contratos" radius={[0, 4, 4, 0]}>
+                    {riskData.map((entry) => (
+                      <Cell key={entry.name} fill={RISK_COLORS[entry.name as keyof typeof RISK_COLORS]} />
                     ))}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                Nenhuma análise de risco disponível
-              </div>
+              <EmptyState
+                title="Sem análises"
+                description="Nenhuma análise de risco disponível"
+              />
             )}
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Contratos por Status</CardTitle>
-            <CardDescription>Situação atual dos contratos</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={statusData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="name" className="text-xs" />
-                <YAxis className="text-xs" />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
-                />
-                <Legend />
-                <Bar dataKey="value" fill="#3b82f6" name="Quantidade" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
 
-      {/* Timeline de Vencimentos */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CalendarIcon className="h-5 w-5" />
-            Timeline de Vencimentos
+      {/* Timeline */}
+      <Card className="card-elevated">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <CalendarIcon className="h-4 w-4 text-primary" />
+            Próximos Vencimentos
           </CardTitle>
-          <CardDescription>Próximos 90 dias</CardDescription>
+          <CardDescription className="text-xs">Contratos nos próximos 90 dias</CardDescription>
         </CardHeader>
         <CardContent>
           {timelineVencimentos.length > 0 ? (
-            <div className="space-y-4">
-              {timelineVencimentos.slice(0, 10).map((contrato, index) => {
+            <div className="space-y-3">
+              {timelineVencimentos.slice(0, 8).map((contrato) => {
                 const dias = getDaysUntil(contrato.data_fim);
-                const urgencia = dias <= 7 ? 'urgent' : dias <= 30 ? 'warning' : 'normal';
+                const urgencia = dias <= 7 ? "destructive" : dias <= 30 ? "warning" : "default";
                 
                 return (
-                  <div key={contrato.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                    <div className="flex-shrink-0 w-16">
-                      <Badge 
-                        variant={urgencia === 'urgent' ? 'destructive' : urgencia === 'warning' ? 'default' : 'secondary'}
-                        className="w-full justify-center"
-                      >
-                        {dias}d
-                      </Badge>
+                  <div 
+                    key={contrato.id} 
+                    className="flex items-center gap-4 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer"
+                    onClick={() => navigate(`/contratos/${contrato.id}`)}
+                  >
+                    <Badge 
+                      variant={urgencia === "destructive" ? "destructive" : urgencia === "warning" ? "default" : "secondary"}
+                      className="w-14 justify-center shrink-0"
+                    >
+                      {dias}d
+                    </Badge>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{contrato.titulo}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Vence em {new Date(contrato.data_fim).toLocaleDateString("pt-BR")}
+                      </p>
                     </div>
-                    <div className="flex-1 w-full">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium truncate">{contrato.titulo}</p>
-                          <p className="text-sm text-muted-foreground">
-                            Vence em {new Date(contrato.data_fim).toLocaleDateString("pt-BR")}
-                          </p>
-                        </div>
-                        <div className="text-left sm:text-right flex-shrink-0">
-                          <p className="font-semibold">{formatCurrency(contrato.valor_total || 0)}</p>
-                        </div>
-                      </div>
-                      <Progress 
-                        value={Math.max(0, 100 - (dias / 90 * 100))} 
-                        className="h-1 mt-2"
-                      />
-                    </div>
+                    <span className="text-sm font-semibold shrink-0">
+                      {formatCurrency(contrato.valor_total || 0)}
+                    </span>
                   </div>
                 );
               })}
-              {timelineVencimentos.length > 10 && (
+              {timelineVencimentos.length > 8 && (
                 <Button 
-                  variant="outline" 
-                  className="w-full" 
+                  variant="ghost" 
+                  className="w-full text-sm" 
                   onClick={() => navigate("/calendario")}
                 >
                   Ver todos os {timelineVencimentos.length} vencimentos
+                  <ArrowUpRight className="ml-1.5 h-4 w-4" />
                 </Button>
               )}
             </div>
           ) : (
-            <div className="text-center py-12 text-muted-foreground">
-              Nenhum contrato vencendo nos próximos 90 dias
-            </div>
+            <EmptyState
+              title="Nenhum vencimento próximo"
+              description="Não há contratos vencendo nos próximos 90 dias"
+            />
           )}
         </CardContent>
       </Card>
-
     </div>
   );
 };
