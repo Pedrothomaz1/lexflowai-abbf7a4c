@@ -14,7 +14,11 @@ import {
   AlertTriangle,
   TrendingDown,
   Activity,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  Timer,
+  Target,
+  RefreshCcw,
+  Building2
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -48,6 +52,11 @@ const Dashboard = () => {
     valorTotal: 0,
     valorMedio: 0,
     riscosAltos: 0,
+    // SLAs
+    tempoMedioAprovacao: 0,
+    taxaAprovacaoNoPrazo: 0,
+    contratosRenovados: 0,
+    taxaRenovacao: 0,
   });
   const [contratosVencendo, setContratosVencendo] = useState<any[]>([]);
   const [chartData, setChartData] = useState<any[]>([]);
@@ -56,6 +65,8 @@ const Dashboard = () => {
   const [riskData, setRiskData] = useState<any[]>([]);
   const [valorMensalData, setValorMensalData] = useState<any[]>([]);
   const [timelineVencimentos, setTimelineVencimentos] = useState<any[]>([]);
+  const [topFornecedores, setTopFornecedores] = useState<any[]>([]);
+  const [slaData, setSlaData] = useState<any[]>([]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -110,11 +121,35 @@ const Dashboard = () => {
       .lte("data_fim", data30Dias.toISOString().split("T")[0])
       .eq("status", "vigente");
 
-    // Buscar aprovações pendentes
+    // Buscar aprovações pendentes e completas
     const { data: aprovacoes } = await supabase
       .from("contract_approvals")
-      .select("*")
-      .is("data_aprovacao", null);
+      .select("*");
+
+    const aprovacoesPendentes = aprovacoes?.filter(a => !a.data_aprovacao) || [];
+    const aprovacoesCompletas = aprovacoes?.filter(a => a.data_aprovacao) || [];
+
+    // Calcular tempo médio de aprovação (em dias)
+    let tempoMedioAprovacao = 0;
+    if (aprovacoesCompletas.length > 0) {
+      const tempos = aprovacoesCompletas.map(a => {
+        const criado = new Date(a.created_at);
+        const aprovado = new Date(a.data_aprovacao);
+        return (aprovado.getTime() - criado.getTime()) / (1000 * 60 * 60 * 24);
+      });
+      tempoMedioAprovacao = tempos.reduce((sum, t) => sum + t, 0) / tempos.length;
+    }
+
+    // Taxa de aprovação no prazo (< 5 dias é considerado no prazo)
+    const aprovacoesNoPrazo = aprovacoesCompletas.filter(a => {
+      const criado = new Date(a.created_at);
+      const aprovado = new Date(a.data_aprovacao);
+      const dias = (aprovado.getTime() - criado.getTime()) / (1000 * 60 * 60 * 24);
+      return dias <= 5;
+    });
+    const taxaAprovacaoNoPrazo = aprovacoesCompletas.length > 0 
+      ? (aprovacoesNoPrazo.length / aprovacoesCompletas.length) * 100 
+      : 0;
 
     // Buscar análises de risco
     const { data: analises } = await supabase
@@ -128,14 +163,58 @@ const Dashboard = () => {
     // Contar riscos altos (score >= 7)
     const riscosAltos = analises?.filter((a: any) => (a.score_risco || 0) >= 7).length || 0;
 
+    // Calcular taxa de renovação
+    const contratosEncerrados = todosContratos?.filter(c => c.status === 'encerrado') || [];
+    const contratosRenovados = todosContratos?.filter(c => 
+      c.observacoes?.toLowerCase().includes('renovado') || 
+      c.observacoes?.toLowerCase().includes('renovação')
+    ).length || 0;
+    const taxaRenovacao = contratosEncerrados.length > 0 
+      ? (contratosRenovados / contratosEncerrados.length) * 100 
+      : 0;
+
+    // Top fornecedores por valor
+    const valorPorFornecedor: Record<string, { nome: string; valor: number; count: number }> = {};
+    
+    const { data: fornecedoresList } = await supabase.from("fornecedores").select("id, razao_social");
+    const fornecedoresMap = new Map(fornecedoresList?.map(f => [f.id, f.razao_social]) || []);
+
+    todosContratos?.forEach((c: any) => {
+      if (c.fornecedor_id) {
+        const nome = fornecedoresMap.get(c.fornecedor_id) || 'Desconhecido';
+        if (!valorPorFornecedor[c.fornecedor_id]) {
+          valorPorFornecedor[c.fornecedor_id] = { nome, valor: 0, count: 0 };
+        }
+        valorPorFornecedor[c.fornecedor_id].valor += Number(c.valor_total) || 0;
+        valorPorFornecedor[c.fornecedor_id].count++;
+      }
+    });
+
+    const topFornecedoresList = Object.values(valorPorFornecedor)
+      .sort((a, b) => b.valor - a.valor)
+      .slice(0, 5);
+    
+    setTopFornecedores(topFornecedoresList);
+
+    // Dados de SLA
+    const slaMetrics = [
+      { name: 'Aprovação < 5 dias', value: taxaAprovacaoNoPrazo, target: 80 },
+      { name: 'Contratos no prazo', value: Math.min(100, 100 - (stats.vencendo30Dias / (stats.contratosAtivos || 1)) * 100), target: 90 },
+    ];
+    setSlaData(slaMetrics);
+
     setStats({
       contratosAtivos: contratos?.length || 0,
       fornecedores: fornecedores?.length || 0,
       vencendo30Dias: vencendo?.length || 0,
-      aprovacoesPendentes: aprovacoes?.length || 0,
+      aprovacoesPendentes: aprovacoesPendentes.length,
       valorTotal,
       valorMedio,
       riscosAltos,
+      tempoMedioAprovacao,
+      taxaAprovacaoNoPrazo,
+      contratosRenovados,
+      taxaRenovacao,
     });
 
     // Contratos vencendo (para alertas)
@@ -355,6 +434,13 @@ const Dashboard = () => {
       color: "text-orange-600",
       bgColor: "bg-orange-600/10",
     },
+    {
+      title: "Tempo Médio Aprovação",
+      value: `${stats.tempoMedioAprovacao.toFixed(1)}d`,
+      icon: Timer,
+      color: "text-indigo-600",
+      bgColor: "bg-indigo-600/10",
+    },
   ];
 
   const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
@@ -441,6 +527,128 @@ const Dashboard = () => {
             </Card>
           );
         })}
+      </div>
+
+      {/* SLAs e Performance */}
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
+        {/* Card de SLAs */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5" />
+              Indicadores de SLA
+            </CardTitle>
+            <CardDescription>Performance vs Metas</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Aprovações no prazo (&lt; 5 dias)</span>
+                <span className={stats.taxaAprovacaoNoPrazo >= 80 ? 'text-green-600' : 'text-amber-600'}>
+                  {stats.taxaAprovacaoNoPrazo.toFixed(0)}%
+                </span>
+              </div>
+              <Progress 
+                value={stats.taxaAprovacaoNoPrazo} 
+                className="h-2"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Meta: 80%</span>
+                <span>{stats.taxaAprovacaoNoPrazo >= 80 ? '✓ Atingida' : '⚠ Abaixo'}</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Taxa de Renovação</span>
+                <span className={stats.taxaRenovacao >= 70 ? 'text-green-600' : 'text-amber-600'}>
+                  {stats.taxaRenovacao.toFixed(0)}%
+                </span>
+              </div>
+              <Progress 
+                value={stats.taxaRenovacao} 
+                className="h-2"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Meta: 70%</span>
+                <span>{stats.taxaRenovacao >= 70 ? '✓ Atingida' : '⚠ Abaixo'}</span>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Timer className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">Tempo médio aprovação</span>
+                </div>
+                <Badge variant={stats.tempoMedioAprovacao <= 5 ? "default" : "secondary"}>
+                  {stats.tempoMedioAprovacao.toFixed(1)} dias
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <RefreshCcw className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">Contratos renovados</span>
+                </div>
+                <Badge variant="outline">{stats.contratosRenovados}</Badge>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Top Fornecedores */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              Top Fornecedores por Valor
+            </CardTitle>
+            <CardDescription>Maiores volumes de contratos</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {topFornecedores.length > 0 ? (
+              <div className="space-y-4">
+                {topFornecedores.map((fornecedor, index) => {
+                  const maxValor = topFornecedores[0]?.valor || 1;
+                  const percentual = (fornecedor.valor / maxValor) * 100;
+                  
+                  return (
+                    <div key={index} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                            index === 0 ? 'bg-amber-500/20 text-amber-600' :
+                            index === 1 ? 'bg-zinc-400/20 text-zinc-600' :
+                            index === 2 ? 'bg-orange-600/20 text-orange-700' :
+                            'bg-muted text-muted-foreground'
+                          }`}>
+                            {index + 1}
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm truncate max-w-[200px]">
+                              {fornecedor.nome}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {fornecedor.count} contrato{fornecedor.count > 1 ? 's' : ''}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="font-semibold text-sm">
+                          {formatCompactCurrency(fornecedor.valor)}
+                        </span>
+                      </div>
+                      <Progress value={percentual} className="h-1.5" />
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-[200px] text-muted-foreground">
+                Nenhum fornecedor com contratos
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Gráficos Principais */}
