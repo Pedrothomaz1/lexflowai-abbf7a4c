@@ -194,7 +194,7 @@ serve(async (req) => {
         const html = getEmailTemplate(body, appUrl);
 
         const { error: sendError } = await resend.emails.send({
-          from: "LexFlow <onboarding@resend.dev>",
+          from: "LexFlow <alertas@veridianaquirino.com.br>",
           to: [user.email],
           subject: `${body.diasAntecedencia <= 7 ? '⚠️ URGENTE: ' : ''}${body.titulo}`,
           html,
