@@ -15,7 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { User } from "@supabase/supabase-js";
-import { Shield, CheckCircle2, FileSignature } from "lucide-react";
+import { Shield, CheckCircle2, FileSignature, Bell } from "lucide-react";
 
 const Settings = () => {
   const { toast } = useToast();
@@ -233,6 +233,28 @@ const Settings = () => {
               Para solicitar alteração de perfil, entre em contato com um administrador.
             </p>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="h-5 w-5" />
+            Notificações
+          </CardTitle>
+          <CardDescription>
+            Configure como receber alertas sobre seus contratos
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button 
+            variant="outline" 
+            className="w-full sm:w-auto"
+            onClick={() => navigate('/notification-settings')}
+          >
+            <Bell className="h-4 w-4 mr-2" />
+            Configurar Notificações
+          </Button>
         </CardContent>
       </Card>
 
