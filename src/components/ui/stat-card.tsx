@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { LucideIcon, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { motion } from "framer-motion";
 
 interface StatCardProps {
   title: string;
@@ -10,7 +11,7 @@ interface StatCardProps {
     value: number;
     label?: string;
   };
-  variant?: "default" | "primary" | "success" | "warning" | "destructive";
+  variant?: "default" | "primary" | "success" | "warning" | "destructive" | "error" | "muted" | "info";
   className?: string;
   onClick?: () => void;
 }
@@ -25,6 +26,9 @@ export function StatCard({
   className,
   onClick,
 }: StatCardProps) {
+  // Map error and muted to existing variants
+  const mappedVariant = variant === "error" ? "destructive" : variant === "muted" ? "default" : variant === "info" ? "primary" : variant;
+  
   const variantClasses = {
     default: "stat-card",
     primary: "stat-card-primary",
@@ -58,9 +62,12 @@ export function StatCard({
     : "";
 
   return (
-    <div
+    <motion.div
+      whileHover={{ y: -2, boxShadow: "0 8px 25px -8px hsl(var(--primary) / 0.1)" }}
+      whileTap={{ scale: 0.98 }}
+      transition={{ type: "spring", stiffness: 400, damping: 17 }}
       className={cn(
-        variantClasses[variant],
+        variantClasses[mappedVariant as keyof typeof variantClasses],
         onClick && "cursor-pointer hover:border-primary/30 transition-all duration-200",
         className
       )}
@@ -71,7 +78,10 @@ export function StatCard({
           <p className="text-sm font-medium text-muted-foreground truncate">
             {title}
           </p>
-          <p className="text-2xl font-semibold tracking-tight text-foreground truncate">
+          <p className={cn(
+            "text-2xl font-semibold tracking-tight truncate",
+            variant === "error" || variant === "destructive" ? "text-destructive" : "text-foreground"
+          )}>
             {value}
           </p>
           {subtitle && (
@@ -82,7 +92,7 @@ export function StatCard({
           <div
             className={cn(
               "p-2.5 rounded-lg bg-background/50",
-              iconColors[variant]
+              iconColors[mappedVariant as keyof typeof iconColors]
             )}
           >
             <Icon className="h-5 w-5" />
@@ -101,7 +111,7 @@ export function StatCard({
           )}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
 

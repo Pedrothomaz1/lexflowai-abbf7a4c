@@ -5,13 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -28,17 +22,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Plus, Users, Mail, Phone, MapPin, Download } from "lucide-react";
+import { Plus, Mail, Phone, MapPin, Download, Building2 } from "lucide-react";
 import { exportFornecedoresPDF } from "@/utils/pdfExport";
+import { PageHeader } from "@/components/ui/page-header";
+import { DataTable, DataTableColumn } from "@/components/ui/data-table";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageSkeleton } from "@/components/ui/skeleton-loaders";
+import { AnimatedButton } from "@/components/ui/animated-button";
+import { StaggerContainer, StaggerItem, FadeIn } from "@/components/ui/motion-container";
+import { AnimatedCard, AnimatedCardContent, AnimatedCardHeader } from "@/components/ui/animated-card";
 
 type Fornecedor = {
   id: string;
@@ -104,7 +96,6 @@ const Fornecedores = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Validar campos obrigatórios
     if (formData.tipo_pessoa === "juridica" && !formData.cnpj) {
       toast({
         variant: "destructive",
@@ -164,268 +155,295 @@ const Fornecedores = () => {
     exportFornecedoresPDF(fornecedores);
   };
 
+  const columns: DataTableColumn<Fornecedor>[] = [
+    {
+      key: "nome",
+      header: "Nome",
+      render: (value) => (
+        <span className="font-medium text-foreground">{value}</span>
+      ),
+    },
+    {
+      key: "tipo_pessoa",
+      header: "Tipo",
+      render: (value) => (
+        <Badge variant="outline" className="font-mono">
+          {value === "juridica" ? "PJ" : "PF"}
+        </Badge>
+      ),
+    },
+    {
+      key: "cnpj",
+      header: "Documento",
+      render: (_, row) => (
+        <span className="font-mono text-sm text-muted-foreground">
+          {row.cnpj || row.cpf || "—"}
+        </span>
+      ),
+    },
+    {
+      key: "email",
+      header: "Contato",
+      render: (_, row) => (
+        <div className="space-y-1 text-sm">
+          {row.email && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Mail className="h-3 w-3" />
+              <span className="truncate max-w-[180px]">{row.email}</span>
+            </div>
+          )}
+          {row.telefone && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Phone className="h-3 w-3" />
+              {row.telefone}
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "cidade",
+      header: "Localização",
+      render: (_, row) =>
+        row.cidade || row.estado ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <MapPin className="h-3 w-3" />
+            {row.cidade}
+            {row.cidade && row.estado && " - "}
+            {row.estado}
+          </div>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+    },
+  ];
+
+  if (loading) {
+    return <PageSkeleton />;
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Fornecedores</h1>
-          <p className="text-muted-foreground mt-1">
-            Gerencie seus fornecedores e parceiros
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleExportPDF}>
-            <Download className="h-4 w-4 mr-2" />
-            Exportar PDF
-          </Button>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Fornecedor
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Novo Fornecedor</DialogTitle>
-              <DialogDescription>
-                Preencha os dados do fornecedor
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="nome">Nome / Razão Social *</Label>
-                <Input
-                  id="nome"
-                  value={formData.nome}
-                  onChange={(e) =>
-                    setFormData({ ...formData, nome: e.target.value })
-                  }
-                  required
-                />
-              </div>
+      <FadeIn>
+        <PageHeader
+          title="Fornecedores"
+          description="Gerencie seus fornecedores e parceiros"
+          actions={
+            <div className="flex gap-2">
+              <AnimatedButton variant="outline" onClick={handleExportPDF}>
+                <Download className="h-4 w-4 mr-2" />
+                Exportar PDF
+              </AnimatedButton>
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
+                  <AnimatedButton>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Novo Fornecedor
+                  </AnimatedButton>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Novo Fornecedor</DialogTitle>
+                    <DialogDescription>
+                      Preencha os dados do fornecedor
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="nome">Nome / Razão Social *</Label>
+                      <Input
+                        id="nome"
+                        value={formData.nome}
+                        onChange={(e) =>
+                          setFormData({ ...formData, nome: e.target.value })
+                        }
+                        required
+                      />
+                    </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="tipo_pessoa">Tipo de Pessoa *</Label>
-                  <Select
-                    value={formData.tipo_pessoa}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, tipo_pessoa: value })
-                    }
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="juridica">Pessoa Jurídica</SelectItem>
-                      <SelectItem value="fisica">Pessoa Física</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {formData.tipo_pessoa === "juridica" ? (
-                  <div className="space-y-2">
-                    <Label htmlFor="cnpj">CNPJ *</Label>
-                    <Input
-                      id="cnpj"
-                      value={formData.cnpj}
-                      onChange={(e) =>
-                        setFormData({ ...formData, cnpj: e.target.value })
-                      }
-                      placeholder="00.000.000/0000-00"
-                      required={formData.tipo_pessoa === "juridica"}
-                    />
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Label htmlFor="cpf">CPF *</Label>
-                    <Input
-                      id="cpf"
-                      value={formData.cpf}
-                      onChange={(e) =>
-                        setFormData({ ...formData, cpf: e.target.value })
-                      }
-                      placeholder="000.000.000-00"
-                      required={formData.tipo_pessoa === "fisica"}
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="telefone">Telefone</Label>
-                  <Input
-                    id="telefone"
-                    value={formData.telefone}
-                    onChange={(e) =>
-                      setFormData({ ...formData, telefone: e.target.value })
-                    }
-                    placeholder="(00) 00000-0000"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="endereco">Endereço</Label>
-                <Input
-                  id="endereco"
-                  value={formData.endereco}
-                  onChange={(e) =>
-                    setFormData({ ...formData, endereco: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="cidade">Cidade</Label>
-                  <Input
-                    id="cidade"
-                    value={formData.cidade}
-                    onChange={(e) =>
-                      setFormData({ ...formData, cidade: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="estado">Estado</Label>
-                  <Input
-                    id="estado"
-                    value={formData.estado}
-                    onChange={(e) =>
-                      setFormData({ ...formData, estado: e.target.value })
-                    }
-                    maxLength={2}
-                    placeholder="SP"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="cep">CEP</Label>
-                  <Input
-                    id="cep"
-                    value={formData.cep}
-                    onChange={(e) =>
-                      setFormData({ ...formData, cep: e.target.value })
-                    }
-                    placeholder="00000-000"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notas">Observações</Label>
-                <Textarea
-                  id="notas"
-                  value={formData.notas}
-                  onChange={(e) =>
-                    setFormData({ ...formData, notas: e.target.value })
-                  }
-                  rows={3}
-                />
-              </div>
-
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit">Criar Fornecedor</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista de Fornecedores</CardTitle>
-          <CardDescription>
-            {fornecedores.length} fornecedor(es) cadastrado(s)
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Carregando...
-            </div>
-          ) : fornecedores.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Nenhum fornecedor cadastrado ainda.</p>
-              <p className="text-sm mt-2">Clique em "Novo Fornecedor" para começar.</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Documento</TableHead>
-                  <TableHead>Contato</TableHead>
-                  <TableHead>Localização</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {fornecedores.map((fornecedor) => (
-                  <TableRow key={fornecedor.id}>
-                    <TableCell className="font-medium">
-                      {fornecedor.nome}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {fornecedor.tipo_pessoa === "juridica" ? "PJ" : "PF"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {fornecedor.cnpj || fornecedor.cpf || "-"}
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1 text-sm">
-                        {fornecedor.email && (
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-3 w-3 text-muted-foreground" />
-                            {fornecedor.email}
-                          </div>
-                        )}
-                        {fornecedor.telefone && (
-                          <div className="flex items-center gap-2">
-                            <Phone className="h-3 w-3 text-muted-foreground" />
-                            {fornecedor.telefone}
-                          </div>
-                        )}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="tipo_pessoa">Tipo de Pessoa *</Label>
+                        <Select
+                          value={formData.tipo_pessoa}
+                          onValueChange={(value) =>
+                            setFormData({ ...formData, tipo_pessoa: value })
+                          }
+                          required
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="juridica">Pessoa Jurídica</SelectItem>
+                            <SelectItem value="fisica">Pessoa Física</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      {(fornecedor.cidade || fornecedor.estado) && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <MapPin className="h-3 w-3 text-muted-foreground" />
-                          {fornecedor.cidade}
-                          {fornecedor.cidade && fornecedor.estado && " - "}
-                          {fornecedor.estado}
+
+                      {formData.tipo_pessoa === "juridica" ? (
+                        <div className="space-y-2">
+                          <Label htmlFor="cnpj">CNPJ *</Label>
+                          <Input
+                            id="cnpj"
+                            value={formData.cnpj}
+                            onChange={(e) =>
+                              setFormData({ ...formData, cnpj: e.target.value })
+                            }
+                            placeholder="00.000.000/0000-00"
+                            required={formData.tipo_pessoa === "juridica"}
+                          />
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <Label htmlFor="cpf">CPF *</Label>
+                          <Input
+                            id="cpf"
+                            value={formData.cpf}
+                            onChange={(e) =>
+                              setFormData({ ...formData, cpf: e.target.value })
+                            }
+                            placeholder="000.000.000-00"
+                            required={formData.tipo_pessoa === "fisica"}
+                          />
                         </div>
                       )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={formData.email}
+                          onChange={(e) =>
+                            setFormData({ ...formData, email: e.target.value })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="telefone">Telefone</Label>
+                        <Input
+                          id="telefone"
+                          value={formData.telefone}
+                          onChange={(e) =>
+                            setFormData({ ...formData, telefone: e.target.value })
+                          }
+                          placeholder="(00) 00000-0000"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="endereco">Endereço</Label>
+                      <Input
+                        id="endereco"
+                        value={formData.endereco}
+                        onChange={(e) =>
+                          setFormData({ ...formData, endereco: e.target.value })
+                        }
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="cidade">Cidade</Label>
+                        <Input
+                          id="cidade"
+                          value={formData.cidade}
+                          onChange={(e) =>
+                            setFormData({ ...formData, cidade: e.target.value })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="estado">Estado</Label>
+                        <Input
+                          id="estado"
+                          value={formData.estado}
+                          onChange={(e) =>
+                            setFormData({ ...formData, estado: e.target.value })
+                          }
+                          maxLength={2}
+                          placeholder="SP"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="cep">CEP</Label>
+                        <Input
+                          id="cep"
+                          value={formData.cep}
+                          onChange={(e) =>
+                            setFormData({ ...formData, cep: e.target.value })
+                          }
+                          placeholder="00000-000"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="notas">Observações</Label>
+                      <Textarea
+                        id="notas"
+                        value={formData.notas}
+                        onChange={(e) =>
+                          setFormData({ ...formData, notas: e.target.value })
+                        }
+                        rows={3}
+                      />
+                    </div>
+
+                    <DialogFooter>
+                      <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                        Cancelar
+                      </Button>
+                      <Button type="submit">Criar Fornecedor</Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </div>
+          }
+        />
+      </FadeIn>
+
+      <StaggerContainer>
+        <StaggerItem>
+          <AnimatedCard hoverScale={1}>
+            <AnimatedCardHeader>
+              <div className="flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-primary" />
+                <h3 className="text-lg font-semibold">Lista de Fornecedores</h3>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {fornecedores.length} fornecedor(es) cadastrado(s)
+              </p>
+            </AnimatedCardHeader>
+            <AnimatedCardContent>
+              {fornecedores.length === 0 ? (
+                <EmptyState
+                  icon={Building2}
+                  title="Nenhum fornecedor cadastrado"
+                  description="Cadastre seu primeiro fornecedor para começar a gerenciar suas parcerias."
+                  action={{
+                    label: "Novo Fornecedor",
+                    onClick: () => setDialogOpen(true),
+                  }}
+                />
+              ) : (
+                <DataTable
+                  data={fornecedores}
+                  columns={columns}
+                  searchable
+                  searchPlaceholder="Buscar por nome, documento..."
+                  searchKey="nome"
+                />
+              )}
+            </AnimatedCardContent>
+          </AnimatedCard>
+        </StaggerItem>
+      </StaggerContainer>
     </div>
   );
 };
