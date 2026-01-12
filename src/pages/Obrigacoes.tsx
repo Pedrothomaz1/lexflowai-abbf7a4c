@@ -61,9 +61,7 @@ type Obligation = {
       nome: string;
     } | null;
   } | null;
-  profiles: {
-    full_name: string;
-  } | null;
+  responsavel_nome?: string | null;
 };
 
 const tipoConfig: Record<string, { label: string; icon: typeof DollarSign; color: string }> = {
@@ -89,7 +87,8 @@ const Obrigacoes = () => {
 
   const fetchObligations = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch obligations with contracts
+      const { data: obligationsData, error: obligationsError } = await supabase
         .from("contract_obligations")
         .select(`
           *,
@@ -100,15 +99,42 @@ const Obrigacoes = () => {
             fornecedores (
               nome
             )
-          ),
-          profiles:responsavel_id (
-            full_name
           )
         `)
         .order("data_vencimento", { ascending: true });
 
-      if (error) throw error;
-      setObligations(data || []);
+      if (obligationsError) throw obligationsError;
+
+      // Get unique responsavel_ids to fetch their profiles
+      const responsavelIds = [...new Set(
+        (obligationsData || [])
+          .map(o => o.responsavel_id)
+          .filter((id): id is string => id !== null)
+      )];
+
+      // Fetch profiles for responsaveis
+      let profilesMap: Record<string, string> = {};
+      if (responsavelIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", responsavelIds);
+
+        if (profilesData) {
+          profilesMap = profilesData.reduce((acc, p) => {
+            acc[p.id] = p.full_name;
+            return acc;
+          }, {} as Record<string, string>);
+        }
+      }
+
+      // Combine data
+      const enrichedObligations: Obligation[] = (obligationsData || []).map(o => ({
+        ...o,
+        responsavel_nome: o.responsavel_id ? profilesMap[o.responsavel_id] || null : null,
+      }));
+
+      setObligations(enrichedObligations);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar obrigações",
@@ -289,12 +315,12 @@ const Obrigacoes = () => {
       ),
     },
     {
-      key: "profiles",
+      key: "responsavel_nome",
       header: "Responsável",
       render: (value) => (
         <div className="flex items-center gap-2">
           <User className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm">{value?.full_name || "Não atribuído"}</span>
+          <span className="text-sm">{value || "Não atribuído"}</span>
         </div>
       ),
     },
