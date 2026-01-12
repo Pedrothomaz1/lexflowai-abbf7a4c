@@ -357,7 +357,7 @@ export function ContractImport({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-4xl h-[90vh] max-h-[90vh] overflow-hidden flex flex-col min-h-0">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5 text-primary" />
@@ -403,7 +403,7 @@ export function ContractImport({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden flex flex-col min-h-0">
           {/* Step 1: Upload */}
           {step === 'upload' && (
             <div className="space-y-6">
@@ -447,16 +447,16 @@ export function ContractImport({
 
           {/* Step 2: Preview */}
           {step === 'preview' && (
-            <div className="space-y-4">
+            <div className="flex flex-col gap-4 flex-1 min-h-0">
               {/* Summary */}
               <div className="flex flex-wrap gap-4 p-4 bg-muted/50 rounded-lg justify-between items-center">
                 <div className="flex gap-4 flex-wrap">
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    <CheckCircle2 className="h-4 w-4 text-success" />
                     <span className="text-sm">{validCount} válidos</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                    <AlertTriangle className="h-4 w-4 text-warning" />
                     <span className="text-sm">{warningCount} com avisos</span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -464,32 +464,28 @@ export function ContractImport({
                     <span className="text-sm">{errorCount} com erros</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-blue-500" />
+                    <Users className="h-4 w-4 text-info" />
                     <span className="text-sm">{newSuppliersCount} novos fornecedores</span>
                   </div>
                 </div>
-                
+
                 {/* Quick Selection Buttons */}
                 <div className="flex gap-2 flex-wrap">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={selectAllValid}
-                    className="text-green-600 border-green-200 hover:bg-green-50"
+                    className="text-success border-success/30 hover:bg-success/10"
                   >
                     <CheckCircle2 className="h-3 w-3 mr-1" />
                     Selecionar válidos ({validCount})
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={toggleAllRows}
-                  >
+                  <Button variant="outline" size="sm" onClick={toggleAllRows}>
                     Selecionar todos ({contracts.length})
                   </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={clearSelection}
                     disabled={selectedRows.size === 0}
                   >
@@ -499,8 +495,9 @@ export function ContractImport({
               </div>
 
 
+
               {/* Table */}
-              <ScrollArea className="h-[400px] border rounded-lg">
+              <ScrollArea className="flex-1 min-h-0 border rounded-lg">
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 bg-muted/80 backdrop-blur">
                     <tr>
@@ -555,7 +552,7 @@ export function ContractImport({
                             {contract.parsed.documentoFormatado || '—'}
                             {contract.parsed.documento && (
                               contract.parsed.documentoValido ? (
-                                <CheckCircle2 className="h-3 w-3 text-green-500" />
+                                <CheckCircle2 className="h-3 w-3 text-success" />
                               ) : (
                                 <XCircle className="h-3 w-3 text-destructive" />
                               )
@@ -579,10 +576,10 @@ export function ContractImport({
                           {contract.validation.valid ? (
                             contract.validation.warnings.length > 0 ? (
                               <div className="flex items-center gap-1" title={contract.validation.warnings.join('\n')}>
-                                <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                                <AlertTriangle className="h-4 w-4 text-warning" />
                               </div>
                             ) : (
-                              <CheckCircle2 className="h-4 w-4 text-green-500" />
+                              <CheckCircle2 className="h-4 w-4 text-success" />
                             )
                           ) : (
                             <div className="flex items-center gap-1" title={contract.validation.errors.join('\n')}>
@@ -636,8 +633,8 @@ export function ContractImport({
           {step === 'complete' && (
             <div className="flex flex-col items-center justify-center py-12 space-y-6">
               {importResults.success > 0 ? (
-                <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                  <FileCheck className="h-8 w-8 text-green-600 dark:text-green-400" />
+                <div className="h-16 w-16 rounded-full bg-success/10 flex items-center justify-center">
+                  <FileCheck className="h-8 w-8 text-success" />
                 </div>
               ) : (
                 <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center">
@@ -648,7 +645,7 @@ export function ContractImport({
               <div className="text-center space-y-2">
                 <p className="text-lg font-medium">Importação Concluída</p>
                 <div className="flex gap-4 justify-center">
-                  <span className="text-green-600 dark:text-green-400">
+                  <span className="text-success">
                     {importResults.success} sucesso
                   </span>
                   {importResults.failed > 0 && (
