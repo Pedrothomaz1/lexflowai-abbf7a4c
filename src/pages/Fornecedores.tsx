@@ -31,6 +31,8 @@ import { PageSkeleton } from "@/components/ui/skeleton-loaders";
 import { AnimatedButton } from "@/components/ui/animated-button";
 import { StaggerContainer, StaggerItem, FadeIn } from "@/components/ui/motion-container";
 import { AnimatedCard, AnimatedCardContent, AnimatedCardHeader } from "@/components/ui/animated-card";
+import { DocumentInput } from "@/components/ui/document-input";
+import { validateCPF, validateCNPJ, cleanDocument, formatCPF, formatCNPJ } from "@/utils/documentValidation";
 
 type Fornecedor = {
   id: string;
@@ -66,6 +68,7 @@ const Fornecedores = () => {
     cep: "",
     notas: "",
   });
+  const [documentValid, setDocumentValid] = useState(false);
 
   useEffect(() => {
     fetchFornecedores();
@@ -96,29 +99,51 @@ const Fornecedores = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    if (formData.tipo_pessoa === "juridica" && !formData.cnpj) {
-      toast({
-        variant: "destructive",
-        title: "CNPJ obrigatório",
-        description: "Para pessoa jurídica, o CNPJ é obrigatório",
-      });
-      return;
+    // Validação de documento obrigatório
+    if (formData.tipo_pessoa === "juridica") {
+      if (!formData.cnpj) {
+        toast({
+          variant: "destructive",
+          title: "CNPJ obrigatório",
+          description: "Para pessoa jurídica, o CNPJ é obrigatório",
+        });
+        return;
+      }
+      if (!validateCNPJ(formData.cnpj)) {
+        toast({
+          variant: "destructive",
+          title: "CNPJ inválido",
+          description: "O CNPJ informado não é válido. Verifique os dígitos.",
+        });
+        return;
+      }
     }
 
-    if (formData.tipo_pessoa === "fisica" && !formData.cpf) {
-      toast({
-        variant: "destructive",
-        title: "CPF obrigatório",
-        description: "Para pessoa física, o CPF é obrigatório",
-      });
-      return;
+    if (formData.tipo_pessoa === "fisica") {
+      if (!formData.cpf) {
+        toast({
+          variant: "destructive",
+          title: "CPF obrigatório",
+          description: "Para pessoa física, o CPF é obrigatório",
+        });
+        return;
+      }
+      if (!validateCPF(formData.cpf)) {
+        toast({
+          variant: "destructive",
+          title: "CPF inválido",
+          description: "O CPF informado não é válido. Verifique os dígitos.",
+        });
+        return;
+      }
     }
 
+    // Limpa formatação antes de salvar
     const { error } = await supabase.from("fornecedores").insert([
       {
         ...formData,
-        cnpj: formData.tipo_pessoa === "juridica" ? formData.cnpj : null,
-        cpf: formData.tipo_pessoa === "fisica" ? formData.cpf : null,
+        cnpj: formData.tipo_pessoa === "juridica" ? cleanDocument(formData.cnpj) : null,
+        cpf: formData.tipo_pessoa === "fisica" ? cleanDocument(formData.cpf) : null,
         created_by: user.id,
       },
     ]);
@@ -175,11 +200,17 @@ const Fornecedores = () => {
     {
       key: "cnpj",
       header: "Documento",
-      render: (_, row) => (
-        <span className="font-mono text-sm text-muted-foreground">
-          {row.cnpj || row.cpf || "—"}
-        </span>
-      ),
+      render: (_, row) => {
+        const doc = row.cnpj || row.cpf;
+        if (!doc) return <span className="text-muted-foreground">—</span>;
+        // Formata o documento para exibição
+        const formatted = row.cnpj ? formatCNPJ(doc) : formatCPF(doc);
+        return (
+          <span className="font-mono text-sm text-muted-foreground">
+            {formatted}
+          </span>
+        );
+      },
     },
     {
       key: "email",
@@ -284,26 +315,28 @@ const Fornecedores = () => {
                       {formData.tipo_pessoa === "juridica" ? (
                         <div className="space-y-2">
                           <Label htmlFor="cnpj">CNPJ *</Label>
-                          <Input
+                          <DocumentInput
                             id="cnpj"
+                            documentType="cnpj"
                             value={formData.cnpj}
-                            onChange={(e) =>
-                              setFormData({ ...formData, cnpj: e.target.value })
-                            }
-                            placeholder="00.000.000/0000-00"
+                            onChange={(value, isValid) => {
+                              setFormData({ ...formData, cnpj: value });
+                              setDocumentValid(isValid);
+                            }}
                             required={formData.tipo_pessoa === "juridica"}
                           />
                         </div>
                       ) : (
                         <div className="space-y-2">
                           <Label htmlFor="cpf">CPF *</Label>
-                          <Input
+                          <DocumentInput
                             id="cpf"
+                            documentType="cpf"
                             value={formData.cpf}
-                            onChange={(e) =>
-                              setFormData({ ...formData, cpf: e.target.value })
-                            }
-                            placeholder="000.000.000-00"
+                            onChange={(value, isValid) => {
+                              setFormData({ ...formData, cpf: value });
+                              setDocumentValid(isValid);
+                            }}
                             required={formData.tipo_pessoa === "fisica"}
                           />
                         </div>
