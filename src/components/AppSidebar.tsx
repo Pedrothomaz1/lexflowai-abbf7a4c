@@ -13,6 +13,7 @@ import {
   ChevronDown,
   HelpCircle,
   Building2,
+  ClipboardList,
 } from "lucide-react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
@@ -49,6 +50,7 @@ const menuItems = [
   { title: "Contratos", url: "/contratos", icon: FileText, roles: ["all"], group: "principal" },
   { title: "Kanban", url: "/kanban", icon: Kanban, roles: ["all"], group: "principal" },
   { title: "Templates", url: "/templates", icon: FileStack, roles: ["all"], group: "principal" },
+  { title: "Obrigações", url: "/obrigacoes", icon: ClipboardList, roles: ["all"], group: "gestao" },
   { title: "Workflows", url: "/workflows", icon: GitBranch, roles: ["administrador"], group: "gestao" },
   { title: "Alertas", url: "/alertas", icon: Bell, roles: ["all"], group: "gestao" },
   { title: "Calendário", url: "/calendario", icon: Calendar, roles: ["all"], group: "gestao" },

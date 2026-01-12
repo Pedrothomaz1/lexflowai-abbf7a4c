@@ -101,10 +101,20 @@ serve(async (req) => {
       }
     }
 
-    // Buscar obrigações vencendo
+    // Buscar obrigações vencendo com informações do contrato e responsável
     const { data: obrigacoes, error: obrigacoesError } = await supabase
       .from('contract_obligations')
-      .select('*')
+      .select(`
+        *,
+        contratos (
+          numero_contrato,
+          titulo
+        ),
+        profiles:responsavel_id (
+          full_name,
+          email
+        )
+      `)
       .eq('status', 'pendente')
       .gte('data_vencimento', dataHoje);
 
@@ -119,21 +129,40 @@ serve(async (req) => {
             .select('id')
             .eq('contrato_id', obrigacao.contrato_id)
             .eq('tipo_alerta', 'obrigacao')
+            .eq('dias_antecedencia', diffDias)
             .ilike('mensagem', `%${obrigacao.titulo}%`)
             .maybeSingle();
 
           if (!alertaExistente) {
+            const responsavelNome = obrigacao.profiles?.full_name || 'Não atribuído';
+            const contratoNumero = obrigacao.contratos?.numero_contrato || 'N/A';
+            const tipoLabels: Record<string, string> = {
+              pagamento: '💰 Pagamento',
+              entrega: '📦 Entrega',
+              relatorio: '📋 Relatório',
+              renovacao: '🔄 Renovação',
+              notificacao: '🔔 Notificação'
+            };
+            const tipoLabel = tipoLabels[obrigacao.tipo as string] || '📋 Obrigação';
+
+            const valorFormatado = obrigacao.valor 
+              ? ` | Valor: R$ ${obrigacao.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+              : '';
+
             await supabase
               .from('contract_alerts')
               .insert({
                 contrato_id: obrigacao.contrato_id,
                 tipo_alerta: 'obrigacao',
-                titulo: `Obrigação vencendo em ${diffDias} dias`,
-                mensagem: `${obrigacao.titulo} - ${obrigacao.tipo} vence em ${diffDias} dias`,
+                titulo: `${tipoLabel} vencendo em ${diffDias} ${diffDias === 1 ? 'dia' : 'dias'}`,
+                mensagem: `${obrigacao.titulo} (Contrato: ${contratoNumero}) | Responsável: ${responsavelNome}${valorFormatado} | Vence em ${dataVencimento.toLocaleDateString('pt-BR')}`,
                 data_alerta: dataVencimento.toISOString().split('T')[0],
                 dias_antecedencia: diffDias,
                 enviado: false,
               });
+            
+            alertasCriados.push({ tipo: 'obrigacao', titulo: obrigacao.titulo, dias: diffDias });
+            console.log(`Alerta de obrigação criado: ${obrigacao.titulo} - ${diffDias} dias`);
           }
         }
       }

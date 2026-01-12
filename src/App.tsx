@@ -16,6 +16,7 @@ import Settings from "./pages/Settings";
 import Templates from "./pages/Templates";
 import Alertas from "./pages/Alertas";
 import Calendario from "./pages/Calendario";
+import Obrigacoes from "./pages/Obrigacoes";
 import WorkflowAprovacoes from "./pages/WorkflowAprovacoes";
 import SignatureSettings from "./pages/SignatureSettings";
 import NotificationSettings from "./pages/NotificationSettings";
@@ -41,6 +42,7 @@ const App = () => (
           <Route path="/templates" element={<DashboardLayout><Templates /></DashboardLayout>} />
           <Route path="/alertas" element={<DashboardLayout><Alertas /></DashboardLayout>} />
           <Route path="/calendario" element={<DashboardLayout><Calendario /></DashboardLayout>} />
+          <Route path="/obrigacoes" element={<DashboardLayout><Obrigacoes /></DashboardLayout>} />
           <Route path="/workflows" element={<DashboardLayout><WorkflowAprovacoes /></DashboardLayout>} />
           <Route path="/signature-settings" element={<DashboardLayout><SignatureSettings /></DashboardLayout>} />
           <Route path="/notification-settings" element={<DashboardLayout><NotificationSettings /></DashboardLayout>} />
