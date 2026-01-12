@@ -8,13 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -37,11 +30,19 @@ import {
   Download,
   Brain,
   AlertTriangle,
+  Info,
 } from "lucide-react";
 import { exportContratoDetalhePDF } from "@/utils/pdfExport";
 import { ContractComments } from "@/components/ContractComments";
 import { ContractSignature } from "@/components/ContractSignature";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { motion, AnimatePresence } from "framer-motion";
+import { PageSkeleton } from "@/components/ui/skeleton-loaders";
+import { EmptyState } from "@/components/ui/empty-state";
+import { AnimatedButton } from "@/components/ui/animated-button";
+import { AnimatedCard, AnimatedCardContent, AnimatedCardHeader } from "@/components/ui/animated-card";
+import { StaggerContainer, StaggerItem, FadeIn } from "@/components/ui/motion-container";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 type Contrato = {
   id: string;
@@ -310,7 +311,6 @@ const ContratoDetalhes = () => {
       setNovaAprovacao({ status: "aprovado", comentario: "" });
       fetchAprovacoes();
 
-      // Atualizar status do contrato se aprovado
       if (novaAprovacao.status === "aprovado") {
         await supabase
           .from("contratos")
@@ -343,26 +343,6 @@ const ContratoDetalhes = () => {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const config: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; icon: any }> = {
-      rascunho: { variant: "secondary", icon: Clock },
-      em_aprovacao: { variant: "outline", icon: Clock },
-      aprovado: { variant: "default", icon: CheckCircle2 },
-      assinado: { variant: "default", icon: CheckCircle2 },
-      vigente: { variant: "default", icon: CheckCircle2 },
-      encerrado: { variant: "outline", icon: CheckCircle2 },
-      cancelado: { variant: "destructive", icon: XCircle },
-    };
-
-    const { variant, icon: Icon } = config[status] || config.rascunho;
-    return (
-      <Badge variant={variant} className="gap-1">
-        <Icon className="h-3 w-3" />
-        {status.replace(/_/g, " ")}
-      </Badge>
-    );
-  };
-
   const handleExportPDF = () => {
     if (contrato) {
       exportContratoDetalhePDF(contrato, fornecedor, aprovacoes);
@@ -370,438 +350,515 @@ const ContratoDetalhes = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-muted-foreground">Carregando...</div>
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   if (!contrato) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center space-y-4">
-          <div className="text-muted-foreground">Contrato não encontrado</div>
-          <Button onClick={() => navigate("/contratos")}>
-            Voltar para Contratos
-          </Button>
-        </div>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <EmptyState
+          icon={FileText}
+          title="Contrato não encontrado"
+          description="O contrato solicitado não existe ou foi removido."
+          action={{
+            label: "Voltar para Contratos",
+            onClick: () => navigate("/contratos"),
+          }}
+        />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/contratos")}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold">{contrato.titulo}</h1>
-          <p className="text-muted-foreground mt-1">
-            Contrato Nº {contrato.numero_contrato}
-          </p>
+      {/* Header */}
+      <FadeIn>
+        <div className="flex items-center gap-4">
+          <AnimatedButton variant="ghost" size="icon" onClick={() => navigate("/contratos")}>
+            <ArrowLeft className="h-4 w-4" />
+          </AnimatedButton>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl font-semibold tracking-tight truncate">{contrato.titulo}</h1>
+            <p className="text-sm text-muted-foreground">
+              Contrato Nº {contrato.numero_contrato}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <AnimatedButton variant="outline" onClick={handleExportPDF}>
+              <Download className="h-4 w-4 mr-2" />
+              Exportar PDF
+            </AnimatedButton>
+            <StatusBadge status={contrato.status} />
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleExportPDF}>
-            <Download className="h-4 w-4 mr-2" />
-            Exportar PDF
-          </Button>
-          {getStatusBadge(contrato.status)}
-        </div>
-      </div>
+      </FadeIn>
 
-      <div className="grid gap-6 md:grid-cols-3">
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle>Informações do Contrato</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <FileText className="h-4 w-4" />
-                  <span>Tipo</span>
+      {/* Main Content Grid */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Left Column - Contract Info */}
+        <StaggerContainer className="lg:col-span-2 space-y-6">
+          <StaggerItem>
+            <AnimatedCard>
+              <AnimatedCardHeader>
+                <div className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-primary" />
+                  <h3 className="text-lg font-semibold">Informações do Contrato</h3>
                 </div>
-                <p className="font-medium capitalize">
-                  {contrato.tipo.replace("_", " ")}
-                </p>
-              </div>
-
-              {contrato.valor_total && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <DollarSign className="h-4 w-4" />
-                    <span>Valor Total</span>
-                  </div>
-                  <p className="font-medium">
-                    {new Intl.NumberFormat("pt-BR", {
-                      style: "currency",
-                      currency: contrato.moeda || "BRL",
-                    }).format(contrato.valor_total)}
-                  </p>
-                </div>
-              )}
-
-              {fornecedor && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Building className="h-4 w-4" />
-                    <span>Fornecedor</span>
-                  </div>
-                  <p className="font-medium">{fornecedor.nome}</p>
-                </div>
-              )}
-
-              {contrato.data_inicio && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
-                    <span>Data de Início</span>
-                  </div>
-                  <p className="font-medium">
-                    {new Date(contrato.data_inicio).toLocaleDateString("pt-BR")}
-                  </p>
-                </div>
-              )}
-
-              {contrato.data_fim && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
-                    <span>Data de Término</span>
-                  </div>
-                  <p className="font-medium">
-                    {new Date(contrato.data_fim).toLocaleDateString("pt-BR")}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {contrato.descricao && (
-              <>
-                <Separator />
-                <div className="space-y-2">
-                  <h3 className="font-medium">Descrição</h3>
-                  <p className="text-sm text-muted-foreground">{contrato.descricao}</p>
-                </div>
-              </>
-            )}
-
-            {contrato.observacoes && (
-              <>
-                <Separator />
-                <div className="space-y-2">
-                  <h3 className="font-medium">Observações</h3>
-                  <p className="text-sm text-muted-foreground">{contrato.observacoes}</p>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Ações</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-2">
-                <Label>Alterar Status</Label>
-                <Select value={contrato.status} onValueChange={handleUpdateStatus}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="rascunho">Rascunho</SelectItem>
-                    <SelectItem value="em_aprovacao">Em Aprovação</SelectItem>
-                    <SelectItem value="aprovado">Aprovado</SelectItem>
-                    <SelectItem value="assinado">Assinado</SelectItem>
-                    <SelectItem value="vigente">Vigente</SelectItem>
-                    <SelectItem value="encerrado">Encerrado</SelectItem>
-                    <SelectItem value="cancelado">Cancelado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-2">
-                <Label>Documento do Contrato</Label>
-                {contrato.arquivo_url ? (
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">Documento anexado</p>
-                    <Button variant="outline" className="w-full" asChild>
-                      <a href={contrato.arquivo_url} target="_blank" rel="noopener noreferrer">
-                        <FileText className="h-4 w-4 mr-2" />
-                        Ver Documento
-                      </a>
-                    </Button>
-                  </div>
-                ) : (
-                  <div>
-                    <Input
-                      type="file"
-                      accept=".pdf,.doc,.docx"
-                      onChange={handleFileUpload}
-                      disabled={uploading}
+              </AnimatedCardHeader>
+              <AnimatedCardContent className="space-y-6">
+                <div className="grid grid-cols-2 gap-6">
+                  <InfoItem
+                    icon={FileText}
+                    label="Tipo"
+                    value={contrato.tipo.replace(/_/g, " ")}
+                    capitalize
+                  />
+                  {contrato.valor_total && (
+                    <InfoItem
+                      icon={DollarSign}
+                      label="Valor Total"
+                      value={new Intl.NumberFormat("pt-BR", {
+                        style: "currency",
+                        currency: contrato.moeda || "BRL",
+                      }).format(contrato.valor_total)}
+                      highlight
                     />
-                    {uploading && (
-                      <p className="text-sm text-muted-foreground mt-2">Enviando...</p>
-                    )}
-                  </div>
+                  )}
+                  {fornecedor && (
+                    <InfoItem
+                      icon={Building}
+                      label="Fornecedor"
+                      value={fornecedor.nome}
+                    />
+                  )}
+                  {contrato.data_inicio && (
+                    <InfoItem
+                      icon={Calendar}
+                      label="Data de Início"
+                      value={new Date(contrato.data_inicio).toLocaleDateString("pt-BR")}
+                    />
+                  )}
+                  {contrato.data_fim && (
+                    <InfoItem
+                      icon={Calendar}
+                      label="Data de Término"
+                      value={new Date(contrato.data_fim).toLocaleDateString("pt-BR")}
+                    />
+                  )}
+                  <InfoItem
+                    icon={Info}
+                    label="Versão"
+                    value={`v${contrato.versao}`}
+                  />
+                </div>
+
+                {contrato.descricao && (
+                  <>
+                    <Separator />
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-muted-foreground">Descrição</h4>
+                      <p className="text-sm leading-relaxed">{contrato.descricao}</p>
+                    </div>
+                  </>
                 )}
-              </div>
 
-              <Separator />
+                {contrato.observacoes && (
+                  <>
+                    <Separator />
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-muted-foreground">Observações</h4>
+                      <p className="text-sm leading-relaxed text-muted-foreground">{contrato.observacoes}</p>
+                    </div>
+                  </>
+                )}
+              </AnimatedCardContent>
+            </AnimatedCard>
+          </StaggerItem>
 
-              <div className="space-y-2">
-                <Label>Análise com IA</Label>
-                <Button 
-                  variant="outline" 
-                  className="w-full" 
-                  onClick={handleAnalisarIA}
-                  disabled={isAnalyzing}
+          {/* AI Analysis Card */}
+          <AnimatePresence>
+            {showAnalise && analise && (
+              <StaggerItem>
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
                 >
-                  <Brain className="h-4 w-4 mr-2" />
-                  {isAnalyzing ? "Analisando..." : analise ? "Reanalisar Contrato" : "Analisar Contrato"}
-                </Button>
-                {analise && (
-                  <Button 
-                    variant="ghost" 
-                    className="w-full text-xs" 
-                    onClick={() => setShowAnalise(!showAnalise)}
-                  >
-                    {showAnalise ? "Ocultar" : "Ver"} Análise
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                  <AnimatedCard className="border-primary/20">
+                    <AnimatedCardHeader>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Brain className="h-5 w-5 text-primary" />
+                          <div>
+                            <h3 className="text-lg font-semibold">Análise com IA</h3>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(analise.analisado_em).toLocaleString("pt-BR")}
+                            </p>
+                          </div>
+                        </div>
+                        {analise.score_risco !== null && (
+                          <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ type: "spring", stiffness: 300 }}
+                          >
+                            <Badge 
+                              variant={
+                                analise.score_risco >= 7 ? "destructive" : 
+                                analise.score_risco >= 4 ? "outline" : 
+                                "default"
+                              }
+                              className="text-base px-4 py-1.5"
+                            >
+                              Score: {Number(analise.score_risco).toFixed(1)}/10
+                            </Badge>
+                          </motion.div>
+                        )}
+                      </div>
+                    </AnimatedCardHeader>
+                    <AnimatedCardContent className="space-y-6">
+                      {analise.riscos_identificados?.length > 0 && (
+                        <div className="space-y-3">
+                          <h4 className="text-sm font-semibold flex items-center gap-2">
+                            <AlertTriangle className="h-4 w-4 text-destructive" />
+                            Riscos Identificados
+                          </h4>
+                          <div className="space-y-2">
+                            {analise.riscos_identificados.map((risco: any, i: number) => (
+                              <motion.div
+                                key={i}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: i * 0.1 }}
+                                className="p-3 rounded-lg border border-destructive/20 bg-destructive/5"
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1">
+                                    <p className="font-medium text-sm">{risco.tipo}</p>
+                                    <p className="text-sm text-muted-foreground mt-1">{risco.descricao}</p>
+                                  </div>
+                                  <Badge variant="destructive" className="shrink-0">
+                                    {risco.gravidade}
+                                  </Badge>
+                                </div>
+                              </motion.div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
-          {canApprove ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Nova Aprovação</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
+                      {analise.clausulas_importantes?.length > 0 && (
+                        <div className="space-y-3">
+                          <h4 className="text-sm font-semibold flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-primary" />
+                            Cláusulas Importantes
+                          </h4>
+                          <div className="space-y-2">
+                            {analise.clausulas_importantes.map((clausula: any, i: number) => (
+                              <motion.div
+                                key={i}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: i * 0.1 }}
+                                className="p-3 rounded-lg border bg-muted/30"
+                              >
+                                <p className="font-medium text-sm">{clausula.titulo}</p>
+                                <p className="text-sm text-muted-foreground mt-1">{clausula.descricao}</p>
+                                {clausula.atencao && (
+                                  <p className="text-sm text-warning mt-2 flex items-center gap-1">
+                                    <AlertTriangle className="h-3 w-3" />
+                                    {clausula.atencao}
+                                  </p>
+                                )}
+                              </motion.div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {analise.sugestoes_melhoria?.length > 0 && (
+                        <div className="space-y-3">
+                          <h4 className="text-sm font-semibold flex items-center gap-2">
+                            <CheckCircle2 className="h-4 w-4 text-success" />
+                            Sugestões de Melhoria
+                          </h4>
+                          <ul className="space-y-2">
+                            {analise.sugestoes_melhoria.map((sugestao: string, i: number) => (
+                              <motion.li
+                                key={i}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: i * 0.1 }}
+                                className="text-sm text-muted-foreground flex items-start gap-2"
+                              >
+                                <CheckCircle2 className="h-4 w-4 text-success mt-0.5 shrink-0" />
+                                <span>{sugestao}</span>
+                              </motion.li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </AnimatedCardContent>
+                  </AnimatedCard>
+                </motion.div>
+              </StaggerItem>
+            )}
+          </AnimatePresence>
+        </StaggerContainer>
+
+        {/* Right Column - Actions */}
+        <StaggerContainer className="space-y-6">
+          <StaggerItem>
+            <AnimatedCard>
+              <AnimatedCardHeader>
+                <h3 className="text-lg font-semibold">Ações</h3>
+              </AnimatedCardHeader>
+              <AnimatedCardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select
-                    value={novaAprovacao.status}
-                    onValueChange={(value) =>
-                      setNovaAprovacao({ ...novaAprovacao, status: value })
-                    }
-                  >
+                  <Label className="text-muted-foreground">Alterar Status</Label>
+                  <Select value={contrato.status} onValueChange={handleUpdateStatus}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="rascunho">Rascunho</SelectItem>
+                      <SelectItem value="em_aprovacao">Em Aprovação</SelectItem>
                       <SelectItem value="aprovado">Aprovado</SelectItem>
-                      <SelectItem value="rejeitado">Rejeitado</SelectItem>
-                      <SelectItem value="pendente">Pendente</SelectItem>
+                      <SelectItem value="assinado">Assinado</SelectItem>
+                      <SelectItem value="vigente">Vigente</SelectItem>
+                      <SelectItem value="encerrado">Encerrado</SelectItem>
+                      <SelectItem value="cancelado">Cancelado</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Comentário</Label>
-                  <Textarea
-                    value={novaAprovacao.comentario}
-                    onChange={(e) =>
-                      setNovaAprovacao({ ...novaAprovacao, comentario: e.target.value })
-                    }
-                    rows={3}
-                    placeholder="Adicione um comentário..."
-                  />
-                </div>
+                <Separator />
 
-                <Button onClick={handleAddAprovacao} className="w-full">
-                  Registrar Aprovação
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="border-muted">
-              <CardHeader>
-                <CardTitle className="text-muted-foreground">Aprovação de Contratos</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Apenas usuários com perfil de <strong>Consultoria Jurídica</strong> ou <strong>Administrador</strong> podem aprovar contratos.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </div>
-
-      {showAnalise && analise && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Brain className="h-5 w-5" />
-                  Análise com Inteligência Artificial
-                </CardTitle>
-                <CardDescription>
-                  Análise realizada em {new Date(analise.analisado_em).toLocaleString("pt-BR")}
-                </CardDescription>
-              </div>
-              {analise.score_risco !== null && (
-                <Badge 
-                  variant={
-                    analise.score_risco >= 7 ? "destructive" : 
-                    analise.score_risco >= 4 ? "outline" : 
-                    "default"
-                  }
-                  className="text-lg px-4 py-2"
-                >
-                  Score: {Number(analise.score_risco).toFixed(1)}/10
-                </Badge>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {analise.riscos_identificados && analise.riscos_identificados.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="font-semibold flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-destructive" />
-                  Riscos Identificados
-                </h3>
                 <div className="space-y-2">
-                  {analise.riscos_identificados.map((risco: any, i: number) => (
-                    <div key={i} className="p-3 border rounded-lg bg-destructive/5">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1">
-                          <p className="font-medium text-sm">{risco.tipo}</p>
-                          <p className="text-sm text-muted-foreground mt-1">{risco.descricao}</p>
-                        </div>
-                        <Badge variant="destructive" className="shrink-0">
-                          {risco.gravidade}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {analise.clausulas_importantes && analise.clausulas_importantes.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="font-semibold flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
-                  Cláusulas Importantes
-                </h3>
-                <div className="space-y-2">
-                  {analise.clausulas_importantes.map((clausula: any, i: number) => (
-                    <div key={i} className="p-3 border rounded-lg">
-                      <p className="font-medium text-sm">{clausula.titulo}</p>
-                      <p className="text-sm text-muted-foreground mt-1">{clausula.descricao}</p>
-                      {clausula.atencao && (
-                        <p className="text-sm text-amber-600 mt-2">⚠️ {clausula.atencao}</p>
+                  <Label className="text-muted-foreground">Documento</Label>
+                  {contrato.arquivo_url ? (
+                    <AnimatedButton variant="outline" className="w-full" asChild>
+                      <a href={contrato.arquivo_url} target="_blank" rel="noopener noreferrer">
+                        <FileText className="h-4 w-4 mr-2" />
+                        Ver Documento
+                      </a>
+                    </AnimatedButton>
+                  ) : (
+                    <div>
+                      <Input
+                        type="file"
+                        accept=".pdf,.doc,.docx"
+                        onChange={handleFileUpload}
+                        disabled={uploading}
+                        className="cursor-pointer"
+                      />
+                      {uploading && (
+                        <p className="text-xs text-muted-foreground mt-2">Enviando...</p>
                       )}
                     </div>
-                  ))}
+                  )}
                 </div>
-              </div>
-            )}
 
-            {analise.sugestoes_melhoria && analise.sugestoes_melhoria.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="font-semibold flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-primary" />
-                  Sugestões de Melhoria
-                </h3>
-                <ul className="space-y-2">
-                  {analise.sugestoes_melhoria.map((sugestao: string, i: number) => (
-                    <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                      <span className="text-primary mt-0.5">•</span>
-                      <span>{sugestao}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+                <Separator />
 
-      <Tabs defaultValue="aprovacoes" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="aprovacoes">Aprovações</TabsTrigger>
-          <TabsTrigger value="assinaturas">Assinaturas</TabsTrigger>
-          <TabsTrigger value="comentarios">Comentários</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="aprovacoes">
-          <Card>
-            <CardHeader>
-              <CardTitle>Histórico de Aprovações</CardTitle>
-              <CardDescription>
-                {aprovacoes.length} aprovação(ões) registrada(s)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {aprovacoes.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  Nenhuma aprovação registrada ainda
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {aprovacoes.map((aprovacao) => (
-                    <div
-                      key={aprovacao.id}
-                      className="flex items-start gap-4 p-4 border rounded-lg"
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground">Análise com IA</Label>
+                  <AnimatedButton 
+                    variant="outline" 
+                    className="w-full" 
+                    onClick={handleAnalisarIA}
+                    disabled={isAnalyzing}
+                  >
+                    <Brain className="h-4 w-4 mr-2" />
+                    {isAnalyzing ? "Analisando..." : analise ? "Reanalisar" : "Analisar Contrato"}
+                  </AnimatedButton>
+                  {analise && (
+                    <Button 
+                      variant="ghost" 
+                      className="w-full text-xs" 
+                      onClick={() => setShowAnalise(!showAnalise)}
                     >
-                      <div className="flex-1 space-y-1">
-                        <div className="flex items-center gap-2">
-                          <Badge
-                            variant={
-                              aprovacao.status === "aprovado"
-                                ? "default"
-                                : aprovacao.status === "rejeitado"
-                                ? "destructive"
-                                : "secondary"
-                            }
-                          >
-                            {aprovacao.status}
-                          </Badge>
-                          {aprovacao.data_aprovacao && (
-                            <span className="text-sm text-muted-foreground">
-                              {new Date(aprovacao.data_aprovacao).toLocaleString("pt-BR")}
-                            </span>
+                      {showAnalise ? "Ocultar" : "Ver"} Análise
+                    </Button>
+                  )}
+                </div>
+              </AnimatedCardContent>
+            </AnimatedCard>
+          </StaggerItem>
+
+          <StaggerItem>
+            {canApprove ? (
+              <AnimatedCard>
+                <AnimatedCardHeader>
+                  <h3 className="text-lg font-semibold">Nova Aprovação</h3>
+                </AnimatedCardHeader>
+                <AnimatedCardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground">Status</Label>
+                    <Select
+                      value={novaAprovacao.status}
+                      onValueChange={(value) =>
+                        setNovaAprovacao({ ...novaAprovacao, status: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="aprovado">Aprovado</SelectItem>
+                        <SelectItem value="rejeitado">Rejeitado</SelectItem>
+                        <SelectItem value="pendente">Pendente</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground">Comentário</Label>
+                    <Textarea
+                      value={novaAprovacao.comentario}
+                      onChange={(e) =>
+                        setNovaAprovacao({ ...novaAprovacao, comentario: e.target.value })
+                      }
+                      rows={3}
+                      placeholder="Adicione um comentário..."
+                      className="resize-none"
+                    />
+                  </div>
+
+                  <AnimatedButton onClick={handleAddAprovacao} className="w-full">
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Registrar Aprovação
+                  </AnimatedButton>
+                </AnimatedCardContent>
+              </AnimatedCard>
+            ) : (
+              <AnimatedCard className="border-muted">
+                <AnimatedCardHeader>
+                  <h3 className="text-lg font-semibold text-muted-foreground">Aprovação</h3>
+                </AnimatedCardHeader>
+                <AnimatedCardContent>
+                  <p className="text-sm text-muted-foreground">
+                    Apenas usuários com perfil de <strong>Consultoria Jurídica</strong> ou <strong>Administrador</strong> podem aprovar contratos.
+                  </p>
+                </AnimatedCardContent>
+              </AnimatedCard>
+            )}
+          </StaggerItem>
+        </StaggerContainer>
+      </div>
+
+      {/* Tabs Section */}
+      <FadeIn delay={0.3}>
+        <Tabs defaultValue="aprovacoes" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
+            <TabsTrigger value="aprovacoes">Aprovações</TabsTrigger>
+            <TabsTrigger value="assinaturas">Assinaturas</TabsTrigger>
+            <TabsTrigger value="comentarios">Comentários</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="aprovacoes">
+            <AnimatedCard>
+              <AnimatedCardHeader>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-primary" />
+                  <div>
+                    <h3 className="text-lg font-semibold">Histórico de Aprovações</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {aprovacoes.length} aprovação(ões) registrada(s)
+                    </p>
+                  </div>
+                </div>
+              </AnimatedCardHeader>
+              <AnimatedCardContent>
+                {aprovacoes.length === 0 ? (
+                  <EmptyState
+                    icon={CheckCircle2}
+                    title="Nenhuma aprovação"
+                    description="Ainda não há aprovações registradas para este contrato."
+                  />
+                ) : (
+                  <div className="space-y-3">
+                    {aprovacoes.map((aprovacao, index) => (
+                      <motion.div
+                        key={aprovacao.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        className="flex items-start gap-4 p-4 rounded-lg border bg-muted/20 hover:bg-muted/30 transition-colors"
+                      >
+                        <div className="flex-1 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              variant={
+                                aprovacao.status === "aprovado"
+                                  ? "default"
+                                  : aprovacao.status === "rejeitado"
+                                  ? "destructive"
+                                  : "secondary"
+                              }
+                            >
+                              {aprovacao.status}
+                            </Badge>
+                            {aprovacao.data_aprovacao && (
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(aprovacao.data_aprovacao).toLocaleString("pt-BR")}
+                              </span>
+                            )}
+                          </div>
+                          {aprovacao.comentario && (
+                            <p className="text-sm text-muted-foreground">
+                              {aprovacao.comentario}
+                            </p>
                           )}
                         </div>
-                        {aprovacao.comentario && (
-                          <p className="text-sm text-muted-foreground">
-                            {aprovacao.comentario}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </AnimatedCardContent>
+            </AnimatedCard>
+          </TabsContent>
 
-        <TabsContent value="assinaturas">
-          <ContractSignature 
-            contratoId={contrato.id} 
-            contratoTitulo={contrato.titulo}
-            arquivoUrl={contrato.arquivo_url}
-          />
-        </TabsContent>
+          <TabsContent value="assinaturas">
+            <ContractSignature 
+              contratoId={contrato.id} 
+              contratoTitulo={contrato.titulo}
+              arquivoUrl={contrato.arquivo_url}
+            />
+          </TabsContent>
 
-        <TabsContent value="comentarios">
-          <ContractComments contratoId={contrato.id} />
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="comentarios">
+            <ContractComments contratoId={contrato.id} />
+          </TabsContent>
+        </Tabs>
+      </FadeIn>
     </div>
   );
 };
+
+// Helper component for info items
+const InfoItem = ({
+  icon: Icon,
+  label,
+  value,
+  capitalize = false,
+  highlight = false,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+  capitalize?: boolean;
+  highlight?: boolean;
+}) => (
+  <div className="space-y-1.5">
+    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <Icon className="h-4 w-4" />
+      <span>{label}</span>
+    </div>
+    <p className={`font-medium ${capitalize ? "capitalize" : ""} ${highlight ? "text-primary text-lg" : ""}`}>
+      {value}
+    </p>
+  </div>
+);
 
 export default ContratoDetalhes;
