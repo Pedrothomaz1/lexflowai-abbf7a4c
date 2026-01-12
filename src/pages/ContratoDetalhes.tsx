@@ -31,6 +31,9 @@ import {
   Brain,
   AlertTriangle,
   Info,
+  Tag,
+  Hash,
+  Paperclip,
 } from "lucide-react";
 import { exportContratoDetalhePDF } from "@/utils/pdfExport";
 import { ContractComments } from "@/components/ContractComments";
@@ -43,6 +46,13 @@ import { AnimatedButton } from "@/components/ui/animated-button";
 import { AnimatedCard, AnimatedCardContent, AnimatedCardHeader } from "@/components/ui/animated-card";
 import { StaggerContainer, StaggerItem, FadeIn } from "@/components/ui/motion-container";
 import { StatusBadge } from "@/components/ui/status-badge";
+import {
+  ContractKPIs,
+  ContractQuickActions,
+  ContractTimeline,
+  ContractSupplierCard,
+  ContractAttachments,
+} from "@/components/ContractDetails";
 
 type Contrato = {
   id: string;
@@ -60,13 +70,9 @@ type Contrato = {
   arquivo_url: string | null;
   observacoes: string | null;
   versao: number;
+  tags: string[] | null;
   created_at: string;
   updated_at: string;
-};
-
-type Fornecedor = {
-  id: string;
-  nome: string;
 };
 
 type Aprovacao = {
@@ -83,7 +89,6 @@ const ContratoDetalhes = () => {
   const { toast } = useToast();
   const { canApprove } = useUserRole();
   const [contrato, setContrato] = useState<Contrato | null>(null);
-  const [fornecedor, setFornecedor] = useState<Fornecedor | null>(null);
   const [aprovacoes, setAprovacoes] = useState<Aprovacao[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -138,10 +143,6 @@ const ContratoDetalhes = () => {
       }
       
       setContrato(data);
-      
-      if (data.fornecedor_id) {
-        fetchFornecedor(data.fornecedor_id);
-      }
     } catch (error: any) {
       console.error("Erro ao buscar contrato:", error);
       toast({
@@ -151,18 +152,6 @@ const ContratoDetalhes = () => {
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchFornecedor = async (fornecedorId: string) => {
-    const { data } = await supabase
-      .from("fornecedores")
-      .select("id, nome")
-      .eq("id", fornecedorId)
-      .maybeSingle();
-
-    if (data) {
-      setFornecedor(data);
     }
   };
 
@@ -345,8 +334,20 @@ const ContratoDetalhes = () => {
 
   const handleExportPDF = () => {
     if (contrato) {
-      exportContratoDetalhePDF(contrato, fornecedor, aprovacoes);
+      exportContratoDetalhePDF(contrato, null, aprovacoes);
     }
+  };
+
+  const getTipoLabel = (tipo: string) => {
+    const labels: Record<string, string> = {
+      prestacao_servicos: 'Prestação de Serviços',
+      fornecimento: 'Fornecimento',
+      locacao: 'Locação',
+      confidencialidade: 'Confidencialidade',
+      parceria: 'Parceria',
+      outro: 'Outro',
+    };
+    return labels[tipo] || tipo;
   };
 
   if (loading) {
@@ -373,30 +374,80 @@ const ContratoDetalhes = () => {
     <div className="space-y-6">
       {/* Header */}
       <FadeIn>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <AnimatedButton variant="ghost" size="icon" onClick={() => navigate("/contratos")}>
             <ArrowLeft className="h-4 w-4" />
           </AnimatedButton>
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-semibold tracking-tight truncate">{contrato.titulo}</h1>
-            <p className="text-sm text-muted-foreground">
-              Contrato Nº {contrato.numero_contrato}
-            </p>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-2xl font-semibold tracking-tight">{contrato.titulo}</h1>
+              <StatusBadge status={contrato.status} />
+            </div>
+            <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Hash className="h-3.5 w-3.5" />
+                {contrato.numero_contrato}
+              </span>
+              <span className="flex items-center gap-1">
+                <Tag className="h-3.5 w-3.5" />
+                {getTipoLabel(contrato.tipo)}
+              </span>
+              <span className="flex items-center gap-1">
+                <Info className="h-3.5 w-3.5" />
+                v{contrato.versao}
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <AnimatedButton variant="outline" onClick={handleExportPDF}>
+          <div className="flex items-center gap-2 shrink-0">
+            <AnimatedButton variant="outline" size="sm" onClick={handleExportPDF}>
               <Download className="h-4 w-4 mr-2" />
-              Exportar PDF
+              PDF
             </AnimatedButton>
-            <StatusBadge status={contrato.status} />
+            <ContractQuickActions
+              contratoId={contrato.id}
+              contratoNumero={contrato.numero_contrato}
+              contratoTitulo={contrato.titulo}
+              status={contrato.status}
+              arquivoUrl={contrato.arquivo_url}
+              onRefresh={fetchContrato}
+            />
           </div>
         </div>
+      </FadeIn>
+
+      {/* KPIs */}
+      <FadeIn delay={0.1}>
+        <ContractKPIs
+          dataInicio={contrato.data_inicio}
+          dataFim={contrato.data_fim}
+          status={contrato.status}
+          valorTotal={contrato.valor_total}
+        />
+      </FadeIn>
+
+      {/* Timeline */}
+      <FadeIn delay={0.15}>
+        <AnimatedCard hoverScale={1}>
+          <AnimatedCardHeader className="pb-2">
+            <h3 className="text-sm font-medium text-muted-foreground">Ciclo de Vida do Contrato</h3>
+          </AnimatedCardHeader>
+          <AnimatedCardContent>
+            <ContractTimeline
+              status={contrato.status}
+              createdAt={contrato.created_at}
+              dataInicio={contrato.data_inicio}
+              dataFim={contrato.data_fim}
+              dataAssinatura={contrato.data_assinatura}
+            />
+          </AnimatedCardContent>
+        </AnimatedCard>
       </FadeIn>
 
       {/* Main Content Grid */}
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Left Column - Contract Info */}
         <StaggerContainer className="lg:col-span-2 space-y-6">
+          {/* Contract Details */}
           <StaggerItem>
             <AnimatedCard>
               <AnimatedCardHeader>
@@ -406,13 +457,7 @@ const ContratoDetalhes = () => {
                 </div>
               </AnimatedCardHeader>
               <AnimatedCardContent className="space-y-6">
-                <div className="grid grid-cols-2 gap-6">
-                  <InfoItem
-                    icon={FileText}
-                    label="Tipo"
-                    value={contrato.tipo.replace(/_/g, " ")}
-                    capitalize
-                  />
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                   {contrato.valor_total && (
                     <InfoItem
                       icon={DollarSign}
@@ -422,13 +467,6 @@ const ContratoDetalhes = () => {
                         currency: contrato.moeda || "BRL",
                       }).format(contrato.valor_total)}
                       highlight
-                    />
-                  )}
-                  {fornecedor && (
-                    <InfoItem
-                      icon={Building}
-                      label="Fornecedor"
-                      value={fornecedor.nome}
                     />
                   )}
                   {contrato.data_inicio && (
@@ -445,12 +483,39 @@ const ContratoDetalhes = () => {
                       value={new Date(contrato.data_fim).toLocaleDateString("pt-BR")}
                     />
                   )}
+                  {contrato.data_assinatura && (
+                    <InfoItem
+                      icon={Calendar}
+                      label="Data de Assinatura"
+                      value={new Date(contrato.data_assinatura).toLocaleDateString("pt-BR")}
+                    />
+                  )}
                   <InfoItem
-                    icon={Info}
-                    label="Versão"
-                    value={`v${contrato.versao}`}
+                    icon={Clock}
+                    label="Última Atualização"
+                    value={new Date(contrato.updated_at).toLocaleDateString("pt-BR")}
                   />
                 </div>
+
+                {/* Tags */}
+                {contrato.tags && contrato.tags.length > 0 && (
+                  <>
+                    <Separator />
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <Tag className="h-4 w-4" />
+                        Tags
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {contrato.tags.map((tag, index) => (
+                          <Badge key={index} variant="secondary">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 {contrato.descricao && (
                   <>
@@ -606,8 +671,9 @@ const ContratoDetalhes = () => {
           </AnimatePresence>
         </StaggerContainer>
 
-        {/* Right Column - Actions */}
+        {/* Right Column - Sidebar */}
         <StaggerContainer className="space-y-6">
+          {/* Actions Card */}
           <StaggerItem>
             <AnimatedCard>
               <AnimatedCardHeader>
@@ -635,7 +701,7 @@ const ContratoDetalhes = () => {
                 <Separator />
 
                 <div className="space-y-2">
-                  <Label className="text-muted-foreground">Documento</Label>
+                  <Label className="text-muted-foreground">Documento Principal</Label>
                   {contrato.arquivo_url ? (
                     <AnimatedButton variant="outline" className="w-full" asChild>
                       <a href={contrato.arquivo_url} target="_blank" rel="noopener noreferrer">
@@ -686,6 +752,37 @@ const ContratoDetalhes = () => {
             </AnimatedCard>
           </StaggerItem>
 
+          {/* Supplier Card */}
+          <StaggerItem>
+            <AnimatedCard>
+              <AnimatedCardHeader>
+                <div className="flex items-center gap-2">
+                  <Building className="h-5 w-5 text-primary" />
+                  <h3 className="text-lg font-semibold">Fornecedor</h3>
+                </div>
+              </AnimatedCardHeader>
+              <AnimatedCardContent>
+                <ContractSupplierCard fornecedorId={contrato.fornecedor_id} />
+              </AnimatedCardContent>
+            </AnimatedCard>
+          </StaggerItem>
+
+          {/* Attachments Card */}
+          <StaggerItem>
+            <AnimatedCard>
+              <AnimatedCardHeader>
+                <div className="flex items-center gap-2">
+                  <Paperclip className="h-5 w-5 text-primary" />
+                  <h3 className="text-lg font-semibold">Anexos</h3>
+                </div>
+              </AnimatedCardHeader>
+              <AnimatedCardContent>
+                <ContractAttachments contratoId={contrato.id} />
+              </AnimatedCardContent>
+            </AnimatedCard>
+          </StaggerItem>
+
+          {/* Approval Card */}
           <StaggerItem>
             {canApprove ? (
               <AnimatedCard>
