@@ -218,6 +218,28 @@ export function ContractImport({
     }
   };
 
+  const selectAllValid = () => {
+    const validRows = new Set(
+      contracts
+        .filter(c => c.validation.valid)
+        .map(c => c.rowIndex)
+    );
+    setSelectedRows(validRows);
+  };
+
+  const selectAllWithWarnings = () => {
+    const rowsWithWarnings = new Set(
+      contracts
+        .filter(c => c.validation.valid && c.validation.warnings.length > 0)
+        .map(c => c.rowIndex)
+    );
+    setSelectedRows(rowsWithWarnings);
+  };
+
+  const clearSelection = () => {
+    setSelectedRows(new Set());
+  };
+
   const downloadTemplate = () => {
     const blob = generateExampleTemplate();
     const url = URL.createObjectURL(blob);
@@ -427,24 +449,55 @@ export function ContractImport({
           {step === 'preview' && (
             <div className="space-y-4">
               {/* Summary */}
-              <div className="flex gap-4 p-4 bg-muted/50 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  <span className="text-sm">{validCount} válidos</span>
+              <div className="flex flex-wrap gap-4 p-4 bg-muted/50 rounded-lg justify-between items-center">
+                <div className="flex gap-4 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    <span className="text-sm">{validCount} válidos</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                    <span className="text-sm">{warningCount} com avisos</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <XCircle className="h-4 w-4 text-destructive" />
+                    <span className="text-sm">{errorCount} com erros</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-blue-500" />
+                    <span className="text-sm">{newSuppliersCount} novos fornecedores</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                  <span className="text-sm">{warningCount} com avisos</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <XCircle className="h-4 w-4 text-destructive" />
-                  <span className="text-sm">{errorCount} com erros</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-blue-500" />
-                  <span className="text-sm">{newSuppliersCount} novos fornecedores</span>
+                
+                {/* Quick Selection Buttons */}
+                <div className="flex gap-2 flex-wrap">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={selectAllValid}
+                    className="text-green-600 border-green-200 hover:bg-green-50"
+                  >
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    Selecionar válidos ({validCount})
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={toggleAllRows}
+                  >
+                    Selecionar todos ({contracts.length})
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={clearSelection}
+                    disabled={selectedRows.size === 0}
+                  >
+                    Limpar seleção
+                  </Button>
                 </div>
               </div>
+
 
               {/* Table */}
               <ScrollArea className="h-[400px] border rounded-lg">
