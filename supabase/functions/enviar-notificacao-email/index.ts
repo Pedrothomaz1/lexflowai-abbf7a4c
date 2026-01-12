@@ -194,7 +194,8 @@ serve(async (req) => {
         const html = getEmailTemplate(body, appUrl);
 
         const { error: sendError } = await resend.emails.send({
-          from: "LexFlow <alertas@veridianaquirino.com.br>",
+          // TODO: Alterar para "LexFlow <alertas@veridianaquirino.com.br>" quando o domínio estiver verificado no Resend
+          from: "LexFlow <onboarding@resend.dev>",
           to: [user.email],
           subject: `${body.diasAntecedencia <= 7 ? '⚠️ URGENTE: ' : ''}${body.titulo}`,
           html,
