@@ -95,13 +95,16 @@ export function parseExcelFile(file: File): Promise<ImportedContractRow[]> {
           dateNF: 'yyyy-mm-dd'
         }) as string[][];
         
-        if (jsonData.length < 2) {
+        if (!jsonData || jsonData.length < 2) {
           reject(new Error('Arquivo vazio ou sem dados'));
           return;
         }
         
         // Encontra os índices das colunas baseado no header
-        const headers = jsonData[0].map(h => String(h || '').toLowerCase().trim());
+        const headerRow = jsonData[0] || [];
+        const headers = headerRow.map(h => 
+          h !== undefined && h !== null ? String(h).toLowerCase().trim() : ''
+        );
         
         const columnMap = {
           objeto: findColumnIndex(headers, ['objeto contratado', 'objeto', 'titulo', 'título']),
@@ -156,7 +159,7 @@ export function parseExcelFile(file: File): Promise<ImportedContractRow[]> {
 
 function findColumnIndex(headers: string[], possibleNames: string[]): number {
   for (const name of possibleNames) {
-    const index = headers.findIndex(h => h.includes(name));
+    const index = headers.findIndex(h => h && typeof h === 'string' && h.includes(name));
     if (index !== -1) return index;
   }
   return -1;
