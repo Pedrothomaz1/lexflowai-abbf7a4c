@@ -52,6 +52,7 @@ import {
   ContractTimeline,
   ContractSupplierCard,
   ContractAttachments,
+  ContractObligations,
 } from "@/components/ContractDetails";
 
 type Contrato = {
@@ -669,6 +670,11 @@ const ContratoDetalhes = () => {
               </StaggerItem>
             )}
           </AnimatePresence>
+
+          {/* Obligations Section */}
+          <StaggerItem>
+            <ContractObligations contratoId={contrato.id} />
+          </StaggerItem>
         </StaggerContainer>
 
         {/* Right Column - Sidebar */}
