@@ -286,23 +286,28 @@ export function processImportedRow(row: ImportedContractRow): ProcessedContract 
       documentoValido = validateCPF(cleaned);
       documentoFormatado = formatCPF(cleaned);
       if (!documentoValido) {
-        warnings.push('CPF inválido (dígitos verificadores incorretos)');
+        errors.push('CPF inválido (dígitos verificadores incorretos)');
       }
     } else if (documentoTipo === 'cnpj') {
       documentoValido = validateCNPJ(cleaned);
       documentoFormatado = formatCNPJ(cleaned);
       if (!documentoValido) {
-        warnings.push('CNPJ inválido (dígitos verificadores incorretos)');
+        errors.push('CNPJ inválido (dígitos verificadores incorretos)');
       }
     } else if (cleaned.length > 0) {
-      warnings.push('Documento com formato inválido');
+      errors.push('Documento com formato inválido (deve ter 11 dígitos para CPF ou 14 para CNPJ)');
+    }
+  } else {
+    // Documento é obrigatório quando há contratada
+    if (row.contratada.trim()) {
+      warnings.push('Documento (CNPJ/CPF) não informado para o fornecedor');
     }
   }
   
   // Parse do valor
   const valor = parseMonetaryValue(row.valor);
   if (row.valor && valor === null) {
-    warnings.push(`Valor "${row.valor}" não pôde ser convertido`);
+    errors.push(`Valor "${row.valor}" não pôde ser convertido`);
   }
   
   // Parse das datas
