@@ -22,13 +22,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Download, Calendar, Eye, FileText, ArrowUpRight } from "lucide-react";
+import { Plus, Download, Calendar, Eye, FileText, ArrowUpRight, Upload } from "lucide-react";
 import { exportContratosPDF } from "@/utils/pdfExport";
 import { BuscaAvancada, FiltrosAvancados } from "@/components/BuscaAvancada";
 import { DataTable, Column } from "@/components/ui/data-table";
 import { StatusBadge, ContractTypeBadge } from "@/components/ui/status-badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
+import { ContractImport } from "@/components/ContractImport/ContractImport";
 
 type Contrato = {
   id: string;
@@ -48,6 +49,8 @@ type Contrato = {
 type Fornecedor = {
   id: string;
   nome: string;
+  cnpj?: string | null;
+  cpf?: string | null;
 };
 
 const Contratos = () => {
@@ -58,6 +61,7 @@ const Contratos = () => {
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     numero_contrato: "",
     titulo: "",
@@ -158,7 +162,7 @@ const Contratos = () => {
   const fetchFornecedores = async () => {
     const { data } = await supabase
       .from("fornecedores")
-      .select("id, nome")
+      .select("id, nome, cnpj, cpf")
       .order("nome");
     
     setFornecedores(data || []);
@@ -363,6 +367,10 @@ const Contratos = () => {
         description={`${contratos.length} contrato(s) cadastrado(s)`}
         actions={
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setImportDialogOpen(true)}>
+              <Upload className="h-4 w-4 mr-1.5" />
+              Importar XLSX
+            </Button>
             <Button variant="outline" size="sm" onClick={handleExportPDF}>
               <Download className="h-4 w-4 mr-1.5" />
               Exportar
@@ -578,6 +586,16 @@ const Contratos = () => {
             onClick: () => setDialogOpen(true),
           },
         }}
+      />
+
+      <ContractImport
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        onImportComplete={() => {
+          fetchContratos();
+          fetchFornecedores();
+        }}
+        fornecedores={fornecedores}
       />
     </div>
   );
