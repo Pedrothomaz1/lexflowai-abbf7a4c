@@ -34,6 +34,7 @@ serve(async (req) => {
     }
 
     const alertasCriados = [];
+    const servicosAlertados = [];
 
     for (const contrato of contratos || []) {
       const dataFim = new Date(contrato.data_fim);
@@ -168,6 +169,122 @@ serve(async (req) => {
       }
     }
 
+    // =========================================================
+    // VERIFICAR SERVIÇOS PERIÓDICOS
+    // =========================================================
+    console.log('Verificando serviços periódicos...');
+
+    const { data: servicos, error: servicosError } = await supabase
+      .from('servicos_periodicos')
+      .select(`
+        *,
+        unidades(nome),
+        especificacoes_servico(nome, categoria)
+      `)
+      .in('status', ['dentro_prazo', 'alerta'])
+      .lte('data_alerta', dataHoje);
+
+    if (servicosError) {
+      console.error('Erro ao buscar serviços:', servicosError);
+    } else if (servicos && servicos.length > 0) {
+      console.log(`Encontrados ${servicos.length} serviços para processar`);
+
+      for (const servico of servicos) {
+        const dataValidade = new Date(servico.data_validade);
+        const diffDias = Math.ceil((dataValidade.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+        
+        // Determinar novo status
+        let novoStatus = servico.status;
+        if (diffDias < 0) {
+          novoStatus = 'vencido';
+        } else if (diffDias <= servico.dias_antecedencia_alerta) {
+          novoStatus = 'alerta';
+        }
+
+        // Se mudou de status para alerta, processar
+        if (servico.status === 'dentro_prazo' && novoStatus === 'alerta') {
+          console.log(`Serviço entrando em alerta: ${servico.especificacoes_servico?.nome} - ${servico.unidades?.nome}`);
+
+          // Atualizar status do serviço
+          await supabase
+            .from('servicos_periodicos')
+            .update({ status: 'alerta' })
+            .eq('id', servico.id);
+
+          // Criar alerta no sistema
+          const categoriaLabels: Record<string, string> = {
+            seguranca: '🔥 Segurança',
+            manutencao: '🔧 Manutenção',
+            higiene: '💧 Higiene',
+            infraestrutura: '🏗️ Infraestrutura',
+            veiculos: '🚗 Veículos',
+            outros: '📋 Outros'
+          };
+          const categoriaLabel = categoriaLabels[servico.especificacoes_servico?.categoria || 'outros'];
+
+          const { error: alertaError } = await supabase
+            .from('contract_alerts')
+            .insert({
+              contrato_id: null,
+              tipo_alerta: 'servico',
+              titulo: `${categoriaLabel} - Serviço vencendo`,
+              mensagem: `${servico.especificacoes_servico?.nome} na ${servico.unidades?.nome}${servico.itens_detalhados ? ` (${servico.itens_detalhados})` : ''} vence em ${diffDias > 0 ? diffDias + ' dias' : 'HOJE'} (${dataValidade.toLocaleDateString('pt-BR')})`,
+              data_alerta: servico.data_validade,
+              dias_antecedencia: diffDias,
+              enviado: false,
+            });
+
+          if (!alertaError) {
+            servicosAlertados.push({
+              id: servico.id,
+              nome: servico.especificacoes_servico?.nome,
+              unidade: servico.unidades?.nome,
+              dias: diffDias
+            });
+            console.log(`Alerta de serviço criado: ${servico.especificacoes_servico?.nome}`);
+          }
+
+          // Verificar se deve enviar para sistema de compras
+          const { data: configCompras } = await supabase
+            .from('integracao_config')
+            .select('is_active')
+            .eq('tipo', 'sistema_compras')
+            .single();
+
+          if (configCompras?.is_active) {
+            // Verificar se já existe solicitação
+            const { data: solicitacaoExistente } = await supabase
+              .from('solicitacoes_compras')
+              .select('id')
+              .eq('servico_id', servico.id)
+              .in('status_envio', ['pendente', 'enviado'])
+              .maybeSingle();
+
+            if (!solicitacaoExistente) {
+              console.log(`Enviando solicitação de compras para serviço ${servico.id}`);
+              
+              try {
+                await supabase.functions.invoke('enviar-solicitacao-compras', {
+                  body: { servicoId: servico.id }
+                });
+              } catch (invokeError) {
+                console.error(`Erro ao invocar enviar-solicitacao-compras:`, invokeError);
+              }
+            }
+          }
+        }
+
+        // Se venceu, atualizar status
+        if (novoStatus === 'vencido' && servico.status !== 'vencido') {
+          await supabase
+            .from('servicos_periodicos')
+            .update({ status: 'vencido' })
+            .eq('id', servico.id);
+          console.log(`Serviço marcado como vencido: ${servico.especificacoes_servico?.nome}`);
+        }
+      }
+    }
+
     // Buscar alertas pendentes para enviar notificações
     const { data: alertasPendentes } = await supabase
       .from('contract_alerts')
@@ -240,12 +357,14 @@ serve(async (req) => {
       }
     }
 
-    console.log(`Verificação concluída. ${alertasCriados.length} alertas criados, ${notificacoesEnviadas} WhatsApp, ${emailsEnviados} emails enviados.`);
+    console.log(`Verificação concluída. ${alertasCriados.length} alertas criados, ${servicosAlertados.length} serviços alertados, ${notificacoesEnviadas} WhatsApp, ${emailsEnviados} emails enviados.`);
 
     return new Response(
       JSON.stringify({
         success: true,
         alertasCriados: alertasCriados.length,
+        servicosAlertados: servicosAlertados.length,
+        servicosDetalhes: servicosAlertados,
         notificacoesWhatsApp: notificacoesEnviadas,
         notificacoesEmail: emailsEnviados,
         mensagem: 'Verificação de alertas concluída com sucesso',
