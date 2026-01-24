@@ -20,6 +20,9 @@ import Obrigacoes from "./pages/Obrigacoes";
 import WorkflowAprovacoes from "./pages/WorkflowAprovacoes";
 import SignatureSettings from "./pages/SignatureSettings";
 import NotificationSettings from "./pages/NotificationSettings";
+import Servicos from "./pages/Servicos";
+import Unidades from "./pages/Unidades";
+import EspecificacoesServico from "./pages/EspecificacoesServico";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,6 +47,9 @@ const App = () => (
           <Route path="/calendario" element={<DashboardLayout><Calendario /></DashboardLayout>} />
           <Route path="/obrigacoes" element={<DashboardLayout><Obrigacoes /></DashboardLayout>} />
           <Route path="/workflows" element={<DashboardLayout><WorkflowAprovacoes /></DashboardLayout>} />
+          <Route path="/servicos" element={<DashboardLayout><Servicos /></DashboardLayout>} />
+          <Route path="/unidades" element={<DashboardLayout><Unidades /></DashboardLayout>} />
+          <Route path="/especificacoes" element={<DashboardLayout><EspecificacoesServico /></DashboardLayout>} />
           <Route path="/signature-settings" element={<DashboardLayout><SignatureSettings /></DashboardLayout>} />
           <Route path="/notification-settings" element={<DashboardLayout><NotificationSettings /></DashboardLayout>} />
           <Route path="/settings" element={<DashboardLayout><Settings /></DashboardLayout>} />

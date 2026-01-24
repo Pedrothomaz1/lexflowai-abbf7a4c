@@ -1,0 +1,296 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+interface ServicoData {
+  id: string;
+  itens_detalhados: string | null;
+  quantidade: number;
+  localizacao_fisica: string | null;
+  data_validade: string;
+  prioridade: string;
+  valor_estimado: number | null;
+  observacoes: string | null;
+  unidades: {
+    nome: string;
+    endereco: string | null;
+    cidade: string | null;
+    estado: string | null;
+  } | null;
+  especificacoes_servico: {
+    nome: string;
+    categoria: string;
+    orgao_regulador: string | null;
+  } | null;
+  profiles: {
+    full_name: string;
+    email: string;
+  } | null;
+  fornecedores: {
+    nome: string;
+    cnpj: string | null;
+    telefone: string | null;
+  } | null;
+}
+
+function calcularUrgencia(dataValidade: string): string {
+  const hoje = new Date();
+  const validade = new Date(dataValidade);
+  const diasRestantes = Math.ceil((validade.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+  
+  if (diasRestantes <= 0) return "critica";
+  if (diasRestantes <= 7) return "alta";
+  if (diasRestantes <= 15) return "media";
+  return "normal";
+}
+
+serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { servicoId } = await req.json();
+
+    if (!servicoId) {
+      throw new Error("servicoId é obrigatório");
+    }
+
+    console.log(`Processando solicitação de compras para serviço: ${servicoId}`);
+
+    // Buscar dados completos do serviço
+    const { data: servico, error: servicoError } = await supabase
+      .from("servicos_periodicos")
+      .select(`
+        *,
+        unidades(nome, endereco, cidade, estado),
+        especificacoes_servico(nome, categoria, orgao_regulador),
+        profiles:responsavel_id(full_name, email),
+        fornecedores:fornecedor_preferencial_id(nome, cnpj, telefone)
+      `)
+      .eq("id", servicoId)
+      .single();
+
+    if (servicoError || !servico) {
+      throw new Error(`Serviço não encontrado: ${servicoError?.message}`);
+    }
+
+    // Buscar histórico para estimativas
+    const { data: historico } = await supabase
+      .from("servico_historico")
+      .select(`
+        data_execucao,
+        valor,
+        observacoes,
+        fornecedores:fornecedor_id(nome)
+      `)
+      .eq("servico_id", servicoId)
+      .order("data_execucao", { ascending: false })
+      .limit(5);
+
+    // Verificar se já existe solicitação pendente/enviada
+    const { data: existingSolicitacao } = await supabase
+      .from("solicitacoes_compras")
+      .select("id, status_envio")
+      .eq("servico_id", servicoId)
+      .in("status_envio", ["pendente", "enviado"])
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (existingSolicitacao && existingSolicitacao.length > 0) {
+      console.log(`Já existe solicitação pendente/enviada para este serviço`);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          message: "Já existe solicitação pendente para este serviço",
+          solicitacao_id: existingSolicitacao[0].id 
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Buscar configuração de integração
+    const { data: config } = await supabase
+      .from("integracao_config")
+      .select("*")
+      .eq("tipo", "sistema_compras")
+      .eq("is_active", true)
+      .single();
+
+    // Montar payload completo
+    const payload = {
+      origem: "LEXFLOW",
+      tipo: "SERVICO_PERIODICO",
+      data_solicitacao: new Date().toISOString(),
+      urgencia: calcularUrgencia(servico.data_validade),
+      servico: {
+        id: servico.id,
+        especificacao: servico.especificacoes_servico?.nome,
+        categoria: servico.especificacoes_servico?.categoria,
+        itens_detalhados: servico.itens_detalhados,
+        quantidade: servico.quantidade,
+        localizacao: servico.localizacao_fisica,
+        data_vencimento: servico.data_validade,
+        prioridade: servico.prioridade,
+        orgao_regulador: servico.especificacoes_servico?.orgao_regulador,
+      },
+      unidade: {
+        nome: servico.unidades?.nome,
+        endereco: servico.unidades?.endereco,
+        cidade: servico.unidades?.cidade,
+        estado: servico.unidades?.estado,
+        responsavel: servico.profiles?.full_name,
+        email_responsavel: servico.profiles?.email,
+      },
+      estimativas: {
+        valor_estimado: servico.valor_estimado,
+        valor_ultima_execucao: historico?.[0]?.valor,
+        fornecedor_preferencial: servico.fornecedores ? {
+          nome: servico.fornecedores.nome,
+          cnpj: servico.fornecedores.cnpj,
+          telefone: servico.fornecedores.telefone,
+        } : null,
+      },
+      historico: historico?.map((h: any) => ({
+        data: h.data_execucao,
+        valor: h.valor,
+        fornecedor: h.fornecedores?.nome,
+        observacoes: h.observacoes,
+      })),
+      observacoes: servico.observacoes,
+    };
+
+    // Se não há configuração ativa ou não há URL, apenas registrar como pendente
+    if (!config || !config.url_api) {
+      console.log("Integração não configurada - registrando como pendente");
+      
+      const { data: solicitacao, error: insertError } = await supabase
+        .from("solicitacoes_compras")
+        .insert({
+          servico_id: servicoId,
+          status_envio: "pendente",
+          payload_enviado: payload,
+        })
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          status: "pendente",
+          message: "Solicitação registrada. Configure a integração para envio automático.",
+          solicitacao_id: solicitacao.id,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Tentar enviar para API de compras
+    const apiUrl = config.url_api;
+    const apiKey = Deno.env.get("COMPRAS_API_KEY");
+    
+    let headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    // Adicionar autenticação conforme tipo
+    if (config.tipo_autenticacao === "api_key" && apiKey) {
+      headers["X-API-Key"] = apiKey;
+    } else if (config.tipo_autenticacao === "bearer" && apiKey) {
+      headers["Authorization"] = `Bearer ${apiKey}`;
+    }
+
+    // Adicionar headers customizados
+    if (config.headers_customizados && typeof config.headers_customizados === "object") {
+      headers = { ...headers, ...(config.headers_customizados as Record<string, string>) };
+    }
+
+    console.log(`Enviando para API: ${apiUrl}`);
+
+    try {
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload),
+      });
+
+      const resultado = await response.json();
+
+      if (!response.ok) {
+        throw new Error(`API retornou status ${response.status}: ${JSON.stringify(resultado)}`);
+      }
+
+      // Registrar sucesso
+      const { data: solicitacao, error: insertError } = await supabase
+        .from("solicitacoes_compras")
+        .insert({
+          servico_id: servicoId,
+          status_envio: "enviado",
+          payload_enviado: payload,
+          resposta_api: resultado,
+          codigo_solicitacao: resultado.numero_solicitacao || resultado.id || null,
+          enviado_em: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+
+      console.log(`Solicitação enviada com sucesso: ${solicitacao.id}`);
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          status: "enviado",
+          solicitacao_id: solicitacao.id,
+          codigo_solicitacao: resultado.numero_solicitacao || resultado.id,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+
+    } catch (apiError: any) {
+      console.error(`Erro ao enviar para API: ${apiError.message}`);
+
+      // Registrar erro
+      const { data: solicitacao } = await supabase
+        .from("solicitacoes_compras")
+        .insert({
+          servico_id: servicoId,
+          status_envio: "erro",
+          payload_enviado: payload,
+          erro_mensagem: apiError.message,
+          tentativas: 1,
+        })
+        .select()
+        .single();
+
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          status: "erro",
+          message: apiError.message,
+          solicitacao_id: solicitacao?.id,
+        }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+  } catch (error: any) {
+    console.error(`Erro geral: ${error.message}`);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});
