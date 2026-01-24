@@ -50,6 +50,8 @@ const menuItems = [
   { title: "Contratos", url: "/contratos", icon: FileText, roles: ["all"], group: "principal" },
   { title: "Kanban", url: "/kanban", icon: Kanban, roles: ["all"], group: "principal" },
   { title: "Templates", url: "/templates", icon: FileStack, roles: ["all"], group: "principal" },
+  { title: "Serviços", url: "/servicos", icon: ClipboardList, roles: ["all"], group: "operacional" },
+  { title: "Unidades", url: "/unidades", icon: Building2, roles: ["all"], group: "operacional" },
   { title: "Obrigações", url: "/obrigacoes", icon: ClipboardList, roles: ["all"], group: "gestao" },
   { title: "Workflows", url: "/workflows", icon: GitBranch, roles: ["administrador"], group: "gestao" },
   { title: "Alertas", url: "/alertas", icon: Bell, roles: ["all"], group: "gestao" },
@@ -111,6 +113,7 @@ export function AppSidebar() {
 
   const groupedItems = {
     principal: visibleMenuItems.filter((item) => item.group === "principal"),
+    operacional: visibleMenuItems.filter((item) => item.group === "operacional"),
     gestao: visibleMenuItems.filter((item) => item.group === "gestao"),
     cadastros: visibleMenuItems.filter((item) => item.group === "cadastros"),
     sistema: visibleMenuItems.filter((item) => item.group === "sistema"),
@@ -156,6 +159,24 @@ export function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 {groupedItems.principal.map((item) => (
+                  <MenuItem key={item.title} item={item} collapsed={collapsed} isActive={isActive(item.url)} />
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {/* Operacional Group */}
+        {groupedItems.operacional.length > 0 && (
+          <SidebarGroup className="mb-2">
+            {!collapsed && (
+              <SidebarGroupLabel className="px-3 text-xs font-medium text-sidebar-muted uppercase tracking-wider">
+                Operacional
+              </SidebarGroupLabel>
+            )}
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {groupedItems.operacional.map((item) => (
                   <MenuItem key={item.title} item={item} collapsed={collapsed} isActive={isActive(item.url)} />
                 ))}
               </SidebarMenu>

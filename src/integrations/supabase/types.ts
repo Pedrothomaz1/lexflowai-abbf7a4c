@@ -546,6 +546,59 @@ export type Database = {
           },
         ]
       }
+      especificacoes_servico: {
+        Row: {
+          categoria: string
+          created_at: string | null
+          created_by: string | null
+          descricao: string | null
+          dias_alerta_padrao: number | null
+          id: string
+          is_active: boolean | null
+          nome: string
+          orgao_regulador: string | null
+          requer_certificado: boolean | null
+          updated_at: string | null
+          validade_padrao_meses: number | null
+        }
+        Insert: {
+          categoria: string
+          created_at?: string | null
+          created_by?: string | null
+          descricao?: string | null
+          dias_alerta_padrao?: number | null
+          id?: string
+          is_active?: boolean | null
+          nome: string
+          orgao_regulador?: string | null
+          requer_certificado?: boolean | null
+          updated_at?: string | null
+          validade_padrao_meses?: number | null
+        }
+        Update: {
+          categoria?: string
+          created_at?: string | null
+          created_by?: string | null
+          descricao?: string | null
+          dias_alerta_padrao?: number | null
+          id?: string
+          is_active?: boolean | null
+          nome?: string
+          orgao_regulador?: string | null
+          requer_certificado?: boolean | null
+          updated_at?: string | null
+          validade_padrao_meses?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "especificacoes_servico_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fornecedores: {
         Row: {
           cep: string | null
@@ -600,6 +653,51 @@ export type Database = {
           telefone?: string | null
           tipo_pessoa?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      integracao_config: {
+        Row: {
+          created_at: string | null
+          headers_customizados: Json | null
+          id: string
+          is_active: boolean | null
+          mapeamento_campos: Json | null
+          nome: string
+          status_ultimo_teste: string | null
+          tipo: string
+          tipo_autenticacao: string | null
+          ultimo_teste: string | null
+          updated_at: string | null
+          url_api: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          headers_customizados?: Json | null
+          id?: string
+          is_active?: boolean | null
+          mapeamento_campos?: Json | null
+          nome: string
+          status_ultimo_teste?: string | null
+          tipo: string
+          tipo_autenticacao?: string | null
+          ultimo_teste?: string | null
+          updated_at?: string | null
+          url_api?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          headers_customizados?: Json | null
+          id?: string
+          is_active?: boolean | null
+          mapeamento_campos?: Json | null
+          nome?: string
+          status_ultimo_teste?: string | null
+          tipo?: string
+          tipo_autenticacao?: string | null
+          ultimo_teste?: string | null
+          updated_at?: string | null
+          url_api?: string | null
         }
         Relationships: []
       }
@@ -676,6 +774,300 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      servico_historico: {
+        Row: {
+          anexos: Json | null
+          created_at: string | null
+          data_execucao: string
+          executado_por: string | null
+          fornecedor_id: string | null
+          fotos: Json | null
+          id: string
+          numero_nota_fiscal: string | null
+          observacoes: string | null
+          proxima_validade: string | null
+          servico_id: string
+          tipo_acao: string
+          valor: number | null
+        }
+        Insert: {
+          anexos?: Json | null
+          created_at?: string | null
+          data_execucao: string
+          executado_por?: string | null
+          fornecedor_id?: string | null
+          fotos?: Json | null
+          id?: string
+          numero_nota_fiscal?: string | null
+          observacoes?: string | null
+          proxima_validade?: string | null
+          servico_id: string
+          tipo_acao: string
+          valor?: number | null
+        }
+        Update: {
+          anexos?: Json | null
+          created_at?: string | null
+          data_execucao?: string
+          executado_por?: string | null
+          fornecedor_id?: string | null
+          fotos?: Json | null
+          id?: string
+          numero_nota_fiscal?: string | null
+          observacoes?: string | null
+          proxima_validade?: string | null
+          servico_id?: string
+          tipo_acao?: string
+          valor?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "servico_historico_executado_por_fkey"
+            columns: ["executado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "servico_historico_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "servico_historico_servico_id_fkey"
+            columns: ["servico_id"]
+            isOneToOne: false
+            referencedRelation: "servicos_periodicos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      servicos_periodicos: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          data_alerta: string
+          data_ultima_troca: string
+          data_validade: string
+          dias_antecedencia_alerta: number | null
+          especificacao_id: string
+          fornecedor_preferencial_id: string | null
+          id: string
+          itens_detalhados: string | null
+          localizacao_fisica: string | null
+          observacoes: string | null
+          prioridade: string | null
+          quantidade: number | null
+          responsavel_id: string | null
+          status: string | null
+          tags: string[] | null
+          unidade_id: string
+          updated_at: string | null
+          validade_meses: number
+          valor_estimado: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          data_alerta: string
+          data_ultima_troca: string
+          data_validade: string
+          dias_antecedencia_alerta?: number | null
+          especificacao_id: string
+          fornecedor_preferencial_id?: string | null
+          id?: string
+          itens_detalhados?: string | null
+          localizacao_fisica?: string | null
+          observacoes?: string | null
+          prioridade?: string | null
+          quantidade?: number | null
+          responsavel_id?: string | null
+          status?: string | null
+          tags?: string[] | null
+          unidade_id: string
+          updated_at?: string | null
+          validade_meses: number
+          valor_estimado?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          data_alerta?: string
+          data_ultima_troca?: string
+          data_validade?: string
+          dias_antecedencia_alerta?: number | null
+          especificacao_id?: string
+          fornecedor_preferencial_id?: string | null
+          id?: string
+          itens_detalhados?: string | null
+          localizacao_fisica?: string | null
+          observacoes?: string | null
+          prioridade?: string | null
+          quantidade?: number | null
+          responsavel_id?: string | null
+          status?: string | null
+          tags?: string[] | null
+          unidade_id?: string
+          updated_at?: string | null
+          validade_meses?: number
+          valor_estimado?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "servicos_periodicos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "servicos_periodicos_especificacao_id_fkey"
+            columns: ["especificacao_id"]
+            isOneToOne: false
+            referencedRelation: "especificacoes_servico"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "servicos_periodicos_fornecedor_preferencial_id_fkey"
+            columns: ["fornecedor_preferencial_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "servicos_periodicos_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "servicos_periodicos_unidade_id_fkey"
+            columns: ["unidade_id"]
+            isOneToOne: false
+            referencedRelation: "unidades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      solicitacoes_compras: {
+        Row: {
+          codigo_solicitacao: string | null
+          confirmado_em: string | null
+          created_at: string | null
+          enviado_em: string | null
+          erro_mensagem: string | null
+          id: string
+          payload_enviado: Json | null
+          resposta_api: Json | null
+          servico_id: string
+          status_envio: string | null
+          tentativas: number | null
+        }
+        Insert: {
+          codigo_solicitacao?: string | null
+          confirmado_em?: string | null
+          created_at?: string | null
+          enviado_em?: string | null
+          erro_mensagem?: string | null
+          id?: string
+          payload_enviado?: Json | null
+          resposta_api?: Json | null
+          servico_id: string
+          status_envio?: string | null
+          tentativas?: number | null
+        }
+        Update: {
+          codigo_solicitacao?: string | null
+          confirmado_em?: string | null
+          created_at?: string | null
+          enviado_em?: string | null
+          erro_mensagem?: string | null
+          id?: string
+          payload_enviado?: Json | null
+          resposta_api?: Json | null
+          servico_id?: string
+          status_envio?: string | null
+          tentativas?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "solicitacoes_compras_servico_id_fkey"
+            columns: ["servico_id"]
+            isOneToOne: false
+            referencedRelation: "servicos_periodicos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      unidades: {
+        Row: {
+          cep: string | null
+          cidade: string | null
+          created_at: string | null
+          created_by: string | null
+          email_contato: string | null
+          endereco: string | null
+          estado: string | null
+          id: string
+          is_active: boolean | null
+          nome: string
+          responsavel_id: string | null
+          telefone: string | null
+          tipo: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          cep?: string | null
+          cidade?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          email_contato?: string | null
+          endereco?: string | null
+          estado?: string | null
+          id?: string
+          is_active?: boolean | null
+          nome: string
+          responsavel_id?: string | null
+          telefone?: string | null
+          tipo?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          cep?: string | null
+          cidade?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          email_contato?: string | null
+          endereco?: string | null
+          estado?: string | null
+          id?: string
+          is_active?: boolean | null
+          nome?: string
+          responsavel_id?: string | null
+          telefone?: string | null
+          tipo?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unidades_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unidades_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
