@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Scale, ArrowRight, Shield, BarChart3, Bell, Lock, Eye, EyeOff } from "lucide-react";
+import { Scale, ArrowRight, Shield, BarChart3, Bell, Lock, Eye, EyeOff, Wrench, FileText } from "lucide-react";
 import logoVeridiana from "@/assets/logo-veridiana.png";
 import { cn } from "@/lib/utils";
 
@@ -19,18 +19,52 @@ const Auth = () => {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        navigate("/dashboard");
+        redirectByModule(session.user.id);
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
-        navigate("/dashboard");
+        redirectByModule(session.user.id);
       }
     });
 
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  const redirectByModule = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("modulo_padrao")
+        .eq("user_id", userId)
+        .single();
+
+      if (error) {
+        console.error("Erro ao buscar módulo:", error);
+        navigate("/dashboard");
+        return;
+      }
+
+      const modulo = data?.modulo_padrao || "contratos";
+      
+      switch (modulo) {
+        case "servicos":
+          navigate("/servicos");
+          break;
+        case "ambos":
+          navigate("/seletor-modulo");
+          break;
+        case "contratos":
+        default:
+          navigate("/dashboard");
+          break;
+      }
+    } catch (error) {
+      console.error("Erro ao redirecionar:", error);
+      navigate("/dashboard");
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -91,19 +125,19 @@ const Auth = () => {
 
   const features = [
     {
-      icon: BarChart3,
-      title: "Dashboard Executivo",
-      description: "Métricas em tempo real",
+      icon: FileText,
+      title: "Gestão de Contratos",
+      description: "Controle total de prazos",
+    },
+    {
+      icon: Wrench,
+      title: "Serviços Periódicos",
+      description: "Renovações automáticas",
     },
     {
       icon: Bell,
       title: "Alertas Automáticos",
-      description: "Notificações de vencimento",
-    },
-    {
-      icon: Shield,
-      title: "Análise de Riscos",
-      description: "IA para identificar riscos",
+      description: "Notificações inteligentes",
     },
   ];
 
@@ -130,13 +164,13 @@ const Auth = () => {
           <div className="space-y-8">
             <div className="space-y-4">
               <h1 className="text-4xl font-bold leading-tight">
-                Gestão de Contratos
+                Gestão Inteligente
                 <br />
-                <span className="text-white/80">Inteligente</span>
+                <span className="text-white/80">de Contratos e Serviços</span>
               </h1>
               <p className="text-lg text-white/70 max-w-md">
-                Automatize alertas, analise riscos e mantenha o controle total 
-                dos seus contratos com fornecedores e terceiros.
+                Dois módulos integrados para gestão completa: contratos com fornecedores 
+                e serviços periódicos com renovações automáticas.
               </p>
             </div>
 
