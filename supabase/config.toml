@@ -12,6 +12,9 @@ verify_jwt = true
 [functions.enviar-notificacao-email]
 verify_jwt = true
 
+[functions.enviar-valores-contrato]
+verify_jwt = true
+
 [functions.verificar-alertas]
 verify_jwt = false
 

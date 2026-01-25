@@ -1073,22 +1073,82 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          modulo_padrao: string | null
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
+          modulo_padrao?: string | null
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
+          modulo_padrao?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
         Relationships: []
+      }
+      uso_sistema: {
+        Row: {
+          contrato_id: string | null
+          created_at: string | null
+          custo_total: number | null
+          custo_unitario: number | null
+          id: string
+          metadata: Json | null
+          quantidade: number | null
+          recurso: string
+          servico_id: string | null
+          tipo: string
+          user_id: string | null
+        }
+        Insert: {
+          contrato_id?: string | null
+          created_at?: string | null
+          custo_total?: number | null
+          custo_unitario?: number | null
+          id?: string
+          metadata?: Json | null
+          quantidade?: number | null
+          recurso: string
+          servico_id?: string | null
+          tipo: string
+          user_id?: string | null
+        }
+        Update: {
+          contrato_id?: string | null
+          created_at?: string | null
+          custo_total?: number | null
+          custo_unitario?: number | null
+          id?: string
+          metadata?: Json | null
+          quantidade?: number | null
+          recurso?: string
+          servico_id?: string | null
+          tipo?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "uso_sistema_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "uso_sistema_servico_id_fkey"
+            columns: ["servico_id"]
+            isOneToOne: false
+            referencedRelation: "servicos_periodicos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

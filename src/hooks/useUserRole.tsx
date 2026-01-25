@@ -2,9 +2,11 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export type UserRole = "analista_juridico" | "consultoria_juridica" | "administrador" | null;
+export type ModuloPadrao = "contratos" | "servicos" | "ambos";
 
 export const useUserRole = () => {
   const [userRole, setUserRole] = useState<UserRole>(null);
+  const [moduloPadrao, setModuloPadrao] = useState<ModuloPadrao>("contratos");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,7 +25,7 @@ export const useUserRole = () => {
 
       const { data, error } = await supabase
         .from("user_roles")
-        .select("role")
+        .select("role, modulo_padrao")
         .eq("user_id", user.id)
         .single();
 
@@ -32,12 +34,36 @@ export const useUserRole = () => {
         setUserRole(null);
       } else {
         setUserRole(data?.role as UserRole);
+        setModuloPadrao((data?.modulo_padrao as ModuloPadrao) || "contratos");
       }
     } catch (error) {
       console.error("Erro ao buscar role:", error);
       setUserRole(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const updateModuloPadrao = async (novoModulo: ModuloPadrao) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return false;
+
+      const { error } = await supabase
+        .from("user_roles")
+        .update({ modulo_padrao: novoModulo })
+        .eq("user_id", user.id);
+
+      if (error) {
+        console.error("Erro ao atualizar módulo:", error);
+        return false;
+      }
+
+      setModuloPadrao(novoModulo);
+      return true;
+    } catch (error) {
+      console.error("Erro ao atualizar módulo:", error);
+      return false;
     }
   };
 
@@ -49,12 +75,14 @@ export const useUserRole = () => {
 
   return {
     userRole,
+    moduloPadrao,
     loading,
     isAnalista,
     isConsultor,
     isAdmin,
     canApprove,
     canManageUsers,
+    updateModuloPadrao,
     refresh: fetchUserRole,
   };
 };
