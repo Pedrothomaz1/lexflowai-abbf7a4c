@@ -77,7 +77,6 @@ const servicosMenuItems = [
 
 // Menu items compartilhados (sistema)
 const sistemaMenuItems = [
-  { title: "Custos", url: "/custos", icon: DollarSign, roles: ["administrador"], group: "sistema" },
   { title: "Configurações", url: "/settings", icon: Settings, roles: ["all"], group: "sistema" },
 ];
 
@@ -275,7 +274,7 @@ export function AppSidebar() {
           <SidebarGroup className="mb-2">
             {!collapsed && (
               <SidebarGroupLabel className="px-3 text-xs font-medium text-sidebar-muted uppercase tracking-wider">
-                Admin Central
+                Cadastro
               </SidebarGroupLabel>
             )}
             <SidebarGroupContent>
