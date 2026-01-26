@@ -65,11 +65,13 @@ type Obligation = {
 };
 
 const tipoConfig: Record<string, { label: string; icon: typeof DollarSign; color: string }> = {
-  pagamento: { label: "Pagamento", icon: DollarSign, color: "text-emerald-600" },
+  comunicacao: { label: "Comunicação", icon: Send, color: "text-emerald-600" },
   entrega: { label: "Entrega", icon: Send, color: "text-blue-600" },
   relatorio: { label: "Relatório", icon: FileText, color: "text-purple-600" },
   renovacao: { label: "Renovação", icon: RefreshCw, color: "text-amber-600" },
   notificacao: { label: "Notificação", icon: Bell, color: "text-rose-600" },
+  // Retrocompatibilidade: mapear "pagamento" antigo para Comunicação
+  pagamento: { label: "Comunicação", icon: Send, color: "text-emerald-600" },
 };
 
 const Obrigacoes = () => {
@@ -239,9 +241,6 @@ const Obrigacoes = () => {
       return dias >= 0 && dias <= 7;
     }).length,
     concluidas: obligations.filter(o => o.status === "concluido").length,
-    valorTotal: obligations
-      .filter(o => o.status !== "concluido" && o.tipo === "pagamento")
-      .reduce((sum, o) => sum + (o.valor || 0), 0),
   };
 
   const completionRate = stats.total > 0 ? Math.round((stats.concluidas / stats.total) * 100) : 0;
@@ -433,15 +432,27 @@ const Obrigacoes = () => {
           <AnimatedCard>
             <AnimatedCardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold">Pagamentos Pendentes</h3>
-                <DollarSign className="h-5 w-5 text-emerald-600" />
+                <h3 className="font-semibold">Distribuição por Tipo</h3>
+                <Filter className="h-5 w-5 text-primary" />
               </div>
-              <span className="text-2xl font-bold text-emerald-600">
-                {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(stats.valorTotal)}
-              </span>
-              <p className="text-sm text-muted-foreground mt-2">
-                Total em pagamentos a realizar
-              </p>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(tipoConfig)
+                  .filter(([tipo]) => tipo !== "pagamento") // Não mostrar duplicado
+                  .map(([tipo, config]) => {
+                    const count = obligations.filter(o => 
+                      (o.tipo === tipo || (tipo === "comunicacao" && o.tipo === "pagamento")) && 
+                      o.status !== "concluido"
+                    ).length;
+                    if (count === 0) return null;
+                    const Icon = config.icon;
+                    return (
+                      <Badge key={tipo} variant="outline" className="gap-1.5">
+                        <Icon className={`h-3 w-3 ${config.color}`} />
+                        {config.label}: {count}
+                      </Badge>
+                    );
+                  })}
+              </div>
             </AnimatedCardContent>
           </AnimatedCard>
         </div>
@@ -468,7 +479,7 @@ const Obrigacoes = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os tipos</SelectItem>
-              <SelectItem value="pagamento">Pagamento</SelectItem>
+              <SelectItem value="comunicacao">Comunicação</SelectItem>
               <SelectItem value="entrega">Entrega</SelectItem>
               <SelectItem value="relatorio">Relatório</SelectItem>
               <SelectItem value="renovacao">Renovação</SelectItem>

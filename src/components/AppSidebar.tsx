@@ -15,6 +15,7 @@ import {
   DollarSign,
   ArrowLeftRight,
   Cog,
+  Check,
 } from "lucide-react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
@@ -132,14 +133,10 @@ export function AppSidebar() {
     }
   };
 
-  const handleSwitchModulo = () => {
-    const novoModulo = moduloAtivo === "contratos" ? "servicos" : "contratos";
+  const handleModuloChange = (novoModulo: ModuloAtivo) => {
+    if (novoModulo === moduloAtivo) return;
     setModuloAtivo(novoModulo);
-    if (novoModulo === "contratos") {
-      navigate("/dashboard");
-    } else {
-      navigate("/servicos");
-    }
+    navigate(novoModulo === "contratos" ? "/dashboard" : "/servicos");
   };
 
   // Determinar quais menus mostrar baseado no módulo ativo
@@ -182,50 +179,61 @@ export function AppSidebar() {
           {!collapsed && (
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-sidebar-foreground">LexFlow</span>
-              <Badge 
-                variant="secondary" 
-                className={cn(
-                  "text-2xs w-fit",
-                  moduloAtivo === "contratos" 
-                    ? "bg-[hsl(153_13%_56%/0.2)] text-[hsl(153_13%_70%)]" 
-                    : "bg-[hsl(35_58%_61%/0.2)] text-[hsl(35_58%_75%)]"
-                )}
-              >
-                {moduloLabels[moduloAtivo]}
-              </Badge>
+              
+              {moduloPadrao === "ambos" ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="flex items-center gap-1 mt-0.5 group focus:outline-none">
+                      <Badge 
+                        variant="secondary" 
+                        className={cn(
+                          "text-2xs cursor-pointer transition-colors",
+                          moduloAtivo === "contratos" 
+                            ? "bg-[hsl(153_13%_56%/0.2)] text-[hsl(153_13%_70%)]" 
+                            : "bg-[hsl(35_58%_61%/0.2)] text-[hsl(35_58%_75%)]"
+                        )}
+                      >
+                        {moduloLabels[moduloAtivo]}
+                        <ChevronDown className="h-3 w-3 ml-1 opacity-70 group-hover:opacity-100 transition-opacity" />
+                      </Badge>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-40">
+                    <DropdownMenuItem 
+                      onClick={() => handleModuloChange("contratos")}
+                      className="flex items-center justify-between"
+                    >
+                      <span>Contratos</span>
+                      {moduloAtivo === "contratos" && <Check className="h-4 w-4 text-primary" />}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => handleModuloChange("servicos")}
+                      className="flex items-center justify-between"
+                    >
+                      <span>Serviços</span>
+                      {moduloAtivo === "servicos" && <Check className="h-4 w-4 text-primary" />}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Badge 
+                  variant="secondary" 
+                  className={cn(
+                    "text-2xs w-fit mt-0.5",
+                    moduloAtivo === "contratos" 
+                      ? "bg-[hsl(153_13%_56%/0.2)] text-[hsl(153_13%_70%)]" 
+                      : "bg-[hsl(35_58%_61%/0.2)] text-[hsl(35_58%_75%)]"
+                  )}
+                >
+                  {moduloLabels[moduloAtivo]}
+                </Badge>
+              )}
             </div>
           )}
         </div>
       </SidebarHeader>
 
       <SidebarContent className="px-2 py-4 scrollbar-thin">
-        {/* Module Switcher - Redesigned as prominent selector */}
-        {moduloPadrao === "ambos" && !collapsed && (
-          <div className="mx-3 mb-4 p-3 rounded-lg bg-sidebar-accent/30 border border-sidebar-border">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className={cn(
-                  "w-2 h-2 rounded-full",
-                  moduloAtivo === "contratos" 
-                    ? "bg-[hsl(153_13%_56%)]" 
-                    : "bg-[hsl(35_58%_61%)]"
-                )} />
-                <span className="text-sm font-medium text-sidebar-foreground">
-                  {moduloAtivo === "contratos" ? "Contratos" : "Serviços"}
-                </span>
-              </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={handleSwitchModulo}
-                className="h-7 px-2 text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
-              >
-                <ArrowLeftRight className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          </div>
-        )}
-
         {/* Operação Group */}
         {groupedItems.operacao.length > 0 && (
           <SidebarGroup className="mb-2">
@@ -342,7 +350,7 @@ export function AppSidebar() {
             <DropdownMenuSeparator />
             {moduloPadrao === "ambos" && (
               <>
-                <DropdownMenuItem onClick={handleSwitchModulo}>
+                <DropdownMenuItem onClick={() => handleModuloChange(moduloAtivo === "contratos" ? "servicos" : "contratos")}>
                   <ArrowLeftRight className="mr-2 h-4 w-4" />
                   Trocar Módulo
                 </DropdownMenuItem>
