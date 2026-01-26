@@ -7,9 +7,10 @@
 @layer base {
   :root {
     /* ========== Paleta Master Blueprint LexFlow ========== */
-    --lexflow-verde-escuro: 153 16% 27%;      /* #384E46 - Sidebar */
+    --lexflow-verde-escuro: 153 16% 27%;      /* #384E46 - Sidebar, Fundo Seletor */
     --lexflow-verde-principal: 153 13% 56%;   /* #7F9C90 - Destaque Contratos */
-    --lexflow-off-white: 80 17% 95%;          /* #F2F4F0 - Textos */
+    --lexflow-verde-claro: 153 18% 63%;       /* #92ACA0 - Textos Secundários */
+    --lexflow-off-white: 80 17% 95%;          /* #F2F4F0 - Textos Primários */
     --lexflow-mostarda: 35 58% 61%;           /* #D6A461 - Destaque Serviços */
     --lexflow-amarelo: 43 82% 68%;            /* #EFC06E - CTAs */
     --lexflow-vinho: 344 62% 39%;             /* #862041 - Alertas Críticos */
@@ -72,7 +73,8 @@
     --sidebar-accent-foreground: var(--lexflow-off-white);
     --sidebar-border: 153 20% 23%;
     --sidebar-ring: var(--modulo-accent);
-    --sidebar-muted: 80 10% 70%;
+    --sidebar-muted: var(--lexflow-verde-claro);
+    --sidebar-muted-opacity: 153 18% 63% / 0.6;
     
     /* Chart Colors */
     --chart-1: 165 35% 45%;

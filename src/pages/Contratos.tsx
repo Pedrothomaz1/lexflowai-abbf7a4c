@@ -629,16 +629,34 @@ const Contratos = () => {
 
       {/* Unified View Tabs */}
       <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as typeof viewMode)} className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="lista" className="gap-2">
+        <TabsList className="bg-[hsl(var(--lexflow-off-white))] p-1">
+          <TabsTrigger 
+            value="lista" 
+            className={cn(
+              "gap-2 data-[state=active]:text-white transition-all",
+              "data-[state=active]:bg-[hsl(var(--lexflow-verde-principal))] data-[state=active]:shadow-sm"
+            )}
+          >
             <List className="h-4 w-4" />
             Lista
           </TabsTrigger>
-          <TabsTrigger value="kanban" className="gap-2">
+          <TabsTrigger 
+            value="kanban" 
+            className={cn(
+              "gap-2 data-[state=active]:text-white transition-all",
+              "data-[state=active]:bg-[hsl(var(--lexflow-verde-principal))] data-[state=active]:shadow-sm"
+            )}
+          >
             <KanbanIcon className="h-4 w-4" />
             Kanban
           </TabsTrigger>
-          <TabsTrigger value="calendario" className="gap-2">
+          <TabsTrigger 
+            value="calendario" 
+            className={cn(
+              "gap-2 data-[state=active]:text-white transition-all",
+              "data-[state=active]:bg-[hsl(var(--lexflow-verde-principal))] data-[state=active]:shadow-sm"
+            )}
+          >
             <Calendar className="h-4 w-4" />
             Calendário
           </TabsTrigger>
