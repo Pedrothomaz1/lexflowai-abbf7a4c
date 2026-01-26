@@ -1,290 +1,259 @@
 
-## Plano: Master Blueprint LexFlow - Redesign UX/UI
 
-### Visão Geral
-
-Transformar a interface do LexFlow em um "cockpit de alta produtividade" com diferenciação visual clara entre os módulos **Contratos** (tema Verde) e **Serviços** (tema Mostarda), seguindo a Lei de Hick para reduzir atrito cognitivo.
+## Plano Consolidado: Seletor de Módulo no Header + Remoção de "Pagamentos Pendentes"
 
 ---
 
-## Fase 1: Sistema de Temas Dinâmicos por Módulo
+## Parte 1: Seletor de Módulo no Header da Sidebar
 
-### 1.1 Novas Variáveis CSS (index.css)
+### Objetivo
 
-Adicionar variáveis de cor específicas para cada módulo:
+Permitir que usuários com acesso a ambos os módulos possam trocar diretamente clicando no Badge do módulo atual no header, sem precisar usar o componente separado abaixo.
 
-```css
-:root {
-  /* Paleta Master Blueprint */
-  --lexflow-verde-escuro: 153 16% 27%;      /* #384E46 - Sidebar */
-  --lexflow-verde-principal: 153 13% 56%;   /* #7F9C90 - Destaque Contratos */
-  --lexflow-off-white: 80 17% 95%;          /* #F2F4F0 - Textos */
-  --lexflow-mostarda: 35 58% 61%;           /* #D6A461 - Destaque Serviços */
-  --lexflow-amarelo: 43 82% 68%;            /* #EFC06E - CTAs */
-  --lexflow-vinho: 344 62% 39%;             /* #862041 - Alertas Críticos */
-  --lexflow-rosa: 13 69% 75%;               /* #EA9E95 - Erros */
-  
-  /* Módulo Ativo (padrão: contratos) */
-  --modulo-accent: var(--lexflow-verde-principal);
-  --modulo-accent-foreground: 0 0% 100%;
-}
+---
 
-/* Classe para módulo Serviços */
-.modulo-servicos {
-  --modulo-accent: var(--lexflow-mostarda);
-  --sidebar-primary: var(--lexflow-mostarda);
-}
+### Mudanças na Interface
+
+**Antes:**
+```text
+[Logo] LexFlow
+       Contratos ← badge estático
+
+[Bloco separado de Module Switcher]
 ```
 
-### 1.2 Aplicação Dinâmica no Layout
+**Depois:**
+```text
+[Logo] LexFlow
+       Contratos ▼ ← badge clicável com chevron (abre dropdown)
+       
+[Dropdown]
+● Contratos
+○ Serviços
 
-Modificar `DashboardLayout.tsx` para aplicar classe CSS baseada no módulo ativo:
-
-```typescript
-const { moduloAtivo } = useModulo();
-
-<div className={cn(
-  "min-h-screen flex w-full bg-background",
-  moduloAtivo === "servicos" && "modulo-servicos"
-)}>
+(Bloco separado removido)
 ```
 
 ---
 
-## Fase 2: Reestruturação do Menu Lateral
+### Comportamento por Tipo de Usuário
 
-### 2.1 Nova Hierarquia de Menu (AppSidebar.tsx)
-
-Reorganizar seguindo o checklist do Blueprint:
-
-| Grupo | Contratos | Serviços |
-|-------|-----------|----------|
-| **Operação** | Dashboard, Contratos | Dashboard, Serviços |
-| **Controle** | Obrigações, Workflows | - |
-| **Admin Central** | Usuários, Fornecedores, Templates | Usuários, Fornecedores, Unidades, Especificações |
-
-**Itens a remover do menu lateral:**
-- Alertas → Mover para Header como ícone
-- Calendário → Mover para Header como ícone
-- Kanban → Integrar dentro da página Contratos como visualização
-
-### 2.2 Switch de Módulo no Topo
-
-Redesenhar o seletor de módulo como componente destacado:
-
-```typescript
-<div className="mx-3 mb-4 p-3 rounded-lg bg-sidebar-accent/30 border border-sidebar-border">
-  <div className="flex items-center justify-between">
-    <div className="flex items-center gap-2">
-      <div className={cn(
-        "w-2 h-2 rounded-full",
-        moduloAtivo === "contratos" ? "bg-[#7F9C90]" : "bg-[#D6A461]"
-      )} />
-      <span className="text-sm font-medium text-sidebar-foreground">
-        {moduloAtivo === "contratos" ? "Contratos" : "Serviços"}
-      </span>
-    </div>
-    <Button variant="ghost" size="sm" onClick={handleSwitchModulo}>
-      <ArrowLeftRight className="h-4 w-4" />
-    </Button>
-  </div>
-</div>
-```
+| Usuário | Comportamento |
+|---------|--------------|
+| Acesso a 1 módulo | Badge estático (sem interação) |
+| Acesso a ambos | Badge clicável com chevron, abre dropdown |
 
 ---
 
-## Fase 3: Novo Header com Utilidades
+### Implementação Técnica (AppSidebar.tsx)
 
-### 3.1 Adicionar Ícones de Alertas e Calendário (GlobalHeader.tsx)
+#### 1. Adicionar import `Check` ao lucide-react
 
 ```typescript
-// Novo layout do header
-<header className="...">
-  <SidebarTrigger />
-  <PageTitle />
-  
-  <div className="flex-1" />
-  
-  {/* Utilities Zone */}
-  <Button variant="ghost" onClick={() => navigate("/calendario")}>
-    <Calendar className="h-4 w-4" />
-  </Button>
-  
-  <Button variant="ghost" className="relative" onClick={() => navigate("/alertas")}>
-    <Bell className="h-4 w-4" />
-    {pendingAlerts > 0 && (
-      <Badge className="absolute -right-1 -top-1 bg-[#862041] text-white">
-        {pendingAlerts}
+import { ..., Check, ChevronDown } from "lucide-react";
+```
+
+#### 2. Transformar Badge em DropdownMenu no SidebarHeader (linhas 182-196)
+
+```typescript
+{!collapsed && (
+  <div className="flex flex-col">
+    <span className="text-sm font-semibold text-sidebar-foreground">LexFlow</span>
+    
+    {moduloPadrao === "ambos" ? (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="flex items-center gap-1 mt-0.5 group focus:outline-none">
+            <Badge 
+              variant="secondary" 
+              className={cn(
+                "text-2xs cursor-pointer transition-colors",
+                moduloAtivo === "contratos" 
+                  ? "bg-[hsl(153_13%_56%/0.2)] text-[hsl(153_13%_70%)]" 
+                  : "bg-[hsl(35_58%_61%/0.2)] text-[hsl(35_58%_75%)]"
+              )}
+            >
+              {moduloLabels[moduloAtivo]}
+              <ChevronDown className="h-3 w-3 ml-1 opacity-70 group-hover:opacity-100 transition-opacity" />
+            </Badge>
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-40">
+          <DropdownMenuItem 
+            onClick={() => handleModuloChange("contratos")}
+            className="flex items-center justify-between"
+          >
+            <span>Contratos</span>
+            {moduloAtivo === "contratos" && <Check className="h-4 w-4 text-primary" />}
+          </DropdownMenuItem>
+          <DropdownMenuItem 
+            onClick={() => handleModuloChange("servicos")}
+            className="flex items-center justify-between"
+          >
+            <span>Serviços</span>
+            {moduloAtivo === "servicos" && <Check className="h-4 w-4 text-primary" />}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    ) : (
+      <Badge 
+        variant="secondary" 
+        className={cn(
+          "text-2xs w-fit mt-0.5",
+          moduloAtivo === "contratos" 
+            ? "bg-[hsl(153_13%_56%/0.2)] text-[hsl(153_13%_70%)]" 
+            : "bg-[hsl(35_58%_61%/0.2)] text-[hsl(35_58%_75%)]"
+        )}
+      >
+        {moduloLabels[moduloAtivo]}
       </Badge>
     )}
-  </Button>
-  
-  <Search />
-  <ThemeToggle />
-</header>
+  </div>
+)}
 ```
 
----
-
-## Fase 4: Visualizações Unificadas (Lista/Kanban/Calendário)
-
-### 4.1 Criar Componente de Tabs dentro de Contratos.tsx
+#### 3. Criar função handleModuloChange
 
 ```typescript
-const [viewMode, setViewMode] = useState<"lista" | "kanban" | "calendario">("lista");
-
-<Tabs value={viewMode} onValueChange={setViewMode}>
-  <TabsList>
-    <TabsTrigger value="lista">
-      <List className="h-4 w-4 mr-2" />
-      Lista
-    </TabsTrigger>
-    <TabsTrigger value="kanban">
-      <Kanban className="h-4 w-4 mr-2" />
-      Kanban
-    </TabsTrigger>
-    <TabsTrigger value="calendario">
-      <Calendar className="h-4 w-4 mr-2" />
-      Calendário
-    </TabsTrigger>
-  </TabsList>
-  
-  <TabsContent value="lista">
-    <DataTable ... />
-  </TabsContent>
-  <TabsContent value="kanban">
-    <KanbanBoard ... />
-  </TabsContent>
-  <TabsContent value="calendario">
-    <CalendarView ... />
-  </TabsContent>
-</Tabs>
+const handleModuloChange = (novoModulo: ModuloAtivo) => {
+  if (novoModulo === moduloAtivo) return;
+  setModuloAtivo(novoModulo);
+  navigate(novoModulo === "contratos" ? "/dashboard" : "/servicos");
+};
 ```
 
-### 4.2 Mover Componentes Existentes
+#### 4. Remover Module Switcher redundante
 
-- Extrair lógica de `Kanban.tsx` para componente reutilizável `KanbanBoard.tsx`
-- Extrair lógica de `Calendario.tsx` para componente reutilizável `CalendarView.tsx`
-
----
-
-## Fase 5: Hierarquia Visual de Cards (Dashboard)
-
-### 5.1 Adicionar Variante Vinho para Cards Críticos
-
-```css
-.stat-card-critical {
-  @apply stat-card;
-  background: linear-gradient(135deg, hsl(344 62% 39% / 0.12), hsl(344 62% 39% / 0.05));
-  border-color: hsl(344 62% 39% / 0.3);
-}
-
-.badge-critical {
-  @apply bg-[#862041]/10 text-[#862041] border-[#862041]/20;
-}
-```
-
-### 5.2 Atualizar Dashboard.tsx
-
-Cards de "Vencendo em 30 dias" e "Riscos Altos" usarão a variante critical:
-
+Remover o bloco separado (linhas 202-227):
 ```typescript
-<StatCard
-  title="Vencendo em 30 dias"
-  value={stats.vencendo30Dias}
-  icon={Clock}
-  variant="critical"  // Nova variante
-/>
+// REMOVER este bloco inteiro
+{moduloPadrao === "ambos" && !collapsed && (
+  <div className="mx-3 mb-4 p-3 rounded-lg bg-sidebar-accent/30 border border-sidebar-border">
+    ...
+  </div>
+)}
 ```
 
 ---
 
-## Fase 6: Contraste de Tipografia
+## Parte 2: Remoção de "Pagamentos Pendentes"
 
-### 6.1 Atualizar Cores do Sidebar (index.css)
+### Contexto
 
-Substituir cinza atual por Off White para legibilidade:
-
-```css
-:root {
-  --sidebar-background: 153 16% 27%;        /* #384E46 - Verde Escuro */
-  --sidebar-foreground: 80 17% 95%;         /* #F2F4F0 - Off White */
-  --sidebar-muted: 80 10% 75%;              /* Mais claro que antes */
-}
-```
+O fluxo LexFlow termina quando um email é enviado ao financeiro. O sistema não controla pagamentos - isso é feito no ERP/sistema financeiro da empresa.
 
 ---
 
-## Fase 7: Botão "Novo Contrato" Destacado
+### Mudanças na Página Obrigacoes.tsx
 
-### 7.1 Aplicar Cor Amarelo Ouro ao CTA Principal
+#### 1. Substituir Card "Pagamentos Pendentes" por "Por Tipo"
 
+**Antes (linhas 433-446):**
 ```typescript
-<Button 
-  size="sm"
-  className="bg-[#EFC06E] hover:bg-[#D6A461] text-[#384E46] font-semibold"
->
-  <Plus className="h-4 w-4 mr-1.5" />
-  Novo Contrato
-</Button>
+<AnimatedCard>
+  <AnimatedCardContent className="p-6">
+    <h3>Pagamentos Pendentes</h3>
+    <DollarSign />
+    <span>{formatCurrency(stats.valorTotal)}</span>
+    <p>Total em pagamentos a realizar</p>
+  </AnimatedCardContent>
+</AnimatedCard>
 ```
+
+**Depois:**
+```typescript
+<AnimatedCard>
+  <AnimatedCardContent className="p-6">
+    <div className="flex items-center justify-between mb-4">
+      <h3 className="font-semibold">Distribuição por Tipo</h3>
+      <Filter className="h-5 w-5 text-primary" />
+    </div>
+    <div className="flex flex-wrap gap-2">
+      {Object.entries(tipoConfig).map(([tipo, config]) => {
+        const count = obligations.filter(o => o.tipo === tipo && o.status !== "concluido").length;
+        if (count === 0) return null;
+        const Icon = config.icon;
+        return (
+          <Badge key={tipo} variant="outline" className="gap-1.5">
+            <Icon className={`h-3 w-3 ${config.color}`} />
+            {config.label}: {count}
+          </Badge>
+        );
+      })}
+    </div>
+  </AnimatedCardContent>
+</AnimatedCard>
+```
+
+#### 2. Atualizar tipoConfig - Renomear "pagamento" para "comunicacao"
+
+**Antes (linhas 67-73):**
+```typescript
+const tipoConfig = {
+  pagamento: { label: "Pagamento", icon: DollarSign, color: "text-emerald-600" },
+  ...
+};
+```
+
+**Depois:**
+```typescript
+const tipoConfig = {
+  comunicacao: { label: "Comunicação", icon: Send, color: "text-emerald-600" },
+  entrega: { label: "Entrega", icon: FileCheck, color: "text-blue-600" },
+  relatorio: { label: "Relatório", icon: FileText, color: "text-purple-600" },
+  renovacao: { label: "Renovação", icon: RefreshCw, color: "text-amber-600" },
+  notificacao: { label: "Notificação", icon: Bell, color: "text-rose-600" },
+  // Retrocompatibilidade: mapear "pagamento" antigo
+  pagamento: { label: "Comunicação", icon: Send, color: "text-emerald-600" },
+};
+```
+
+#### 3. Remover cálculo de valorTotal dos stats
+
+**Remover (linhas 242-244):**
+```typescript
+valorTotal: obligations
+  .filter(o => o.status !== "concluido" && o.tipo === "pagamento")
+  .reduce((sum, o) => sum + (o.valor || 0), 0),
+```
+
+#### 4. Atualizar filtro de tipos (linhas 470-476)
+
+**Antes:**
+```typescript
+<SelectItem value="pagamento">Pagamento</SelectItem>
+```
+
+**Depois:**
+```typescript
+<SelectItem value="comunicacao">Comunicação</SelectItem>
+```
+
+#### 5. Manter coluna "Valor" como referência (opcional)
+
+A coluna "Valor" pode continuar existindo para exibir valores de referência quando houver, sem a métrica de "Pagamentos Pendentes".
 
 ---
 
-## Arquivos a Modificar
+## Resumo de Arquivos a Modificar
 
 | Arquivo | Mudanças |
 |---------|----------|
-| `src/index.css` | Adicionar variáveis da paleta, temas por módulo, variantes de cards |
-| `src/components/DashboardLayout.tsx` | Aplicar classe CSS dinâmica baseada no módulo |
-| `src/components/AppSidebar.tsx` | Nova estrutura de menu, remover Alertas/Calendário, redesenhar switch |
-| `src/components/GlobalHeader.tsx` | Adicionar ícones de Calendário e Alertas |
-| `src/pages/Contratos.tsx` | Integrar tabs Lista/Kanban/Calendário |
-| `src/pages/Servicos.tsx` | Integrar tabs Lista/Calendário |
-| `src/components/ui/stat-card.tsx` | Adicionar variante "critical" |
-| `src/pages/Dashboard.tsx` | Usar nova variante critical para cards de risco |
-| `src/pages/Kanban.tsx` | Refatorar para componente reutilizável |
-| `src/pages/Calendario.tsx` | Refatorar para componente reutilizável |
-| `tailwind.config.ts` | Adicionar cores da paleta oficial |
+| `src/components/AppSidebar.tsx` | Badge clicável com dropdown, remover Module Switcher separado |
+| `src/pages/Obrigacoes.tsx` | Card "Por Tipo", atualizar tipoConfig, remover valorTotal |
 
 ---
 
-## Arquivos Novos a Criar
+## Resultado Esperado
 
-| Arquivo | Descrição |
-|---------|-----------|
-| `src/components/contracts/KanbanBoard.tsx` | Componente Kanban reutilizável |
-| `src/components/contracts/CalendarView.tsx` | Componente Calendário reutilizável |
-| `src/components/contracts/ViewToggle.tsx` | Seletor de visualização (Lista/Kanban/Calendário) |
+### Sidebar
+- Badge do módulo no header é clicável para usuários com acesso a ambos
+- Dropdown mostra opções com indicador visual do módulo ativo
+- Interface mais limpa sem componente duplicado
 
----
+### Obrigações
+- Sem métricas de "Pagamentos Pendentes" que não fazem sentido no contexto
+- Card mostra distribuição por tipo de obrigação
+- Tipo "Comunicação" substitui "Pagamento" (retrocompatível)
+- Foco no fluxo real: gestão de contratos, não controle financeiro
 
-## Resultado Visual Esperado
-
-**Módulo Contratos:**
-- Sidebar: Verde Escuro (#384E46)
-- Destaque ativo: Verde Principal (#7F9C90)
-- Textos: Off White (#F2F4F0)
-- CTA principal: Amarelo (#EFC06E)
-
-**Módulo Serviços:**
-- Sidebar: Verde Escuro (#384E46)
-- Destaque ativo: Mostarda (#D6A461)
-- Textos: Off White (#F2F4F0)
-- CTA principal: Amarelo (#EFC06E)
-
-**Alertas Críticos:**
-- Badges e bordas: Vinho (#862041)
-- Erros de validação: Rosa (#EA9E95)
-
----
-
-## Checklist de Validação
-
-- [ ] Switch de módulo altera cor de destaque instantaneamente
-- [ ] Alertas e Calendário removidos do menu lateral
-- [ ] Ícones de Alertas e Calendário visíveis no header
-- [ ] Contratos.tsx possui tabs Lista/Kanban/Calendário
-- [ ] Cards críticos usam bordas/fundos em Vinho
-- [ ] Tipografia do sidebar usa Off White
-- [ ] Botão "Novo Contrato" em Amarelo destacado
