@@ -80,6 +80,7 @@ const Contratos = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [filtros, setFiltros] = useState<FiltrosAvancados>({
     busca: searchParams.get("search") || "",
+    status: searchParams.get("status") || "",
   });
   const [viewMode, setViewMode] = useState<"lista" | "kanban" | "calendario">("lista");
   const [obligations, setObligations] = useState<CalendarObligation[]>([]);
