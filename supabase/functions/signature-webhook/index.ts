@@ -31,12 +31,11 @@ async function verifyWebhookSignature(
 ): Promise<{ valid: boolean; error?: string }> {
   const webhookSecret = Deno.env.get('WEBHOOK_SECRET');
   
-  // If no webhook secret is configured, log warning but allow in development
-  // In production, this should be strictly enforced
+  // SECURITY: Require WEBHOOK_SECRET to be configured
+  // This prevents unauthenticated access to the webhook endpoint
   if (!webhookSecret) {
-    console.warn('WEBHOOK_SECRET not configured - webhook signature verification disabled');
-    console.warn('For production, please configure WEBHOOK_SECRET in edge function secrets');
-    return { valid: true };
+    console.error('WEBHOOK_SECRET not configured - rejecting request for security');
+    return { valid: false, error: 'WEBHOOK_SECRET must be configured for webhook security' };
   }
 
   try {
