@@ -265,7 +265,7 @@ export function AppSidebar() {
               {!collapsed && (
                 <CollapsibleTrigger className="w-full">
                   <SidebarGroupLabel className="px-3 text-xs font-medium text-[hsl(var(--lexflow-verde-claro)/0.6)] uppercase tracking-wider flex items-center justify-between cursor-pointer hover:text-[hsl(var(--lexflow-verde-claro))] transition-colors">
-                    <span>Configurações</span>
+                    <span>Cadastro</span>
                     {configOpen ? (
                       <ChevronDown className="h-3.5 w-3.5" />
                     ) : (
