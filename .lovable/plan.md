@@ -1,259 +1,270 @@
 
 
-## Plano Consolidado: Seletor de Módulo no Header + Remoção de "Pagamentos Pendentes"
+## Plano Consolidado: Menu + Custos em Configurações + Registro de Tokens
 
 ---
 
-## Parte 1: Seletor de Módulo no Header da Sidebar
+## Parte 1: Reorganização do Menu da Sidebar
 
-### Objetivo
+### Mudanças no Menu
 
-Permitir que usuários com acesso a ambos os módulos possam trocar diretamente clicando no Badge do módulo atual no header, sem precisar usar o componente separado abaixo.
+| Mudança | Arquivo | Antes | Depois |
+|---------|---------|-------|--------|
+| Renomear grupo | AppSidebar.tsx (linha 278) | `Admin Central` | `Cadastro` |
+| Mover Custos para Settings | AppSidebar.tsx | Item separado no menu | Seção dentro de /settings |
 
----
+### Remover "Custos" do Menu Lateral
 
-### Mudanças na Interface
-
-**Antes:**
-```text
-[Logo] LexFlow
-       Contratos ← badge estático
-
-[Bloco separado de Module Switcher]
-```
-
-**Depois:**
-```text
-[Logo] LexFlow
-       Contratos ▼ ← badge clicável com chevron (abre dropdown)
-       
-[Dropdown]
-● Contratos
-○ Serviços
-
-(Bloco separado removido)
-```
-
----
-
-### Comportamento por Tipo de Usuário
-
-| Usuário | Comportamento |
-|---------|--------------|
-| Acesso a 1 módulo | Badge estático (sem interação) |
-| Acesso a ambos | Badge clicável com chevron, abre dropdown |
-
----
-
-### Implementação Técnica (AppSidebar.tsx)
-
-#### 1. Adicionar import `Check` ao lucide-react
+Atualmente, "Custos" aparece como item separado no grupo "Sistema" (linha 80):
 
 ```typescript
-import { ..., Check, ChevronDown } from "lucide-react";
+const sistemaMenuItems = [
+  { title: "Custos", url: "/custos", icon: DollarSign, roles: ["administrador"], group: "sistema" },
+  { title: "Configurações", url: "/settings", icon: Settings, roles: ["all"], group: "sistema" },
+];
 ```
 
-#### 2. Transformar Badge em DropdownMenu no SidebarHeader (linhas 182-196)
+**Mudança:** Remover o item "Custos" do `sistemaMenuItems`:
 
 ```typescript
-{!collapsed && (
-  <div className="flex flex-col">
-    <span className="text-sm font-semibold text-sidebar-foreground">LexFlow</span>
-    
-    {moduloPadrao === "ambos" ? (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-1 mt-0.5 group focus:outline-none">
-            <Badge 
-              variant="secondary" 
-              className={cn(
-                "text-2xs cursor-pointer transition-colors",
-                moduloAtivo === "contratos" 
-                  ? "bg-[hsl(153_13%_56%/0.2)] text-[hsl(153_13%_70%)]" 
-                  : "bg-[hsl(35_58%_61%/0.2)] text-[hsl(35_58%_75%)]"
-              )}
-            >
-              {moduloLabels[moduloAtivo]}
-              <ChevronDown className="h-3 w-3 ml-1 opacity-70 group-hover:opacity-100 transition-opacity" />
-            </Badge>
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-40">
-          <DropdownMenuItem 
-            onClick={() => handleModuloChange("contratos")}
-            className="flex items-center justify-between"
-          >
-            <span>Contratos</span>
-            {moduloAtivo === "contratos" && <Check className="h-4 w-4 text-primary" />}
-          </DropdownMenuItem>
-          <DropdownMenuItem 
-            onClick={() => handleModuloChange("servicos")}
-            className="flex items-center justify-between"
-          >
-            <span>Serviços</span>
-            {moduloAtivo === "servicos" && <Check className="h-4 w-4 text-primary" />}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    ) : (
-      <Badge 
-        variant="secondary" 
-        className={cn(
-          "text-2xs w-fit mt-0.5",
-          moduloAtivo === "contratos" 
-            ? "bg-[hsl(153_13%_56%/0.2)] text-[hsl(153_13%_70%)]" 
-            : "bg-[hsl(35_58%_61%/0.2)] text-[hsl(35_58%_75%)]"
-        )}
+const sistemaMenuItems = [
+  { title: "Configurações", url: "/settings", icon: Settings, roles: ["all"], group: "sistema" },
+];
+```
+
+### Renomear "Admin Central" para "Cadastro" (linha 278)
+
+```typescript
+// Antes
+<SidebarGroupLabel>Admin Central</SidebarGroupLabel>
+
+// Depois
+<SidebarGroupLabel>Cadastro</SidebarGroupLabel>
+```
+
+---
+
+## Parte 2: Adicionar "Custos" dentro de Configurações
+
+### Mudança na Página Settings.tsx
+
+Adicionar um novo Card para "Custos Operacionais" que redireciona para `/custos`, visível apenas para administradores:
+
+```typescript
+{/* Custos - Admin Only */}
+{isAdmin && (
+  <Card>
+    <CardHeader>
+      <CardTitle className="flex items-center gap-2">
+        <DollarSign className="h-5 w-5" />
+        Custos Operacionais
+      </CardTitle>
+      <CardDescription>
+        Acompanhe o consumo de recursos e custos da plataforma
+      </CardDescription>
+    </CardHeader>
+    <CardContent>
+      <Button 
+        variant="outline" 
+        className="w-full sm:w-auto"
+        onClick={() => navigate('/custos')}
       >
-        {moduloLabels[moduloAtivo]}
-      </Badge>
-    )}
-  </div>
+        <DollarSign className="h-4 w-4 mr-2" />
+        Ver Custos e Consumo
+      </Button>
+    </CardContent>
+  </Card>
 )}
 ```
 
-#### 3. Criar função handleModuloChange
+### Adicionar Import de DollarSign
 
 ```typescript
-const handleModuloChange = (novoModulo: ModuloAtivo) => {
-  if (novoModulo === moduloAtivo) return;
-  setModuloAtivo(novoModulo);
-  navigate(novoModulo === "contratos" ? "/dashboard" : "/servicos");
-};
-```
-
-#### 4. Remover Module Switcher redundante
-
-Remover o bloco separado (linhas 202-227):
-```typescript
-// REMOVER este bloco inteiro
-{moduloPadrao === "ambos" && !collapsed && (
-  <div className="mx-3 mb-4 p-3 rounded-lg bg-sidebar-accent/30 border border-sidebar-border">
-    ...
-  </div>
-)}
+import { 
+  Shield, 
+  CheckCircle2, 
+  FileSignature, 
+  Bell, 
+  Link2, 
+  ShoppingCart,
+  TestTube,
+  Loader2,
+  AlertCircle,
+  Check,
+  DollarSign  // Adicionar
+} from "lucide-react";
 ```
 
 ---
 
-## Parte 2: Remoção de "Pagamentos Pendentes"
+## Parte 3: Registro de Uso de Tokens de IA
 
-### Contexto
+### Problema Atual
 
-O fluxo LexFlow termina quando um email é enviado ao financeiro. O sistema não controla pagamentos - isso é feito no ERP/sistema financeiro da empresa.
+As edge functions que consomem tokens **NÃO registram** o uso na tabela `uso_sistema`, impossibilitando o rastreamento de custos de IA.
 
----
+### Funções a Modificar
 
-### Mudanças na Página Obrigacoes.tsx
+| Função | Tokens Estimados | Registro Atual |
+|--------|------------------|----------------|
+| `analisar-contrato` | ~500-1500/doc | Nao registra |
+| `analisar-contrato-ia` | ~2000-5000/doc | Nao registra |
 
-#### 1. Substituir Card "Pagamentos Pendentes" por "Por Tipo"
+### Modificacao em `analisar-contrato-ia/index.ts`
 
-**Antes (linhas 433-446):**
+**1. Capturar tokens da resposta da API (apos `const data = await response.json()`):**
+
 ```typescript
-<AnimatedCard>
-  <AnimatedCardContent className="p-6">
-    <h3>Pagamentos Pendentes</h3>
-    <DollarSign />
-    <span>{formatCurrency(stats.valorTotal)}</span>
-    <p>Total em pagamentos a realizar</p>
-  </AnimatedCardContent>
-</AnimatedCard>
+const data = await response.json();
+const analiseTexto = data.choices[0]?.message?.content;
+
+// Capturar tokens utilizados
+const tokensUsados = data.usage?.total_tokens || 0;
+const promptTokens = data.usage?.prompt_tokens || 0;
+const completionTokens = data.usage?.completion_tokens || 0;
+
+console.log(`Tokens utilizados: ${tokensUsados} (prompt: ${promptTokens}, completion: ${completionTokens})`);
 ```
 
-**Depois:**
+**2. Registrar na tabela `uso_sistema` (apos salvar analise no banco):**
+
 ```typescript
-<AnimatedCard>
-  <AnimatedCardContent className="p-6">
-    <div className="flex items-center justify-between mb-4">
-      <h3 className="font-semibold">Distribuição por Tipo</h3>
-      <Filter className="h-5 w-5 text-primary" />
-    </div>
-    <div className="flex flex-wrap gap-2">
-      {Object.entries(tipoConfig).map(([tipo, config]) => {
-        const count = obligations.filter(o => o.tipo === tipo && o.status !== "concluido").length;
-        if (count === 0) return null;
-        const Icon = config.icon;
-        return (
-          <Badge key={tipo} variant="outline" className="gap-1.5">
-            <Icon className={`h-3 w-3 ${config.color}`} />
-            {config.label}: {count}
-          </Badge>
-        );
-      })}
-    </div>
-  </AnimatedCardContent>
-</AnimatedCard>
+// Registrar uso de tokens
+if (userId && tokensUsados > 0) {
+  const { error: usageError } = await supabase
+    .from('uso_sistema')
+    .insert({
+      tipo: 'ai_tokens',
+      recurso: 'analisar-contrato-ia',
+      quantidade: tokensUsados,
+      custo_unitario: 0.00001, // Custo estimado por token
+      custo_total: tokensUsados * 0.00001,
+      user_id: userId,
+      contrato_id: contratoId,
+      metadata: {
+        modelo: 'google/gemini-2.5-flash',
+        prompt_tokens: promptTokens,
+        completion_tokens: completionTokens
+      }
+    });
+
+  if (usageError) {
+    console.error('Erro ao registrar uso de tokens:', usageError);
+  } else {
+    console.log('Uso de tokens registrado com sucesso');
+  }
+}
 ```
 
-#### 2. Atualizar tipoConfig - Renomear "pagamento" para "comunicacao"
+### Modificacao em `analisar-contrato/index.ts`
 
-**Antes (linhas 67-73):**
+**1. Capturar tokens da resposta (apos `const aiResponse = await response.json()`):**
+
 ```typescript
-const tipoConfig = {
-  pagamento: { label: "Pagamento", icon: DollarSign, color: "text-emerald-600" },
-  ...
-};
+const aiResponse = await response.json();
+
+// Capturar tokens utilizados
+const tokensUsados = aiResponse.usage?.total_tokens || 0;
+const promptTokens = aiResponse.usage?.prompt_tokens || 0;
+const completionTokens = aiResponse.usage?.completion_tokens || 0;
+
+console.log(`Tokens utilizados: ${tokensUsados}`);
 ```
 
-**Depois:**
+**2. Registrar na tabela (antes do return de sucesso):**
+
 ```typescript
-const tipoConfig = {
-  comunicacao: { label: "Comunicação", icon: Send, color: "text-emerald-600" },
-  entrega: { label: "Entrega", icon: FileCheck, color: "text-blue-600" },
-  relatorio: { label: "Relatório", icon: FileText, color: "text-purple-600" },
-  renovacao: { label: "Renovação", icon: RefreshCw, color: "text-amber-600" },
-  notificacao: { label: "Notificação", icon: Bell, color: "text-rose-600" },
-  // Retrocompatibilidade: mapear "pagamento" antigo
-  pagamento: { label: "Comunicação", icon: Send, color: "text-emerald-600" },
-};
+// Registrar uso de tokens
+const authHeader = req.headers.get('Authorization');
+const token = authHeader?.replace('Bearer ', '');
+
+if (token && tokensUsados > 0) {
+  const { data: { user } } = await supabase.auth.getUser(token);
+  
+  if (user) {
+    await supabase
+      .from('uso_sistema')
+      .insert({
+        tipo: 'ai_tokens',
+        recurso: 'analisar-contrato',
+        quantidade: tokensUsados,
+        custo_unitario: 0.00001,
+        custo_total: tokensUsados * 0.00001,
+        user_id: user.id,
+        metadata: {
+          modelo: 'google/gemini-2.5-flash',
+          prompt_tokens: promptTokens,
+          completion_tokens: completionTokens
+        }
+      });
+  }
+}
 ```
-
-#### 3. Remover cálculo de valorTotal dos stats
-
-**Remover (linhas 242-244):**
-```typescript
-valorTotal: obligations
-  .filter(o => o.status !== "concluido" && o.tipo === "pagamento")
-  .reduce((sum, o) => sum + (o.valor || 0), 0),
-```
-
-#### 4. Atualizar filtro de tipos (linhas 470-476)
-
-**Antes:**
-```typescript
-<SelectItem value="pagamento">Pagamento</SelectItem>
-```
-
-**Depois:**
-```typescript
-<SelectItem value="comunicacao">Comunicação</SelectItem>
-```
-
-#### 5. Manter coluna "Valor" como referência (opcional)
-
-A coluna "Valor" pode continuar existindo para exibir valores de referência quando houver, sem a métrica de "Pagamentos Pendentes".
 
 ---
 
 ## Resumo de Arquivos a Modificar
 
-| Arquivo | Mudanças |
-|---------|----------|
-| `src/components/AppSidebar.tsx` | Badge clicável com dropdown, remover Module Switcher separado |
-| `src/pages/Obrigacoes.tsx` | Card "Por Tipo", atualizar tipoConfig, remover valorTotal |
+| Arquivo | Mudanca |
+|---------|---------|
+| `src/components/AppSidebar.tsx` | Remover "Custos" do menu, renomear "Admin Central" para "Cadastro" |
+| `src/pages/Settings.tsx` | Adicionar Card "Custos Operacionais" com botao para /custos |
+| `supabase/functions/analisar-contrato-ia/index.ts` | Capturar e registrar tokens usados |
+| `supabase/functions/analisar-contrato/index.ts` | Capturar e registrar tokens usados |
+
+---
+
+## Estrutura Final do Menu
+
+### Modulo Contratos
+
+```text
+OPERACAO
+  - Dashboard
+  - Contratos
+
+CONTROLE
+  - Obrigacoes
+  - Workflows (admin)
+
+CADASTRO  ← renomeado
+  - Fornecedores
+  - Templates
+  - Usuarios (admin)
+
+SISTEMA
+  - Configuracoes  ← Custos agora esta aqui dentro
+```
+
+### Modulo Servicos
+
+```text
+OPERACAO
+  - Dashboard
+  - Servicos
+
+CADASTRO  ← renomeado
+  - Fornecedores
+  - Unidades
+  - Especificacoes
+  - Usuarios (admin)
+
+SISTEMA
+  - Configuracoes  ← Custos agora esta aqui dentro
+```
 
 ---
 
 ## Resultado Esperado
 
-### Sidebar
-- Badge do módulo no header é clicável para usuários com acesso a ambos
-- Dropdown mostra opções com indicador visual do módulo ativo
-- Interface mais limpa sem componente duplicado
+### Menu
+- Grupo "Admin Central" renomeado para "Cadastro"
+- Item "Custos" removido do menu lateral
+- Custos acessivel via Configuracoes (para admins)
 
-### Obrigações
-- Sem métricas de "Pagamentos Pendentes" que não fazem sentido no contexto
-- Card mostra distribuição por tipo de obrigação
-- Tipo "Comunicação" substitui "Pagamento" (retrocompatível)
-- Foco no fluxo real: gestão de contratos, não controle financeiro
+### Rastreamento de Custos
+- Cada analise de IA registra automaticamente os tokens consumidos
+- Pagina `/custos` mostrara o uso real de tokens por usuario
+- Metadados incluem: funcao, modelo, contrato analisado
+- Permite controle e planejamento de custos de IA
 
