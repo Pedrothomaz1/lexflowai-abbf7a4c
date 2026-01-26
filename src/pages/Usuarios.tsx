@@ -36,6 +36,7 @@ type Profile = {
 
 type UserWithRole = Profile & {
   role: string;
+  modulo_padrao: string;
 };
 
 const Usuarios = () => {
@@ -85,13 +86,14 @@ const Usuarios = () => {
       profiles.map(async (profile) => {
         const { data: roleData } = await supabase
           .from("user_roles")
-          .select("role")
+          .select("role, modulo_padrao")
           .eq("user_id", profile.id)
           .single();
 
         return {
           ...profile,
           role: roleData?.role || "analista_juridico",
+          modulo_padrao: roleData?.modulo_padrao || "contratos",
         };
       })
     );
@@ -118,6 +120,37 @@ const Usuarios = () => {
       });
       fetchUsuarios();
     }
+  };
+
+  const handleModuloChange = async (userId: string, novoModulo: string) => {
+    const { error } = await supabase
+      .from("user_roles")
+      .update({ modulo_padrao: novoModulo })
+      .eq("user_id", userId);
+
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao atualizar módulo",
+        description: error.message,
+      });
+    } else {
+      toast({
+        title: "Módulo atualizado com sucesso!",
+      });
+      fetchUsuarios();
+    }
+  };
+
+  const getModuloBadge = (modulo: string) => {
+    const config: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
+      contratos: { label: "Contratos", variant: "secondary" },
+      servicos: { label: "Serviços", variant: "default" },
+      ambos: { label: "Ambos", variant: "outline" },
+    };
+
+    const { label, variant } = config[modulo] || { label: modulo, variant: "outline" };
+    return <Badge variant={variant}>{label}</Badge>;
   };
 
   const getRoleBadge = (role: string) => {
@@ -174,7 +207,9 @@ const Usuarios = () => {
                   <TableHead>Usuário</TableHead>
                   <TableHead>E-mail</TableHead>
                   <TableHead>Perfil Atual</TableHead>
+                  <TableHead>Módulo</TableHead>
                   <TableHead>Alterar Perfil</TableHead>
+                  <TableHead>Alterar Módulo</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -186,6 +221,7 @@ const Usuarios = () => {
                     </TableCell>
                     <TableCell>{usuario.email}</TableCell>
                     <TableCell>{getRoleBadge(usuario.role)}</TableCell>
+                    <TableCell>{getModuloBadge(usuario.modulo_padrao)}</TableCell>
                     <TableCell>
                       <Select
                         value={usuario.role}
@@ -193,7 +229,7 @@ const Usuarios = () => {
                           handleRoleChange(usuario.id, value)
                         }
                       >
-                        <SelectTrigger className="w-[200px]">
+                        <SelectTrigger className="w-[180px]">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -209,6 +245,23 @@ const Usuarios = () => {
                         </SelectContent>
                       </Select>
                     </TableCell>
+                    <TableCell>
+                      <Select
+                        value={usuario.modulo_padrao}
+                        onValueChange={(value) =>
+                          handleModuloChange(usuario.id, value)
+                        }
+                      >
+                        <SelectTrigger className="w-[140px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="contratos">Contratos</SelectItem>
+                          <SelectItem value="servicos">Serviços</SelectItem>
+                          <SelectItem value="ambos">Ambos</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -219,32 +272,54 @@ const Usuarios = () => {
 
       <Card className="border-primary/50">
         <CardHeader>
-          <CardTitle>Sobre os Perfis</CardTitle>
+          <CardTitle>Sobre os Perfis e Módulos</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4">
           <div>
-            <h4 className="font-semibold flex items-center gap-2">
-              <Badge variant="secondary">Analista Jurídico</Badge>
-            </h4>
-            <p className="text-sm text-muted-foreground mt-1">
-              Pode cadastrar fornecedores e contratos. Pode editar apenas contratos em rascunho criados por ele.
-            </p>
+            <h4 className="font-semibold mb-2">Perfis de Acesso</h4>
+            <div className="space-y-2">
+              <div>
+                <Badge variant="secondary">Analista Jurídico</Badge>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Pode cadastrar fornecedores e contratos. Pode editar apenas contratos em rascunho criados por ele.
+                </p>
+              </div>
+              <div>
+                <Badge variant="default">Consultoria Jurídica</Badge>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Pode aprovar contratos, cadastrar fornecedores e editar qualquer contrato.
+                </p>
+              </div>
+              <div>
+                <Badge variant="outline">Administrador</Badge>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Possui todas as permissões do sistema, incluindo gerenciar usuários e seus perfis.
+                </p>
+              </div>
+            </div>
           </div>
           <div>
-            <h4 className="font-semibold flex items-center gap-2">
-              <Badge variant="default">Consultoria Jurídica</Badge>
-            </h4>
-            <p className="text-sm text-muted-foreground mt-1">
-              Pode aprovar contratos, cadastrar fornecedores e editar qualquer contrato.
-            </p>
-          </div>
-          <div>
-            <h4 className="font-semibold flex items-center gap-2">
-              <Badge variant="outline">Administrador</Badge>
-            </h4>
-            <p className="text-sm text-muted-foreground mt-1">
-              Possui todas as permissões do sistema, incluindo gerenciar usuários e seus perfis.
-            </p>
+            <h4 className="font-semibold mb-2">Módulos do Sistema</h4>
+            <div className="space-y-2">
+              <div>
+                <Badge variant="secondary">Contratos</Badge>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Acesso ao módulo de gestão de contratos, fornecedores e aprovações.
+                </p>
+              </div>
+              <div>
+                <Badge variant="default">Serviços</Badge>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Acesso ao módulo de serviços periódicos, unidades e manutenções.
+                </p>
+              </div>
+              <div>
+                <Badge variant="outline">Ambos</Badge>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Acesso completo a ambos os módulos. O usuário poderá alternar entre eles na sidebar.
+                </p>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
