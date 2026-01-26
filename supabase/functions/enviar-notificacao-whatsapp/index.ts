@@ -109,7 +109,10 @@ Deno.serve(async (req) => {
 
     if (rolesError) {
       console.error('Erro ao buscar roles:', rolesError)
-      throw rolesError
+      return new Response(
+        JSON.stringify({ success: false, error: 'Falha ao processar notificação' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
     if (!userRoles || userRoles.length === 0) {
@@ -133,7 +136,10 @@ Deno.serve(async (req) => {
 
     if (profilesError) {
       console.error('Erro ao buscar profiles:', profilesError)
-      throw profilesError
+      return new Response(
+        JSON.stringify({ success: false, error: 'Falha ao processar notificação' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
     console.log('Aprovadores encontrados:', profiles?.length || 0)
@@ -236,7 +242,7 @@ Deno.serve(async (req) => {
   } catch (error: any) {
     console.error('Erro ao processar notificação:', error)
     return new Response(
-      JSON.stringify({ error: error?.message || 'Erro desconhecido' }),
+      JSON.stringify({ success: false, error: 'Falha ao enviar notificação' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     )
   }

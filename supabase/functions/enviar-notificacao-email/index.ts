@@ -172,7 +172,10 @@ serve(async (req) => {
 
     if (prefError) {
       console.error("Erro ao buscar preferências:", prefError);
-      throw prefError;
+      return new Response(
+        JSON.stringify({ success: false, error: "Falha ao processar notificação" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Se não há preferências, buscar todos os usuários com roles apropriados
@@ -280,7 +283,7 @@ serve(async (req) => {
   } catch (error: any) {
     console.error("Erro na função enviar-notificacao-email:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ success: false, error: "Falha ao enviar notificação por email" }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
