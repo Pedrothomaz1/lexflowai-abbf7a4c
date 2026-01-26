@@ -373,7 +373,7 @@ const Dashboard = () => {
         title="Dashboard Executivo"
         description="Visão geral e análise de contratos"
         actions={
-          <Button onClick={() => navigate("/contratos")} variant="outline" size="sm">
+          <Button onClick={() => navigate("/contratos")} size="sm" className="btn-cta">
             Ver Todos os Contratos
             <ArrowUpRight className="ml-1.5 h-4 w-4" />
           </Button>
@@ -418,13 +418,13 @@ const Dashboard = () => {
           title="Vencendo em 30 dias"
           value={stats.vencendo30Dias}
           icon={Clock}
-          variant="warning"
+          variant="critical"
         />
         <StatCard
           title="Riscos Altos"
           value={stats.riscosAltos}
           icon={AlertTriangle}
-          variant="destructive"
+          variant="critical"
         />
       </StatCardGrid>
 

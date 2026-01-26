@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Bell, Search, Moon, Sun, X } from "lucide-react";
+import { Bell, Search, Moon, Sun, X, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -142,6 +142,17 @@ export function GlobalHeader() {
           </Button>
         )}
       </div>
+
+      {/* Calendar - Quick Access */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => navigate("/calendario")}
+        className="h-9 w-9 text-muted-foreground hover:text-foreground"
+      >
+        <Calendar className="h-4 w-4" />
+        <span className="sr-only">Calendário</span>
+      </Button>
 
       {/* Theme Toggle */}
       <Button

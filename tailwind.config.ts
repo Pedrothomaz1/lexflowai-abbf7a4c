@@ -45,6 +45,19 @@ export default {
           DEFAULT: "hsl(var(--info))",
           foreground: "hsl(var(--info-foreground))",
         },
+        critical: {
+          DEFAULT: "hsl(var(--critical))",
+          foreground: "hsl(var(--critical-foreground))",
+        },
+        lexflow: {
+          "verde-escuro": "hsl(var(--lexflow-verde-escuro))",
+          "verde-principal": "hsl(var(--lexflow-verde-principal))",
+          "off-white": "hsl(var(--lexflow-off-white))",
+          mostarda: "hsl(var(--lexflow-mostarda))",
+          amarelo: "hsl(var(--lexflow-amarelo))",
+          vinho: "hsl(var(--lexflow-vinho))",
+          rosa: "hsl(var(--lexflow-rosa))",
+        },
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
