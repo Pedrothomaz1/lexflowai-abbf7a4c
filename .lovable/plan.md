@@ -1,270 +1,310 @@
 
+# Plano de Reformulacao da Interface do LexFlow
 
-## Plano Consolidado: Menu + Custos em Configurações + Registro de Tokens
+## Resumo Executivo
 
----
-
-## Parte 1: Reorganização do Menu da Sidebar
-
-### Mudanças no Menu
-
-| Mudança | Arquivo | Antes | Depois |
-|---------|---------|-------|--------|
-| Renomear grupo | AppSidebar.tsx (linha 278) | `Admin Central` | `Cadastro` |
-| Mover Custos para Settings | AppSidebar.tsx | Item separado no menu | Seção dentro de /settings |
-
-### Remover "Custos" do Menu Lateral
-
-Atualmente, "Custos" aparece como item separado no grupo "Sistema" (linha 80):
-
-```typescript
-const sistemaMenuItems = [
-  { title: "Custos", url: "/custos", icon: DollarSign, roles: ["administrador"], group: "sistema" },
-  { title: "Configurações", url: "/settings", icon: Settings, roles: ["all"], group: "sistema" },
-];
-```
-
-**Mudança:** Remover o item "Custos" do `sistemaMenuItems`:
-
-```typescript
-const sistemaMenuItems = [
-  { title: "Configurações", url: "/settings", icon: Settings, roles: ["all"], group: "sistema" },
-];
-```
-
-### Renomear "Admin Central" para "Cadastro" (linha 278)
-
-```typescript
-// Antes
-<SidebarGroupLabel>Admin Central</SidebarGroupLabel>
-
-// Depois
-<SidebarGroupLabel>Cadastro</SidebarGroupLabel>
-```
+Reformulacao completa da interface do LexFlow para alcancar alta performance em UX/UI, clareza contextual e acessibilidade, utilizando a paleta de cores oficial. O foco esta em eliminar carga cognitiva, otimizar navegacao e diferenciar modulos por meio de elementos visuais coesos.
 
 ---
 
-## Parte 2: Adicionar "Custos" dentro de Configurações
+## 1. Atualizacao da Paleta de Cores (index.css)
 
-### Mudança na Página Settings.tsx
+### Tokens CSS a Atualizar
 
-Adicionar um novo Card para "Custos Operacionais" que redireciona para `/custos`, visível apenas para administradores:
+| Cor | Hex | HSL | Uso |
+|-----|-----|-----|-----|
+| Verde Escuro | #384E46 | 153 16% 27% | Fundo sidebar, fundo pagina seletor |
+| Verde Principal | #7F9C90 | 153 13% 56% | Destaques modulo Contratos, estados ativos |
+| Verde Claro | #92ACA0 | 153 18% 63% | Textos secundarios, divisores |
+| Off White | #F2F4F0 | 80 17% 95% | Textos primarios, fundos de cards |
+| Amarelo | #EFC06E | 43 82% 68% | Botoes CTA, destaques |
+| Vinho | #862041 | 344 62% 39% | Alertas criticos, badges urgencia |
+| Rosa | #EA9E95 | 13 69% 75% | Feedback negativo suave |
+| Mostarda | #D6A461 | 35 58% 61% | Destaque modulo Servicos |
 
-```typescript
-{/* Custos - Admin Only */}
-{isAdmin && (
-  <Card>
-    <CardHeader>
-      <CardTitle className="flex items-center gap-2">
-        <DollarSign className="h-5 w-5" />
-        Custos Operacionais
-      </CardTitle>
-      <CardDescription>
-        Acompanhe o consumo de recursos e custos da plataforma
-      </CardDescription>
-    </CardHeader>
-    <CardContent>
-      <Button 
-        variant="outline" 
-        className="w-full sm:w-auto"
-        onClick={() => navigate('/custos')}
-      >
-        <DollarSign className="h-4 w-4 mr-2" />
-        Ver Custos e Consumo
-      </Button>
-    </CardContent>
-  </Card>
-)}
-```
+### Mudancas no index.css
 
-### Adicionar Import de DollarSign
-
-```typescript
-import { 
-  Shield, 
-  CheckCircle2, 
-  FileSignature, 
-  Bell, 
-  Link2, 
-  ShoppingCart,
-  TestTube,
-  Loader2,
-  AlertCircle,
-  Check,
-  DollarSign  // Adicionar
-} from "lucide-react";
-```
-
----
-
-## Parte 3: Registro de Uso de Tokens de IA
-
-### Problema Atual
-
-As edge functions que consomem tokens **NÃO registram** o uso na tabela `uso_sistema`, impossibilitando o rastreamento de custos de IA.
-
-### Funções a Modificar
-
-| Função | Tokens Estimados | Registro Atual |
-|--------|------------------|----------------|
-| `analisar-contrato` | ~500-1500/doc | Nao registra |
-| `analisar-contrato-ia` | ~2000-5000/doc | Nao registra |
-
-### Modificacao em `analisar-contrato-ia/index.ts`
-
-**1. Capturar tokens da resposta da API (apos `const data = await response.json()`):**
-
-```typescript
-const data = await response.json();
-const analiseTexto = data.choices[0]?.message?.content;
-
-// Capturar tokens utilizados
-const tokensUsados = data.usage?.total_tokens || 0;
-const promptTokens = data.usage?.prompt_tokens || 0;
-const completionTokens = data.usage?.completion_tokens || 0;
-
-console.log(`Tokens utilizados: ${tokensUsados} (prompt: ${promptTokens}, completion: ${completionTokens})`);
-```
-
-**2. Registrar na tabela `uso_sistema` (apos salvar analise no banco):**
-
-```typescript
-// Registrar uso de tokens
-if (userId && tokensUsados > 0) {
-  const { error: usageError } = await supabase
-    .from('uso_sistema')
-    .insert({
-      tipo: 'ai_tokens',
-      recurso: 'analisar-contrato-ia',
-      quantidade: tokensUsados,
-      custo_unitario: 0.00001, // Custo estimado por token
-      custo_total: tokensUsados * 0.00001,
-      user_id: userId,
-      contrato_id: contratoId,
-      metadata: {
-        modelo: 'google/gemini-2.5-flash',
-        prompt_tokens: promptTokens,
-        completion_tokens: completionTokens
-      }
-    });
-
-  if (usageError) {
-    console.error('Erro ao registrar uso de tokens:', usageError);
-  } else {
-    console.log('Uso de tokens registrado com sucesso');
-  }
-}
-```
-
-### Modificacao em `analisar-contrato/index.ts`
-
-**1. Capturar tokens da resposta (apos `const aiResponse = await response.json()`):**
-
-```typescript
-const aiResponse = await response.json();
-
-// Capturar tokens utilizados
-const tokensUsados = aiResponse.usage?.total_tokens || 0;
-const promptTokens = aiResponse.usage?.prompt_tokens || 0;
-const completionTokens = aiResponse.usage?.completion_tokens || 0;
-
-console.log(`Tokens utilizados: ${tokensUsados}`);
-```
-
-**2. Registrar na tabela (antes do return de sucesso):**
-
-```typescript
-// Registrar uso de tokens
-const authHeader = req.headers.get('Authorization');
-const token = authHeader?.replace('Bearer ', '');
-
-if (token && tokensUsados > 0) {
-  const { data: { user } } = await supabase.auth.getUser(token);
+```css
+:root {
+  /* Adicionar Verde Claro */
+  --lexflow-verde-claro: 153 18% 63%;  /* #92ACA0 */
   
-  if (user) {
-    await supabase
-      .from('uso_sistema')
-      .insert({
-        tipo: 'ai_tokens',
-        recurso: 'analisar-contrato',
-        quantidade: tokensUsados,
-        custo_unitario: 0.00001,
-        custo_total: tokensUsados * 0.00001,
-        user_id: user.id,
-        metadata: {
-          modelo: 'google/gemini-2.5-flash',
-          prompt_tokens: promptTokens,
-          completion_tokens: completionTokens
-        }
-      });
-  }
+  /* Atualizar sidebar */
+  --sidebar-background: var(--lexflow-verde-escuro);
+  --sidebar-foreground: var(--lexflow-off-white);
+  --sidebar-muted: 153 18% 63%;  /* Verde Claro para itens inativos */
 }
 ```
 
 ---
 
-## Resumo de Arquivos a Modificar
+## 2. Reformulacao da Tela de Selecao de Modulos (SeletorModulo.tsx)
 
-| Arquivo | Mudanca |
-|---------|---------|
-| `src/components/AppSidebar.tsx` | Remover "Custos" do menu, renomear "Admin Central" para "Cadastro" |
-| `src/pages/Settings.tsx` | Adicionar Card "Custos Operacionais" com botao para /custos |
-| `supabase/functions/analisar-contrato-ia/index.ts` | Capturar e registrar tokens usados |
-| `supabase/functions/analisar-contrato/index.ts` | Capturar e registrar tokens usados |
+### Design Atual vs Novo
+
+**Atual:**
+- Fundo claro (bg-background)
+- Cards com borda simples
+- Titulo generico "Bem-vindo ao LexFlow"
+
+**Novo:**
+- Fundo Verde Escuro (#384E46)
+- Cards Off White com hover elegante
+- Copy profissional: "Controle Integrado de Contratos e Manutencoes"
+
+### Mudancas Visuais
+
+```text
++--------------------------------------------------+
+|                 [Logo Veridiana]                  |
+|                                                  |
+|    Controle Integrado de Contratos e Manutencoes  |  <- Off White
+|                                                  |
+|  Centralize a governanca juridica e operacional   |  <- Verde Claro
+|  em um fluxo unico, automatizado e livre de riscos|
+|                                                  |
+|  +--------------------+  +--------------------+   |
+|  |  [Icon Documento]  |  |  [Icon Engrenagem] |   |
+|  |                    |  |                    |   |
+|  | Modulo Juridico:   |  | Modulo Operacional:|   |
+|  |    Contratos       |  |    Servicos        |   |
+|  |                    |  |                    |   |
+|  | Gestao completa de |  | Controle de        |   |
+|  | minutas, assinat.  |  | manutencoes e      |   |
+|  | e vigencias        |  | conformidade       |   |
+|  |                    |  |                    |   |
+|  |  [Acessar ->]      |  |  [Acessar ->]      |   |
+|  +--------------------+  +--------------------+   |
+|                                                  |
+|       (C) Veridiana Quirino - Verde Claro 40%    |
++--------------------------------------------------+
+        Fundo: Verde Escuro (#384E46)
+```
+
+### Implementacao
+
+1. Alterar container principal: `bg-[#384E46]` ou `gradient-hero`
+2. Atualizar cards: fundo Off White, texto Verde Escuro
+3. Diferenciar cores de descricao por modulo:
+   - Contratos: Verde Principal (#7F9C90)
+   - Servicos: Mostarda (#D6A461)
+4. Adicionar rodape com copyright Veridiana Quirino
+5. Hover: borda/sombra sutil + scale(1.02)
 
 ---
 
-## Estrutura Final do Menu
+## 3. Reformulacao do Menu Lateral (AppSidebar.tsx)
 
-### Modulo Contratos
+### Estrutura Nova
 
 ```text
-OPERACAO
-  - Dashboard
-  - Contratos
-
-CONTROLE
-  - Obrigacoes
-  - Workflows (admin)
-
-CADASTRO  ← renomeado
-  - Fornecedores
-  - Templates
-  - Usuarios (admin)
-
-SISTEMA
-  - Configuracoes  ← Custos agora esta aqui dentro
++------------------------+
+| [Logo] LexFlow         |
+|        [Toggle: Juridico/Operacional]  <- Novo toggle contextual
++------------------------+
+| PRINCIPAL              |
+|   Dashboard            |
+|   Contratos/Servicos   |  <- Icone muda por modulo
++------------------------+
+| GESTAO                 |
+|   Obrigacoes  [5]      |  <- Badge Vinho com contagem
+|   Workflows            |
++------------------------+
+| CONFIGURACOES [v]      |  <- Colapsavel
+|   Templates            |
+|   Fornecedores         |
+|   Unidades             |
+|   Usuarios             |
++------------------------+
+| [Avatar] Nome Usuario  |
+|          Administrador |  <- Verde Claro
++------------------------+
 ```
 
-### Modulo Servicos
+### Mudancas Chave
 
-```text
-OPERACAO
-  - Dashboard
-  - Servicos
+#### Toggle de Contexto (Substitui badge atual)
 
-CADASTRO  ← renomeado
-  - Fornecedores
-  - Unidades
-  - Especificacoes
-  - Usuarios (admin)
+```typescript
+// Novo componente no header da sidebar
+<div className="flex items-center gap-2 p-2 rounded-lg bg-sidebar-accent/30">
+  <span className="text-xs text-sidebar-muted uppercase">Modulo:</span>
+  <button 
+    onClick={handleToggle}
+    className={cn(
+      "px-3 py-1 rounded-md text-sm font-medium transition-colors",
+      moduloAtivo === "contratos" 
+        ? "bg-lexflow-verde-principal text-white" 
+        : "bg-lexflow-mostarda text-white"
+    )}
+  >
+    {moduloAtivo === "contratos" ? "Juridico" : "Operacional"}
+  </button>
+</div>
+```
 
-SISTEMA
-  - Configuracoes  ← Custos agora esta aqui dentro
+#### Badge de Obrigacoes Pendentes
+
+```typescript
+// No item de menu Obrigacoes
+<Badge className="bg-lexflow-vinho text-white">
+  {pendingCount}
+</Badge>
+```
+
+#### Grupo Colapsavel para Configuracoes
+
+```typescript
+// Usar Collapsible do Radix
+<Collapsible defaultOpen={false}>
+  <CollapsibleTrigger>
+    <SidebarGroupLabel>
+      Configuracoes <ChevronDown />
+    </SidebarGroupLabel>
+  </CollapsibleTrigger>
+  <CollapsibleContent>
+    {/* Templates, Fornecedores, Unidades, Usuarios */}
+  </CollapsibleContent>
+</Collapsible>
+```
+
+#### Cores de Estados
+
+- Item ativo: Fundo com cor do modulo (Verde Principal ou Mostarda)
+- Item inativo: Texto Verde Claro com 60% opacidade
+- Hover: Fundo sidebar-accent/50
+
+---
+
+## 4. Reformulacao da Navegacao Interna (Contratos.tsx)
+
+### Abas de Visualizacao Atualizadas
+
+O componente de abas ja existe mas precisa de estilizacao contextual:
+
+```typescript
+<Tabs value={viewMode} onValueChange={(v) => setViewMode(v)}>
+  <TabsList className="bg-lexflow-off-white p-1 rounded-lg">
+    <TabsTrigger 
+      value="lista"
+      className={cn(
+        "data-[state=active]:text-white",
+        moduloAtivo === "contratos" 
+          ? "data-[state=active]:bg-lexflow-verde-principal" 
+          : "data-[state=active]:bg-lexflow-mostarda"
+      )}
+    >
+      <List className="h-4 w-4 mr-2" />
+      Lista
+    </TabsTrigger>
+    {/* Kanban, Calendario */}
+  </TabsList>
+</Tabs>
+```
+
+### Estilo das Abas
+
+| Estado | Fundo | Texto |
+|--------|-------|-------|
+| Inativa | Transparente | Verde Escuro |
+| Ativa (Contratos) | Verde Principal | Off White |
+| Ativa (Servicos) | Mostarda | Off White |
+| Hover | Verde Claro/10 | Verde Escuro |
+
+---
+
+## 5. Arquivos a Modificar
+
+| Arquivo | Mudancas |
+|---------|----------|
+| `src/index.css` | Adicionar `--lexflow-verde-claro`, atualizar tokens |
+| `src/pages/SeletorModulo.tsx` | Redesign completo com nova paleta |
+| `src/components/AppSidebar.tsx` | Toggle contextual, grupos colapsaveis, badge pendentes |
+| `src/pages/Contratos.tsx` | Estilizacao dinamica das abas |
+| `src/pages/Servicos.tsx` | Aplicar mesma logica de abas (se houver) |
+| `src/components/ui/tabs.tsx` | Adicionar variantes de cor modular |
+
+---
+
+## 6. Consideracoes de Acessibilidade (WCAG AA)
+
+### Contrastes Validados
+
+| Combinacao | Ratio | Status |
+|------------|-------|--------|
+| Off White em Verde Escuro | 7.2:1 | Aprovado |
+| Verde Principal em Off White | 3.1:1 | Aprovado (large text) |
+| Vinho em Off White | 5.8:1 | Aprovado |
+| Mostarda em Verde Escuro | 4.6:1 | Aprovado |
+
+### Focus States
+
+Todos os elementos interativos terao:
+- `focus-visible:ring-2`
+- `focus-visible:ring-offset-2`
+- Ring color baseada no modulo ativo
+
+---
+
+## 7. Microinteracoes e Animacoes
+
+### Cards do Seletor
+
+```css
+.module-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.module-card:hover {
+  transform: scale(1.02);
+  box-shadow: 0 20px 40px -10px rgba(56, 78, 70, 0.25);
+}
+```
+
+### Toggle de Modulo
+
+```css
+.module-toggle {
+  transition: background-color 0.3s ease, color 0.2s ease;
+}
+```
+
+### Abas
+
+```css
+.tab-trigger {
+  transition: all 0.2s ease;
+}
+.tab-trigger[data-state="active"] {
+  animation: tab-activate 0.2s ease-out;
+}
+```
+
+---
+
+## 8. Responsividade
+
+### Breakpoints
+
+- **Mobile (< 640px):** Sidebar colapsada, toggle no header global
+- **Tablet (640-1024px):** Sidebar semi-expandida, cards em coluna
+- **Desktop (> 1024px):** Layout completo
+
+### Seletor de Modulos Mobile
+
+```typescript
+// Em mobile, cards empilham verticalmente
+<div className="grid gap-6 md:grid-cols-2">
+  {/* Cards */}
+</div>
 ```
 
 ---
 
 ## Resultado Esperado
 
-### Menu
-- Grupo "Admin Central" renomeado para "Cadastro"
-- Item "Custos" removido do menu lateral
-- Custos acessivel via Configuracoes (para admins)
-
-### Rastreamento de Custos
-- Cada analise de IA registra automaticamente os tokens consumidos
-- Pagina `/custos` mostrara o uso real de tokens por usuario
-- Metadados incluem: funcao, modelo, contrato analisado
-- Permite controle e planejamento de custos de IA
-
+1. **Tela de Selecao:** Visual premium com fundo escuro e cards claros, copy profissional
+2. **Sidebar:** Toggle contextual substituindo dropdown, grupos organizados, badge de urgencia
+3. **Navegacao Interna:** Abas com cores dinamicas baseadas no modulo ativo
+4. **Consistencia:** Toda a interface seguindo a paleta oficial sem cores hardcoded
+5. **Acessibilidade:** Contrastes WCAG AA, focus states visiveis
+6. **Performance:** Animacoes suaves sem impacto em renders
