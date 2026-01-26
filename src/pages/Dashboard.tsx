@@ -406,6 +406,7 @@ const Dashboard = () => {
           icon={FileText}
           variant="primary"
           trend={{ value: 12, label: "vs mês anterior" }}
+          onClick={() => navigate("/contratos?status=vigente")}
         />
         <StatCard
           title="Valor Total"
@@ -413,18 +414,21 @@ const Dashboard = () => {
           icon={DollarSign}
           variant="success"
           trend={{ value: 8, label: "vs mês anterior" }}
+          onClick={() => navigate("/contratos")}
         />
         <StatCard
           title="Vencendo em 30 dias"
           value={stats.vencendo30Dias}
           icon={Clock}
           variant="critical"
+          onClick={() => navigate("/alertas")}
         />
         <StatCard
           title="Riscos Altos"
           value={stats.riscosAltos}
           icon={AlertTriangle}
           variant="critical"
+          onClick={() => navigate("/contratos")}
         />
       </StatCardGrid>
 
@@ -435,24 +439,28 @@ const Dashboard = () => {
           value={stats.fornecedores}
           icon={Users}
           subtitle="Cadastrados"
+          onClick={() => navigate("/fornecedores")}
         />
         <StatCard
           title="Valor Médio"
           value={formatCompactCurrency(stats.valorMedio)}
           icon={Activity}
           subtitle="Por contrato"
+          onClick={() => navigate("/contratos")}
         />
         <StatCard
           title="Aprovações Pendentes"
           value={stats.aprovacoesPendentes}
           icon={Timer}
           subtitle="Aguardando ação"
+          onClick={() => navigate("/workflows")}
         />
         <StatCard
           title="Tempo Médio Aprovação"
           value={`${stats.tempoMedioAprovacao.toFixed(1)}d`}
           icon={Target}
           subtitle={stats.tempoMedioAprovacao <= 5 ? "✓ Dentro da meta" : "⚠ Acima da meta"}
+          onClick={() => navigate("/workflows")}
         />
       </div>
 
