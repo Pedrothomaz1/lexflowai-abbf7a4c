@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   FileText,
@@ -8,14 +9,12 @@ import {
   FileStack,
   GitBranch,
   ChevronDown,
+  ChevronRight,
   HelpCircle,
   Building2,
   ClipboardList,
   Wrench,
-  DollarSign,
-  ArrowLeftRight,
   Cog,
-  Check,
 } from "lucide-react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
@@ -40,56 +39,55 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useModulo, ModuloAtivo } from "@/contexts/ModuloContext";
-import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import logoVeridiana from "@/assets/logo-veridiana.png";
 import { Badge } from "@/components/ui/badge";
 
-// Menu items para módulo de Contratos - Blueprint structure
-const contratosMenuItems = [
-  // Operação
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: ["all"], group: "operacao" },
-  { title: "Contratos", url: "/contratos", icon: FileText, roles: ["all"], group: "operacao" },
-  // Controle
-  { title: "Obrigações", url: "/obrigacoes", icon: ClipboardList, roles: ["all"], group: "controle" },
-  { title: "Workflows", url: "/workflows", icon: GitBranch, roles: ["administrador"], group: "controle" },
-  // Admin Central
-  { title: "Fornecedores", url: "/fornecedores", icon: Users, roles: ["all"], group: "admin" },
-  { title: "Templates", url: "/templates", icon: FileStack, roles: ["all"], group: "admin" },
-  { title: "Usuários", url: "/usuarios", icon: Shield, roles: ["administrador"], group: "admin" },
-];
+// Menu items para módulo de Contratos
+const contratosMenuItems = {
+  principal: [
+    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: ["all"], hasBadge: false },
+    { title: "Contratos", url: "/contratos", icon: FileText, roles: ["all"], hasBadge: false },
+  ],
+  gestao: [
+    { title: "Obrigações", url: "/obrigacoes", icon: ClipboardList, roles: ["all"], hasBadge: true },
+    { title: "Workflows", url: "/workflows", icon: GitBranch, roles: ["administrador"], hasBadge: false },
+  ],
+  configuracoes: [
+    { title: "Templates", url: "/templates", icon: FileStack, roles: ["all"], hasBadge: false },
+    { title: "Fornecedores", url: "/fornecedores", icon: Users, roles: ["all"], hasBadge: false },
+    { title: "Usuários", url: "/usuarios", icon: Shield, roles: ["administrador"], hasBadge: false },
+  ],
+};
 
-// Menu items para módulo de Serviços - Blueprint structure
-const servicosMenuItems = [
-  // Operação
-  { title: "Dashboard", url: "/servicos", icon: LayoutDashboard, roles: ["all"], group: "operacao" },
-  { title: "Serviços", url: "/servicos", icon: Wrench, roles: ["all"], group: "operacao" },
-  // Admin Central
-  { title: "Fornecedores", url: "/fornecedores", icon: Users, roles: ["all"], group: "admin" },
-  { title: "Unidades", url: "/unidades", icon: Building2, roles: ["all"], group: "admin" },
-  { title: "Especificações", url: "/especificacoes", icon: Cog, roles: ["all"], group: "admin" },
-  { title: "Usuários", url: "/usuarios", icon: Shield, roles: ["administrador"], group: "admin" },
-];
-
-// Menu items compartilhados (sistema)
-const sistemaMenuItems = [
-  { title: "Configurações", url: "/settings", icon: Settings, roles: ["all"], group: "sistema" },
-];
+// Menu items para módulo de Serviços
+const servicosMenuItems = {
+  principal: [
+    { title: "Dashboard", url: "/servicos", icon: LayoutDashboard, roles: ["all"], hasBadge: false },
+    { title: "Serviços", url: "/servicos", icon: Wrench, roles: ["all"], hasBadge: false },
+  ],
+  gestao: [] as { title: string; url: string; icon: typeof LayoutDashboard; roles: string[]; hasBadge: boolean }[],
+  configuracoes: [
+    { title: "Fornecedores", url: "/fornecedores", icon: Users, roles: ["all"], hasBadge: false },
+    { title: "Unidades", url: "/unidades", icon: Building2, roles: ["all"], hasBadge: false },
+    { title: "Especificações", url: "/especificacoes", icon: Cog, roles: ["all"], hasBadge: false },
+    { title: "Usuários", url: "/usuarios", icon: Shield, roles: ["administrador"], hasBadge: false },
+  ],
+};
 
 const roleLabels: Record<string, string> = {
   administrador: "Administrador",
   analista_juridico: "Analista Jurídico",
   consultoria_juridica: "Consultoria Jurídica",
-};
-
-const moduloLabels: Record<ModuloAtivo, string> = {
-  contratos: "Contratos",
-  servicos: "Serviços",
-  ambos: "Ambos",
 };
 
 export function AppSidebar() {
@@ -102,6 +100,8 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const [userEmail, setUserEmail] = useState<string>("");
   const [userName, setUserName] = useState<string>("");
+  const [pendingObligations, setPendingObligations] = useState<number>(0);
+  const [configOpen, setConfigOpen] = useState(false);
 
   useEffect(() => {
     const getUser = async () => {
@@ -117,7 +117,16 @@ export function AppSidebar() {
       }
     };
     getUser();
+    fetchPendingObligations();
   }, []);
+
+  const fetchPendingObligations = async () => {
+    const { count } = await supabase
+      .from("contract_obligations")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "pendente");
+    setPendingObligations(count || 0);
+  };
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -132,29 +141,16 @@ export function AppSidebar() {
     }
   };
 
-  const handleModuloChange = (novoModulo: ModuloAtivo) => {
-    if (novoModulo === moduloAtivo) return;
+  const handleModuloToggle = () => {
+    const novoModulo: ModuloAtivo = moduloAtivo === "contratos" ? "servicos" : "contratos";
     setModuloAtivo(novoModulo);
     navigate(novoModulo === "contratos" ? "/dashboard" : "/servicos");
   };
 
-  // Determinar quais menus mostrar baseado no módulo ativo
   const menuItems = moduloAtivo === "contratos" ? contratosMenuItems : servicosMenuItems;
 
-  const visibleMenuItems = menuItems.filter(
-    (item) => item.roles.includes("all") || (userRole && item.roles.includes(userRole))
-  );
-
-  const visibleSistemaItems = sistemaMenuItems.filter(
-    (item) => item.roles.includes("all") || (userRole && item.roles.includes(userRole))
-  );
-
-  const groupedItems = {
-    operacao: visibleMenuItems.filter((item) => item.group === "operacao"),
-    controle: visibleMenuItems.filter((item) => item.group === "controle"),
-    admin: visibleMenuItems.filter((item) => item.group === "admin"),
-    sistema: visibleSistemaItems,
-  };
+  const filterByRole = (items: typeof contratosMenuItems.principal) =>
+    items.filter((item) => item.roles.includes("all") || (userRole && item.roles.includes(userRole)));
 
   const getInitials = (name: string) => {
     return name
@@ -167,64 +163,46 @@ export function AppSidebar() {
 
   const isActive = (url: string) => location.pathname === url;
 
+  const accentColor = moduloAtivo === "contratos" 
+    ? "hsl(var(--lexflow-verde-principal))" 
+    : "hsl(var(--lexflow-mostarda))";
+
   return (
     <Sidebar className={cn("border-r-0", collapsed ? "w-16" : "w-64")}>
-      {/* Header with Logo */}
+      {/* Header with Logo and Module Toggle */}
       <SidebarHeader className="border-b border-sidebar-border px-4 py-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-primary/10">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[hsl(var(--lexflow-off-white)/0.1)]">
             <img src={logoVeridiana} alt="Veridiana" className="h-6 w-6 object-contain" />
           </div>
           {!collapsed && (
-            <div className="flex flex-col">
+            <div className="flex flex-col gap-1.5">
               <span className="text-sm font-semibold text-sidebar-foreground">LexFlow</span>
               
               {moduloPadrao === "ambos" ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="flex items-center gap-1 mt-0.5 group focus:outline-none">
-                      <Badge 
-                        variant="secondary" 
-                        className={cn(
-                          "text-2xs cursor-pointer transition-colors",
-                          moduloAtivo === "contratos" 
-                            ? "bg-[hsl(153_13%_56%/0.2)] text-[hsl(153_13%_70%)]" 
-                            : "bg-[hsl(35_58%_61%/0.2)] text-[hsl(35_58%_75%)]"
-                        )}
-                      >
-                        {moduloLabels[moduloAtivo]}
-                        <ChevronDown className="h-3 w-3 ml-1 opacity-70 group-hover:opacity-100 transition-opacity" />
-                      </Badge>
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-40">
-                    <DropdownMenuItem 
-                      onClick={() => handleModuloChange("contratos")}
-                      className="flex items-center justify-between"
-                    >
-                      <span>Contratos</span>
-                      {moduloAtivo === "contratos" && <Check className="h-4 w-4 text-primary" />}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => handleModuloChange("servicos")}
-                      className="flex items-center justify-between"
-                    >
-                      <span>Serviços</span>
-                      {moduloAtivo === "servicos" && <Check className="h-4 w-4 text-primary" />}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <Badge 
-                  variant="secondary" 
+                <button
+                  onClick={handleModuloToggle}
                   className={cn(
-                    "text-2xs w-fit mt-0.5",
-                    moduloAtivo === "contratos" 
-                      ? "bg-[hsl(153_13%_56%/0.2)] text-[hsl(153_13%_70%)]" 
-                      : "bg-[hsl(35_58%_61%/0.2)] text-[hsl(35_58%_75%)]"
+                    "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all",
+                    "hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+                    moduloAtivo === "contratos"
+                      ? "bg-[hsl(var(--lexflow-verde-principal))] text-white focus-visible:ring-[hsl(var(--lexflow-verde-principal))]"
+                      : "bg-[hsl(var(--lexflow-mostarda))] text-white focus-visible:ring-[hsl(var(--lexflow-mostarda))]"
                   )}
                 >
-                  {moduloLabels[moduloAtivo]}
+                  <span className="text-[10px] opacity-80 uppercase tracking-wide">Módulo:</span>
+                  <span>{moduloAtivo === "contratos" ? "Jurídico" : "Operacional"}</span>
+                </button>
+              ) : (
+                <Badge 
+                  className={cn(
+                    "text-xs w-fit",
+                    moduloAtivo === "contratos" 
+                      ? "bg-[hsl(var(--lexflow-verde-principal)/0.2)] text-[hsl(var(--lexflow-verde-principal))]" 
+                      : "bg-[hsl(var(--lexflow-mostarda)/0.2)] text-[hsl(var(--lexflow-mostarda))]"
+                  )}
+                >
+                  {moduloAtivo === "contratos" ? "Jurídico" : "Operacional"}
                 </Badge>
               )}
             </div>
@@ -233,77 +211,122 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="px-2 py-4 scrollbar-thin">
-        {/* Operação Group */}
-        {groupedItems.operacao.length > 0 && (
+        {/* Principal Group */}
+        <SidebarGroup className="mb-2">
+          {!collapsed && (
+            <SidebarGroupLabel className="px-3 text-xs font-medium text-[hsl(var(--lexflow-verde-claro)/0.6)] uppercase tracking-wider">
+              Principal
+            </SidebarGroupLabel>
+          )}
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {filterByRole(menuItems.principal).map((item) => (
+                <MenuItem 
+                  key={item.title} 
+                  item={item} 
+                  collapsed={collapsed} 
+                  isActive={isActive(item.url)}
+                  moduloAtivo={moduloAtivo}
+                />
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Gestão Group - Only for Contratos module */}
+        {filterByRole(menuItems.gestao).length > 0 && (
           <SidebarGroup className="mb-2">
             {!collapsed && (
-              <SidebarGroupLabel className="px-3 text-xs font-medium text-sidebar-muted uppercase tracking-wider">
-                Operação
+              <SidebarGroupLabel className="px-3 text-xs font-medium text-[hsl(var(--lexflow-verde-claro)/0.6)] uppercase tracking-wider">
+                Gestão
               </SidebarGroupLabel>
             )}
             <SidebarGroupContent>
               <SidebarMenu>
-                {groupedItems.operacao.map((item) => (
-                  <MenuItem key={item.title} item={item} collapsed={collapsed} isActive={isActive(item.url)} />
+                {filterByRole(menuItems.gestao).map((item) => (
+                  <MenuItem 
+                    key={item.title} 
+                    item={item} 
+                    collapsed={collapsed} 
+                    isActive={isActive(item.url)}
+                    moduloAtivo={moduloAtivo}
+                    badge={item.hasBadge && pendingObligations > 0 ? pendingObligations : undefined}
+                  />
                 ))}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
         )}
 
-        {/* Controle Group - Only for Contratos module */}
-        {groupedItems.controle.length > 0 && (
+        {/* Configurações Group - Collapsible */}
+        {filterByRole(menuItems.configuracoes).length > 0 && (
           <SidebarGroup className="mb-2">
-            {!collapsed && (
-              <SidebarGroupLabel className="px-3 text-xs font-medium text-sidebar-muted uppercase tracking-wider">
-                Controle
-              </SidebarGroupLabel>
+            <Collapsible open={configOpen} onOpenChange={setConfigOpen}>
+              {!collapsed && (
+                <CollapsibleTrigger className="w-full">
+                  <SidebarGroupLabel className="px-3 text-xs font-medium text-[hsl(var(--lexflow-verde-claro)/0.6)] uppercase tracking-wider flex items-center justify-between cursor-pointer hover:text-[hsl(var(--lexflow-verde-claro))] transition-colors">
+                    <span>Configurações</span>
+                    {configOpen ? (
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    ) : (
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    )}
+                  </SidebarGroupLabel>
+                </CollapsibleTrigger>
+              )}
+              <CollapsibleContent>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {filterByRole(menuItems.configuracoes).map((item) => (
+                      <MenuItem 
+                        key={item.title} 
+                        item={item} 
+                        collapsed={collapsed} 
+                        isActive={isActive(item.url)}
+                        moduloAtivo={moduloAtivo}
+                      />
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </CollapsibleContent>
+            </Collapsible>
+            {/* Show items when collapsed */}
+            {collapsed && (
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {filterByRole(menuItems.configuracoes).map((item) => (
+                    <MenuItem 
+                      key={item.title} 
+                      item={item} 
+                      collapsed={collapsed} 
+                      isActive={isActive(item.url)}
+                      moduloAtivo={moduloAtivo}
+                    />
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
             )}
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {groupedItems.controle.map((item) => (
-                  <MenuItem key={item.title} item={item} collapsed={collapsed} isActive={isActive(item.url)} />
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
-
-        {/* Admin Central Group */}
-        {groupedItems.admin.length > 0 && (
-          <SidebarGroup className="mb-2">
-            {!collapsed && (
-              <SidebarGroupLabel className="px-3 text-xs font-medium text-sidebar-muted uppercase tracking-wider">
-                Cadastro
-              </SidebarGroupLabel>
-            )}
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {groupedItems.admin.map((item) => (
-                  <MenuItem key={item.title} item={item} collapsed={collapsed} isActive={isActive(item.url)} />
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
           </SidebarGroup>
         )}
 
         {/* Sistema Group */}
-        {groupedItems.sistema.length > 0 && (
-          <SidebarGroup>
-            {!collapsed && (
-              <SidebarGroupLabel className="px-3 text-xs font-medium text-sidebar-muted uppercase tracking-wider">
-                Sistema
-              </SidebarGroupLabel>
-            )}
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {groupedItems.sistema.map((item) => (
-                  <MenuItem key={item.title} item={item} collapsed={collapsed} isActive={isActive(item.url)} />
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
+        <SidebarGroup>
+          {!collapsed && (
+            <SidebarGroupLabel className="px-3 text-xs font-medium text-[hsl(var(--lexflow-verde-claro)/0.6)] uppercase tracking-wider">
+              Sistema
+            </SidebarGroupLabel>
+          )}
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <MenuItem 
+                item={{ title: "Configurações", url: "/settings", icon: Settings, roles: ["all"] }} 
+                collapsed={collapsed} 
+                isActive={isActive("/settings")}
+                moduloAtivo={moduloAtivo}
+              />
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
 
       {/* Footer with User */}
@@ -318,7 +341,13 @@ export function AppSidebar() {
               )}
             >
               <Avatar className="h-8 w-8 shrink-0">
-                <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground text-xs font-medium">
+                <AvatarFallback 
+                  className="text-xs font-medium"
+                  style={{ 
+                    backgroundColor: accentColor,
+                    color: 'white'
+                  }}
+                >
                   {getInitials(userName || "U")}
                 </AvatarFallback>
               </Avatar>
@@ -328,11 +357,11 @@ export function AppSidebar() {
                     <span className="text-sm font-medium text-sidebar-foreground truncate">
                       {userName}
                     </span>
-                    <span className="text-xs text-sidebar-muted truncate">
+                    <span className="text-xs text-[hsl(var(--lexflow-verde-claro))] truncate">
                       {roleLabels[userRole || ""] || "Usuário"}
                     </span>
                   </div>
-                  <ChevronDown className="h-4 w-4 text-sidebar-muted shrink-0" />
+                  <ChevronDown className="h-4 w-4 text-[hsl(var(--lexflow-verde-claro))] shrink-0" />
                 </>
               )}
             </button>
@@ -347,15 +376,6 @@ export function AppSidebar() {
               <p className="text-xs text-muted-foreground">{userEmail}</p>
             </div>
             <DropdownMenuSeparator />
-            {moduloPadrao === "ambos" && (
-              <>
-                <DropdownMenuItem onClick={() => handleModuloChange(moduloAtivo === "contratos" ? "servicos" : "contratos")}>
-                  <ArrowLeftRight className="mr-2 h-4 w-4" />
-                  Trocar Módulo
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-              </>
-            )}
             <DropdownMenuItem onClick={() => navigate("/settings")}>
               <Settings className="mr-2 h-4 w-4" />
               Configurações
@@ -374,7 +394,7 @@ export function AppSidebar() {
 
         {/* Version */}
         {!collapsed && (
-          <div className="mt-2 flex items-center justify-center gap-1.5 text-2xs text-sidebar-muted">
+          <div className="mt-2 flex items-center justify-center gap-1.5 text-2xs text-[hsl(var(--lexflow-verde-claro)/0.5)]">
             <Building2 className="h-3 w-3" />
             <span>v1.1.0</span>
           </div>
@@ -385,13 +405,23 @@ export function AppSidebar() {
 }
 
 interface MenuItemProps {
-  item: { title: string; url: string; icon: typeof LayoutDashboard; roles: string[]; group: string };
+  item: { title: string; url: string; icon: typeof LayoutDashboard; roles: string[] };
   collapsed: boolean;
   isActive: boolean;
+  moduloAtivo: ModuloAtivo;
+  badge?: number;
 }
 
-function MenuItem({ item, collapsed, isActive }: MenuItemProps) {
+function MenuItem({ item, collapsed, isActive, moduloAtivo, badge }: MenuItemProps) {
   const Icon = item.icon;
+
+  const activeStyles = moduloAtivo === "contratos"
+    ? "bg-[hsl(var(--lexflow-verde-principal)/0.15)] text-[hsl(var(--lexflow-verde-principal))]"
+    : "bg-[hsl(var(--lexflow-mostarda)/0.15)] text-[hsl(var(--lexflow-mostarda))]";
+
+  const iconActiveColor = moduloAtivo === "contratos"
+    ? "text-[hsl(var(--lexflow-verde-principal))]"
+    : "text-[hsl(var(--lexflow-mostarda))]";
 
   return (
     <SidebarMenuItem>
@@ -402,13 +432,24 @@ function MenuItem({ item, collapsed, isActive }: MenuItemProps) {
             "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-200",
             "hover:bg-sidebar-accent/50",
             isActive
-              ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm"
-              : "text-sidebar-foreground/80",
+              ? cn(activeStyles, "font-medium")
+              : "text-[hsl(var(--lexflow-off-white)/0.8)]",
             collapsed && "justify-center px-2"
           )}
         >
-          <Icon className={cn("h-4 w-4 shrink-0", isActive && "text-sidebar-primary")} />
-          {!collapsed && <span>{item.title}</span>}
+          <Icon className={cn("h-4 w-4 shrink-0", isActive && iconActiveColor)} />
+          {!collapsed && (
+            <>
+              <span className="flex-1">{item.title}</span>
+              {badge !== undefined && badge > 0 && (
+                <Badge 
+                  className="bg-[hsl(var(--lexflow-vinho))] text-white text-xs px-1.5 py-0 h-5 min-w-[20px] flex items-center justify-center"
+                >
+                  {badge}
+                </Badge>
+              )}
+            </>
+          )}
         </NavLink>
       </SidebarMenuButton>
     </SidebarMenuItem>
