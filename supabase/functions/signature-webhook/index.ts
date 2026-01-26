@@ -6,28 +6,174 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper function to convert ArrayBuffer to hex string
+function arrayBufferToHex(buffer: ArrayBuffer): string {
+  return Array.from(new Uint8Array(buffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+// Helper function to convert ArrayBuffer to base64 string
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+// Verify webhook signature based on provider
+async function verifyWebhookSignature(
+  req: Request,
+  payload: string,
+  provider: string
+): Promise<{ valid: boolean; error?: string }> {
+  const webhookSecret = Deno.env.get('WEBHOOK_SECRET');
+  
+  // If no webhook secret is configured, log warning but allow in development
+  // In production, this should be strictly enforced
+  if (!webhookSecret) {
+    console.warn('WEBHOOK_SECRET not configured - webhook signature verification disabled');
+    console.warn('For production, please configure WEBHOOK_SECRET in edge function secrets');
+    return { valid: true };
+  }
+
+  try {
+    switch (provider.toLowerCase()) {
+      case 'docusign': {
+        const signature = req.headers.get('x-docusign-signature-1');
+        if (!signature) {
+          return { valid: false, error: 'Missing DocuSign signature header' };
+        }
+        
+        const key = await crypto.subtle.importKey(
+          'raw',
+          new TextEncoder().encode(webhookSecret),
+          { name: 'HMAC', hash: 'SHA-256' },
+          false,
+          ['sign']
+        );
+        const computedSignature = await crypto.subtle.sign(
+          'HMAC',
+          key,
+          new TextEncoder().encode(payload)
+        );
+        const computedBase64 = arrayBufferToBase64(computedSignature);
+        
+        if (signature !== computedBase64) {
+          return { valid: false, error: 'Invalid DocuSign signature' };
+        }
+        return { valid: true };
+      }
+      
+      case 'clicksign': {
+        const apiKey = req.headers.get('x-clicksign-key') || req.headers.get('authorization');
+        if (!apiKey) {
+          return { valid: false, error: 'Missing ClickSign API key header' };
+        }
+        
+        // ClickSign uses API key validation
+        if (apiKey !== webhookSecret && apiKey !== `Bearer ${webhookSecret}`) {
+          return { valid: false, error: 'Invalid ClickSign API key' };
+        }
+        return { valid: true };
+      }
+      
+      case 'd4sign': {
+        const hash = req.headers.get('x-d4sign-hash');
+        if (!hash) {
+          return { valid: false, error: 'Missing D4Sign hash header' };
+        }
+        
+        const computedHash = await crypto.subtle.digest(
+          'SHA-256',
+          new TextEncoder().encode(payload + webhookSecret)
+        );
+        const computedHex = arrayBufferToHex(computedHash);
+        
+        if (hash !== computedHex) {
+          return { valid: false, error: 'Invalid D4Sign hash' };
+        }
+        return { valid: true };
+      }
+      
+      default: {
+        // For custom/unknown providers, check for a generic authorization header
+        const authHeader = req.headers.get('x-webhook-secret') || 
+                          req.headers.get('authorization');
+        
+        if (authHeader && authHeader !== webhookSecret && authHeader !== `Bearer ${webhookSecret}`) {
+          return { valid: false, error: 'Invalid webhook authorization' };
+        }
+        
+        // If no auth header provided and we have a secret configured, require validation
+        if (!authHeader && webhookSecret) {
+          console.warn('No authorization header provided for custom webhook');
+          return { valid: false, error: 'Missing webhook authorization header' };
+        }
+        
+        return { valid: true };
+      }
+    }
+  } catch (error) {
+    console.error('Signature verification error:', error);
+    return { valid: false, error: 'Signature verification failed' };
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // Get client IP for logging
+  const clientIP = req.headers.get('x-forwarded-for') || 
+                   req.headers.get('x-real-ip') || 
+                   'unknown';
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const payload = await req.json();
-    console.log('Webhook received:', JSON.stringify(payload, null, 2));
+    // Read body as text for signature verification
+    const bodyText = await req.text();
+    let payload: any;
+    
+    try {
+      payload = JSON.parse(bodyText);
+    } catch (parseError) {
+      console.error(`[${clientIP}] Invalid JSON payload`);
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON payload' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    // Identificar o provedor pelo header ou corpo da requisição
+    console.log(`[${clientIP}] Webhook received:`, JSON.stringify(payload, null, 2));
+
+    // Identify provider from header or payload
     const provider = req.headers.get('x-signature-provider') || payload.provider || 'custom';
     
+    // Verify webhook signature
+    const verification = await verifyWebhookSignature(req, bodyText, provider);
+    if (!verification.valid) {
+      console.error(`[${clientIP}] Webhook verification failed for provider ${provider}: ${verification.error}`);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized', details: verification.error }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`[${clientIP}] Webhook signature verified for provider: ${provider}`);
+
     let externalId: string;
     let status: string;
     let signedDocumentUrl: string | null = null;
     let metadata: any = {};
 
-    // Processar webhook baseado no provedor
+    // Process webhook based on provider
     switch (provider.toLowerCase()) {
       case 'docusign':
         externalId = payload.data?.envelopeId || payload.envelopeId;
@@ -60,29 +206,52 @@ serve(async (req) => {
         break;
 
       default:
-        // Formato genérico
+        // Generic format
         externalId = payload.externalId || payload.id;
         status = payload.status || 'pending';
         signedDocumentUrl = payload.signedDocumentUrl;
         metadata = payload;
     }
 
-    if (!externalId) {
-      console.error('External ID not found in payload');
+    // Validate externalId format (basic validation)
+    if (!externalId || typeof externalId !== 'string' || externalId.length < 1 || externalId.length > 500) {
+      console.error(`[${clientIP}] Invalid external ID: ${externalId}`);
       return new Response(
-        JSON.stringify({ error: 'External ID not found' }),
+        JSON.stringify({ error: 'Invalid external ID' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Atualizar status da assinatura
+    // Validate status is one of expected values
+    const validStatuses = ['pending', 'sent', 'viewed', 'signed', 'completed', 'declined', 'cancelled', 'expired'];
+    if (!validStatuses.includes(status)) {
+      console.warn(`[${clientIP}] Unknown status received: ${status}, defaulting to pending`);
+      status = 'pending';
+    }
+
+    // Verify external_id exists before updating
+    const { data: existingSignature, error: checkError } = await supabase
+      .from('contract_signatures')
+      .select('id, contrato_id')
+      .eq('external_id', externalId)
+      .single();
+
+    if (checkError || !existingSignature) {
+      console.error(`[${clientIP}] Signature not found for external_id: ${externalId}`);
+      return new Response(
+        JSON.stringify({ error: 'Signature record not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Update signature status
     const updateData: any = {
       status,
       metadata,
       updated_at: new Date().toISOString(),
     };
 
-    if (signedDocumentUrl) {
+    if (signedDocumentUrl && typeof signedDocumentUrl === 'string' && signedDocumentUrl.length < 2000) {
       updateData.signed_document_url = signedDocumentUrl;
     }
 
@@ -98,16 +267,16 @@ serve(async (req) => {
       .single();
 
     if (error) {
-      console.error('Error updating signature:', error);
+      console.error(`[${clientIP}] Error updating signature:`, error);
       return new Response(
-        JSON.stringify({ error: error.message }),
+        JSON.stringify({ error: 'Failed to update signature' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Signature updated successfully:', data);
+    console.log(`[${clientIP}] Signature updated successfully:`, data.id);
 
-    // Se completado, atualizar o contrato
+    // If completed, update the contract
     if (status === 'completed' && data) {
       const { error: contratoError } = await supabase
         .from('contratos')
@@ -118,7 +287,7 @@ serve(async (req) => {
         .eq('id', data.contrato_id);
 
       if (contratoError) {
-        console.error('Error updating contract:', contratoError);
+        console.error(`[${clientIP}] Error updating contract:`, contratoError);
       }
     }
 
@@ -128,15 +297,15 @@ serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error('Webhook processing error:', error);
+    console.error(`[${clientIP}] Webhook processing error:`, error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
 
-// Mapeamento de status dos provedores
+// Status mapping functions
 function mapDocuSignStatus(status: string): string {
   const statusMap: Record<string, string> = {
     'sent': 'sent',
