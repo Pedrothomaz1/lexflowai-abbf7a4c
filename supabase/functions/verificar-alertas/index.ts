@@ -30,7 +30,10 @@ serve(async (req) => {
 
     if (contratosError) {
       console.error('Erro ao buscar contratos:', contratosError);
-      throw contratosError;
+      return new Response(
+        JSON.stringify({ success: false, error: 'Falha ao verificar contratos' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const alertasCriados = [];
@@ -378,7 +381,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: error instanceof Error ? error.message : 'Erro desconhecido',
+        error: 'Falha ao processar verificação de alertas',
       }),
       {
         status: 500,
