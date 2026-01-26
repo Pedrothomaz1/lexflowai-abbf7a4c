@@ -11,7 +11,7 @@ interface StatCardProps {
     value: number;
     label?: string;
   };
-  variant?: "default" | "primary" | "success" | "warning" | "destructive" | "error" | "muted" | "info";
+  variant?: "default" | "primary" | "success" | "warning" | "destructive" | "error" | "muted" | "info" | "critical";
   className?: string;
   onClick?: () => void;
 }
@@ -27,7 +27,7 @@ export function StatCard({
   onClick,
 }: StatCardProps) {
   // Map error and muted to existing variants
-  const mappedVariant = variant === "error" ? "destructive" : variant === "muted" ? "default" : variant === "info" ? "primary" : variant;
+  const mappedVariant = variant === "error" ? "destructive" : variant === "muted" ? "default" : variant === "info" ? "primary" : variant === "critical" ? "critical" : variant;
   
   const variantClasses = {
     default: "stat-card",
@@ -35,6 +35,7 @@ export function StatCard({
     success: "stat-card-success",
     warning: "stat-card-warning",
     destructive: "stat-card-destructive",
+    critical: "stat-card-critical",
   };
 
   const iconColors = {
@@ -43,6 +44,7 @@ export function StatCard({
     success: "text-success",
     warning: "text-warning",
     destructive: "text-destructive",
+    critical: "text-[hsl(var(--critical))]",
   };
 
   const TrendIcon = trend

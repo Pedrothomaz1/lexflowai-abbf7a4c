@@ -4,11 +4,8 @@ import {
   Users,
   Settings,
   LogOut,
-  Kanban,
   Shield,
   FileStack,
-  Bell,
-  Calendar,
   GitBranch,
   ChevronDown,
   HelpCircle,
@@ -51,30 +48,30 @@ import { cn } from "@/lib/utils";
 import logoVeridiana from "@/assets/logo-veridiana.png";
 import { Badge } from "@/components/ui/badge";
 
-// Menu items para módulo de Contratos
+// Menu items para módulo de Contratos - Blueprint structure
 const contratosMenuItems = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: ["all"], group: "principal" },
-  { title: "Contratos", url: "/contratos", icon: FileText, roles: ["all"], group: "principal" },
-  { title: "Kanban", url: "/kanban", icon: Kanban, roles: ["all"], group: "principal" },
-  { title: "Templates", url: "/templates", icon: FileStack, roles: ["all"], group: "principal" },
-  { title: "Obrigações", url: "/obrigacoes", icon: ClipboardList, roles: ["all"], group: "gestao" },
-  { title: "Workflows", url: "/workflows", icon: GitBranch, roles: ["administrador"], group: "gestao" },
-  { title: "Alertas", url: "/alertas", icon: Bell, roles: ["all"], group: "gestao" },
-  { title: "Calendário", url: "/calendario", icon: Calendar, roles: ["all"], group: "gestao" },
-  { title: "Fornecedores", url: "/fornecedores", icon: Users, roles: ["all"], group: "cadastros" },
-  { title: "Usuários", url: "/usuarios", icon: Shield, roles: ["administrador"], group: "cadastros" },
+  // Operação
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: ["all"], group: "operacao" },
+  { title: "Contratos", url: "/contratos", icon: FileText, roles: ["all"], group: "operacao" },
+  // Controle
+  { title: "Obrigações", url: "/obrigacoes", icon: ClipboardList, roles: ["all"], group: "controle" },
+  { title: "Workflows", url: "/workflows", icon: GitBranch, roles: ["administrador"], group: "controle" },
+  // Admin Central
+  { title: "Fornecedores", url: "/fornecedores", icon: Users, roles: ["all"], group: "admin" },
+  { title: "Templates", url: "/templates", icon: FileStack, roles: ["all"], group: "admin" },
+  { title: "Usuários", url: "/usuarios", icon: Shield, roles: ["administrador"], group: "admin" },
 ];
 
-// Menu items para módulo de Serviços
+// Menu items para módulo de Serviços - Blueprint structure
 const servicosMenuItems = [
-  { title: "Dashboard", url: "/servicos", icon: LayoutDashboard, roles: ["all"], group: "principal" },
-  { title: "Serviços", url: "/servicos", icon: Wrench, roles: ["all"], group: "principal" },
-  { title: "Unidades", url: "/unidades", icon: Building2, roles: ["all"], group: "principal" },
-  { title: "Especificações", url: "/especificacoes", icon: Cog, roles: ["all"], group: "principal" },
-  { title: "Alertas", url: "/alertas", icon: Bell, roles: ["all"], group: "gestao" },
-  { title: "Calendário", url: "/calendario", icon: Calendar, roles: ["all"], group: "gestao" },
-  { title: "Fornecedores", url: "/fornecedores", icon: Users, roles: ["all"], group: "cadastros" },
-  { title: "Usuários", url: "/usuarios", icon: Shield, roles: ["administrador"], group: "cadastros" },
+  // Operação
+  { title: "Dashboard", url: "/servicos", icon: LayoutDashboard, roles: ["all"], group: "operacao" },
+  { title: "Serviços", url: "/servicos", icon: Wrench, roles: ["all"], group: "operacao" },
+  // Admin Central
+  { title: "Fornecedores", url: "/fornecedores", icon: Users, roles: ["all"], group: "admin" },
+  { title: "Unidades", url: "/unidades", icon: Building2, roles: ["all"], group: "admin" },
+  { title: "Especificações", url: "/especificacoes", icon: Cog, roles: ["all"], group: "admin" },
+  { title: "Usuários", url: "/usuarios", icon: Shield, roles: ["administrador"], group: "admin" },
 ];
 
 // Menu items compartilhados (sistema)
@@ -157,9 +154,9 @@ export function AppSidebar() {
   );
 
   const groupedItems = {
-    principal: visibleMenuItems.filter((item) => item.group === "principal"),
-    gestao: visibleMenuItems.filter((item) => item.group === "gestao"),
-    cadastros: visibleMenuItems.filter((item) => item.group === "cadastros"),
+    operacao: visibleMenuItems.filter((item) => item.group === "operacao"),
+    controle: visibleMenuItems.filter((item) => item.group === "controle"),
+    admin: visibleMenuItems.filter((item) => item.group === "admin"),
     sistema: visibleSistemaItems,
   };
 
@@ -185,7 +182,15 @@ export function AppSidebar() {
           {!collapsed && (
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-sidebar-foreground">LexFlow</span>
-              <Badge variant="secondary" className="text-2xs w-fit">
+              <Badge 
+                variant="secondary" 
+                className={cn(
+                  "text-2xs w-fit",
+                  moduloAtivo === "contratos" 
+                    ? "bg-[hsl(153_13%_56%/0.2)] text-[hsl(153_13%_70%)]" 
+                    : "bg-[hsl(35_58%_61%/0.2)] text-[hsl(35_58%_75%)]"
+                )}
+              >
                 {moduloLabels[moduloAtivo]}
               </Badge>
             </div>
@@ -194,32 +199,44 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="px-2 py-4 scrollbar-thin">
-        {/* Module Switcher - Only show if user has access to both */}
+        {/* Module Switcher - Redesigned as prominent selector */}
         {moduloPadrao === "ambos" && !collapsed && (
-          <div className="px-3 mb-4">
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full justify-start gap-2 text-xs"
-              onClick={handleSwitchModulo}
-            >
-              <ArrowLeftRight className="h-3.5 w-3.5" />
-              Trocar para {moduloAtivo === "contratos" ? "Serviços" : "Contratos"}
-            </Button>
+          <div className="mx-3 mb-4 p-3 rounded-lg bg-sidebar-accent/30 border border-sidebar-border">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className={cn(
+                  "w-2 h-2 rounded-full",
+                  moduloAtivo === "contratos" 
+                    ? "bg-[hsl(153_13%_56%)]" 
+                    : "bg-[hsl(35_58%_61%)]"
+                )} />
+                <span className="text-sm font-medium text-sidebar-foreground">
+                  {moduloAtivo === "contratos" ? "Contratos" : "Serviços"}
+                </span>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleSwitchModulo}
+                className="h-7 px-2 text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+              >
+                <ArrowLeftRight className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           </div>
         )}
 
-        {/* Principal Group */}
-        {groupedItems.principal.length > 0 && (
+        {/* Operação Group */}
+        {groupedItems.operacao.length > 0 && (
           <SidebarGroup className="mb-2">
             {!collapsed && (
               <SidebarGroupLabel className="px-3 text-xs font-medium text-sidebar-muted uppercase tracking-wider">
-                Principal
+                Operação
               </SidebarGroupLabel>
             )}
             <SidebarGroupContent>
               <SidebarMenu>
-                {groupedItems.principal.map((item) => (
+                {groupedItems.operacao.map((item) => (
                   <MenuItem key={item.title} item={item} collapsed={collapsed} isActive={isActive(item.url)} />
                 ))}
               </SidebarMenu>
@@ -227,17 +244,17 @@ export function AppSidebar() {
           </SidebarGroup>
         )}
 
-        {/* Gestão Group */}
-        {groupedItems.gestao.length > 0 && (
+        {/* Controle Group - Only for Contratos module */}
+        {groupedItems.controle.length > 0 && (
           <SidebarGroup className="mb-2">
             {!collapsed && (
               <SidebarGroupLabel className="px-3 text-xs font-medium text-sidebar-muted uppercase tracking-wider">
-                Gestão
+                Controle
               </SidebarGroupLabel>
             )}
             <SidebarGroupContent>
               <SidebarMenu>
-                {groupedItems.gestao.map((item) => (
+                {groupedItems.controle.map((item) => (
                   <MenuItem key={item.title} item={item} collapsed={collapsed} isActive={isActive(item.url)} />
                 ))}
               </SidebarMenu>
@@ -245,17 +262,17 @@ export function AppSidebar() {
           </SidebarGroup>
         )}
 
-        {/* Cadastros Group */}
-        {groupedItems.cadastros.length > 0 && (
+        {/* Admin Central Group */}
+        {groupedItems.admin.length > 0 && (
           <SidebarGroup className="mb-2">
             {!collapsed && (
               <SidebarGroupLabel className="px-3 text-xs font-medium text-sidebar-muted uppercase tracking-wider">
-                Cadastros
+                Admin Central
               </SidebarGroupLabel>
             )}
             <SidebarGroupContent>
               <SidebarMenu>
-                {groupedItems.cadastros.map((item) => (
+                {groupedItems.admin.map((item) => (
                   <MenuItem key={item.title} item={item} collapsed={collapsed} isActive={isActive(item.url)} />
                 ))}
               </SidebarMenu>

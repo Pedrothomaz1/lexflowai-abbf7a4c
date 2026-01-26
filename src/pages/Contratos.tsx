@@ -22,7 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Download, Calendar, Eye, FileText, ArrowUpRight, Upload } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Download, Calendar, Eye, FileText, ArrowUpRight, Upload, List, Kanban as KanbanIcon } from "lucide-react";
 import { exportContratosPDF } from "@/utils/pdfExport";
 import { BuscaAvancada, FiltrosAvancados } from "@/components/BuscaAvancada";
 import { DataTable, Column } from "@/components/ui/data-table";
@@ -30,6 +31,8 @@ import { StatusBadge, ContractTypeBadge } from "@/components/ui/status-badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
 import { ContractImport } from "@/components/ContractImport/ContractImport";
+import { KanbanBoard } from "@/components/contracts/KanbanBoard";
+import { CalendarView, CalendarObligation } from "@/components/contracts/CalendarView";
 
 type Contrato = {
   id: string;
@@ -78,10 +81,13 @@ const Contratos = () => {
   const [filtros, setFiltros] = useState<FiltrosAvancados>({
     busca: searchParams.get("search") || "",
   });
+  const [viewMode, setViewMode] = useState<"lista" | "kanban" | "calendario">("lista");
+  const [obligations, setObligations] = useState<CalendarObligation[]>([]);
 
   useEffect(() => {
     fetchContratos();
     fetchFornecedores();
+    fetchObligations();
     generateNextContractNumber();
   }, [filtros]);
 
@@ -166,6 +172,54 @@ const Contratos = () => {
       .order("nome");
     
     setFornecedores(data || []);
+  };
+
+  const fetchObligations = async () => {
+    const { data, error } = await supabase
+      .from("contract_obligations")
+      .select(`
+        *,
+        contratos (
+          numero_contrato,
+          titulo
+        )
+      `)
+      .order("data_vencimento", { ascending: true });
+
+    if (!error && data) {
+      setObligations(data as CalendarObligation[]);
+    }
+  };
+
+  const handleStatusChange = async (contratoId: string, newStatus: string) => {
+    const { error } = await supabase
+      .from("contratos")
+      .update({ status: newStatus })
+      .eq("id", contratoId);
+
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao atualizar status",
+        description: error.message,
+      });
+      fetchContratos();
+    } else {
+      const statusLabels: Record<string, string> = {
+        rascunho: "Rascunho",
+        em_aprovacao: "Em Aprovação",
+        aprovado: "Aprovado",
+        assinado: "Assinado",
+        vigente: "Vigente",
+        encerrado: "Encerrado",
+        cancelado: "Cancelado",
+      };
+      toast({
+        title: "Status atualizado!",
+        description: `Contrato movido para "${statusLabels[newStatus] || newStatus}"`,
+      });
+      fetchContratos();
+    }
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -377,7 +431,7 @@ const Contratos = () => {
             </Button>
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
-                <Button size="sm">
+                <Button size="sm" className="btn-cta">
                   <Plus className="h-4 w-4 mr-1.5" />
                   Novo Contrato
                 </Button>
@@ -573,20 +627,53 @@ const Contratos = () => {
         fornecedores={fornecedores}
       />
 
-      <DataTable
-        data={contratos}
-        columns={columns}
-        loading={loading}
-        onRowClick={(contrato) => navigate(`/contratos/${contrato.id}`)}
-        emptyState={{
-          title: "Nenhum contrato encontrado",
-          description: "Clique em 'Novo Contrato' para começar",
-          action: {
-            label: "Novo Contrato",
-            onClick: () => setDialogOpen(true),
-          },
-        }}
-      />
+      {/* Unified View Tabs */}
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as typeof viewMode)} className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="lista" className="gap-2">
+            <List className="h-4 w-4" />
+            Lista
+          </TabsTrigger>
+          <TabsTrigger value="kanban" className="gap-2">
+            <KanbanIcon className="h-4 w-4" />
+            Kanban
+          </TabsTrigger>
+          <TabsTrigger value="calendario" className="gap-2">
+            <Calendar className="h-4 w-4" />
+            Calendário
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="lista" className="mt-4">
+          <DataTable
+            data={contratos}
+            columns={columns}
+            loading={loading}
+            onRowClick={(contrato) => navigate(`/contratos/${contrato.id}`)}
+            emptyState={{
+              title: "Nenhum contrato encontrado",
+              description: "Clique em 'Novo Contrato' para começar",
+              action: {
+                label: "Novo Contrato",
+                onClick: () => setDialogOpen(true),
+              },
+            }}
+          />
+        </TabsContent>
+
+        <TabsContent value="kanban" className="mt-4">
+          <KanbanBoard
+            contratos={contratos}
+            fornecedores={fornecedores}
+            onStatusChange={handleStatusChange}
+            onViewContrato={(id) => navigate(`/contratos/${id}`)}
+          />
+        </TabsContent>
+
+        <TabsContent value="calendario" className="mt-4">
+          <CalendarView obligations={obligations} />
+        </TabsContent>
+      </Tabs>
 
       <ContractImport
         open={importDialogOpen}
