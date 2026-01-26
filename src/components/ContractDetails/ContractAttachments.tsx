@@ -70,7 +70,8 @@ export function ContractAttachments({ contratoId }: ContractAttachmentsProps) {
       if (!user) throw new Error("Usuário não autenticado");
 
       const fileExt = file.name.split(".").pop();
-      const fileName = `${contratoId}/${Date.now()}-${file.name}`;
+      // Use user.id as folder to comply with storage RLS policies
+      const fileName = `${user.id}/${Date.now()}-${file.name}`;
 
       const { error: uploadError } = await supabase.storage
         .from("contratos-documentos")
