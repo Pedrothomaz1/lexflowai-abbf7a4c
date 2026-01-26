@@ -55,6 +55,23 @@ serve(async (req) => {
   }
 
   try {
+    // Validate CRON_SECRET authentication for internal/scheduled calls
+    const cronSecret = Deno.env.get('CRON_SECRET');
+    const authHeader = req.headers.get('Authorization');
+    
+    if (cronSecret) {
+      // If CRON_SECRET is configured, require it
+      if (!authHeader || authHeader.replace('Bearer ', '') !== cronSecret) {
+        console.warn('Unauthorized access attempt to enviar-solicitacao-compras');
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    } else {
+      console.warn('CRON_SECRET not configured - please set it for production security');
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
