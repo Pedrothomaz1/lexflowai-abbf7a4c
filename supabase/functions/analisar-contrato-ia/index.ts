@@ -6,16 +6,116 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+// Maximum content length (100KB)
+const MAX_CONTENT_LENGTH = 102400;
+
+// Sanitize content to prevent prompt injection
+function sanitizeContent(content: string): string {
+  return content
+    .replace(/[\x00-\x1F\x7F-\x9F]/g, '') // Remove control characters
+    .substring(0, MAX_CONTENT_LENGTH); // Enforce hard limit
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { contratoId, conteudo } = await req.json();
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    if (!contratoId || !conteudo) {
-      throw new Error('contratoId e conteudo são obrigatórios');
+    // Validate authentication first
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized: Missing authentication' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized: Invalid authentication' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const userId = user.id;
+
+    // Parse and validate request body
+    let requestBody: any;
+    try {
+      requestBody = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid JSON body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { contratoId, conteudo } = requestBody;
+
+    // Validate contratoId format
+    if (!contratoId || typeof contratoId !== 'string' || !UUID_REGEX.test(contratoId)) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid contract ID format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate content
+    if (!conteudo || typeof conteudo !== 'string') {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Content is required and must be a string' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (conteudo.length > MAX_CONTENT_LENGTH) {
+      return new Response(
+        JSON.stringify({ success: false, error: `Content exceeds maximum length of ${MAX_CONTENT_LENGTH} characters` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Verify contract exists and user has permission to analyze it
+    const { data: contrato, error: contratoError } = await supabase
+      .from('contratos')
+      .select('id, created_by')
+      .eq('id', contratoId)
+      .single();
+
+    if (contratoError || !contrato) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Contract not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check user role for authorization
+    const { data: userRole } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .single();
+
+    const canAnalyze = contrato.created_by === userId || 
+      ['consultoria_juridica', 'administrador'].includes(userRole?.role || '');
+
+    if (!canAnalyze) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Forbidden: Insufficient permissions to analyze this contract' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
@@ -23,9 +123,12 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY não configurada');
     }
 
-    console.log(`Analisando contrato ${contratoId} com IA`);
+    // Sanitize content before sending to AI
+    const sanitizedConteudo = sanitizeContent(conteudo);
 
-    // Chamada para Lovable AI
+    console.log(`Analyzing contract ${contratoId} for user ${userId}`);
+
+    // Call Lovable AI
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -52,7 +155,7 @@ Retorne a resposta em formato JSON estruturado com as chaves:
           },
           {
             role: 'user',
-            content: `Analise este contrato:\n\n${conteudo}`
+            content: `Analise este contrato:\n\n${sanitizedConteudo}`
           }
         ],
         temperature: 0.7,
@@ -76,7 +179,7 @@ Retorne a resposta em formato JSON estruturado com as chaves:
     const data = await response.json();
     const analiseTexto = data.choices[0]?.message?.content;
 
-    // Capturar tokens utilizados
+    // Capture tokens used
     const tokensUsados = data.usage?.total_tokens || 0;
     const promptTokens = data.usage?.prompt_tokens || 0;
     const completionTokens = data.usage?.completion_tokens || 0;
@@ -89,17 +192,17 @@ Retorne a resposta em formato JSON estruturado com as chaves:
 
     console.log('Análise recebida:', analiseTexto);
 
-    // Tentar parsear como JSON
+    // Try to parse as JSON
     let analise;
     try {
-      // Remover markdown code blocks se existirem
+      // Remove markdown code blocks if present
       const jsonMatch = analiseTexto.match(/```json\n?([\s\S]*?)\n?```/) || 
                         analiseTexto.match(/```\n?([\s\S]*?)\n?```/);
       const jsonString = jsonMatch ? jsonMatch[1] : analiseTexto;
       analise = JSON.parse(jsonString);
     } catch (parseError) {
       console.error('Erro ao parsear JSON da IA:', parseError);
-      // Se não conseguir parsear, criar estrutura padrão
+      // Create default structure if parsing fails
       analise = {
         riscos_identificados: [
           {
@@ -115,22 +218,7 @@ Retorne a resposta em formato JSON estruturado com as chaves:
       };
     }
 
-    // Inicializar cliente Supabase
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Obter usuário autenticado
-    const authHeader = req.headers.get('Authorization');
-    const token = authHeader?.replace('Bearer ', '');
-    let userId = null;
-
-    if (token) {
-      const { data: { user } } = await supabase.auth.getUser(token);
-      userId = user?.id;
-    }
-
-    // Salvar análise no banco
+    // Save analysis to database
     const { data: savedAnalysis, error: insertError } = await supabase
       .from('contract_analysis')
       .insert({
@@ -151,8 +239,8 @@ Retorne a resposta em formato JSON estruturado com as chaves:
 
     console.log('Análise salva com sucesso:', savedAnalysis.id);
 
-    // Registrar uso de tokens
-    if (userId && tokensUsados > 0) {
+    // Register token usage
+    if (tokensUsados > 0) {
       const { error: usageError } = await supabase
         .from('uso_sistema')
         .insert({
