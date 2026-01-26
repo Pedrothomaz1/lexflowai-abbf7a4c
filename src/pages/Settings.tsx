@@ -39,7 +39,8 @@ import {
   TestTube,
   Loader2,
   AlertCircle,
-  Check
+  Check,
+  DollarSign
 } from "lucide-react";
 
 interface IntegracaoConfig {
@@ -444,6 +445,31 @@ const Settings = () => {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Custos - Admin Only */}
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              Custos Operacionais
+            </CardTitle>
+            <CardDescription>
+              Acompanhe o consumo de recursos e custos da plataforma
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              variant="outline" 
+              className="w-full sm:w-auto"
+              onClick={() => navigate('/custos')}
+            >
+              <DollarSign className="h-4 w-4 mr-2" />
+              Ver Custos e Consumo
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Integrações - Admin Only */}
       {isAdmin && (

@@ -126,6 +126,45 @@ serve(async (req) => {
     const aiResponse = await response.json();
     console.log('Resposta da IA:', JSON.stringify(aiResponse));
 
+    // Capturar tokens utilizados
+    const tokensUsados = aiResponse.usage?.total_tokens || 0;
+    const promptTokens = aiResponse.usage?.prompt_tokens || 0;
+    const completionTokens = aiResponse.usage?.completion_tokens || 0;
+
+    console.log(`Tokens utilizados: ${tokensUsados} (prompt: ${promptTokens}, completion: ${completionTokens})`);
+
+    // Registrar uso de tokens
+    const authHeader = req.headers.get('Authorization');
+    const token = authHeader?.replace('Bearer ', '');
+
+    if (token && tokensUsados > 0) {
+      const { data: { user } } = await supabase.auth.getUser(token);
+      
+      if (user) {
+        const { error: usageError } = await supabase
+          .from('uso_sistema')
+          .insert({
+            tipo: 'ai_tokens',
+            recurso: 'analisar-contrato',
+            quantidade: tokensUsados,
+            custo_unitario: 0.00001,
+            custo_total: tokensUsados * 0.00001,
+            user_id: user.id,
+            metadata: {
+              modelo: 'google/gemini-2.5-flash',
+              prompt_tokens: promptTokens,
+              completion_tokens: completionTokens
+            }
+          });
+
+        if (usageError) {
+          console.error('Erro ao registrar uso de tokens:', usageError);
+        } else {
+          console.log('Uso de tokens registrado com sucesso');
+        }
+      }
+    }
+
     // Extrair dados do tool call
     const toolCall = aiResponse.choices?.[0]?.message?.tool_calls?.[0];
     if (toolCall && toolCall.function?.arguments) {

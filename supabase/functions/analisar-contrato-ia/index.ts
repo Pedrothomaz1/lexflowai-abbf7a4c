@@ -76,6 +76,13 @@ Retorne a resposta em formato JSON estruturado com as chaves:
     const data = await response.json();
     const analiseTexto = data.choices[0]?.message?.content;
 
+    // Capturar tokens utilizados
+    const tokensUsados = data.usage?.total_tokens || 0;
+    const promptTokens = data.usage?.prompt_tokens || 0;
+    const completionTokens = data.usage?.completion_tokens || 0;
+
+    console.log(`Tokens utilizados: ${tokensUsados} (prompt: ${promptTokens}, completion: ${completionTokens})`);
+
     if (!analiseTexto) {
       throw new Error('Resposta vazia da IA');
     }
@@ -143,6 +150,32 @@ Retorne a resposta em formato JSON estruturado com as chaves:
     }
 
     console.log('Análise salva com sucesso:', savedAnalysis.id);
+
+    // Registrar uso de tokens
+    if (userId && tokensUsados > 0) {
+      const { error: usageError } = await supabase
+        .from('uso_sistema')
+        .insert({
+          tipo: 'ai_tokens',
+          recurso: 'analisar-contrato-ia',
+          quantidade: tokensUsados,
+          custo_unitario: 0.00001,
+          custo_total: tokensUsados * 0.00001,
+          user_id: userId,
+          contrato_id: contratoId,
+          metadata: {
+            modelo: 'google/gemini-2.5-flash',
+            prompt_tokens: promptTokens,
+            completion_tokens: completionTokens
+          }
+        });
+
+      if (usageError) {
+        console.error('Erro ao registrar uso de tokens:', usageError);
+      } else {
+        console.log('Uso de tokens registrado com sucesso');
+      }
+    }
 
     return new Response(
       JSON.stringify({
