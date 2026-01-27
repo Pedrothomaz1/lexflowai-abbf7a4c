@@ -601,9 +601,12 @@ export type Database = {
       }
       fornecedores: {
         Row: {
+          agencia: string | null
+          banco: string | null
           cep: string | null
           cidade: string | null
           cnpj: string | null
+          conta: string | null
           cpf: string | null
           created_at: string
           created_by: string | null
@@ -614,14 +617,19 @@ export type Database = {
           id: string
           nome: string
           notas: string | null
+          pix: string | null
           telefone: string | null
           tipo_pessoa: string | null
+          titular_conta: string | null
           updated_at: string
         }
         Insert: {
+          agencia?: string | null
+          banco?: string | null
           cep?: string | null
           cidade?: string | null
           cnpj?: string | null
+          conta?: string | null
           cpf?: string | null
           created_at?: string
           created_by?: string | null
@@ -632,14 +640,19 @@ export type Database = {
           id?: string
           nome: string
           notas?: string | null
+          pix?: string | null
           telefone?: string | null
           tipo_pessoa?: string | null
+          titular_conta?: string | null
           updated_at?: string
         }
         Update: {
+          agencia?: string | null
+          banco?: string | null
           cep?: string | null
           cidade?: string | null
           cnpj?: string | null
+          conta?: string | null
           cpf?: string | null
           created_at?: string
           created_by?: string | null
@@ -650,8 +663,10 @@ export type Database = {
           id?: string
           nome?: string
           notas?: string | null
+          pix?: string | null
           telefone?: string | null
           tipo_pessoa?: string | null
+          titular_conta?: string | null
           updated_at?: string
         }
         Relationships: []

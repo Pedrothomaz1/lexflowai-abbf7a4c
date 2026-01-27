@@ -43,6 +43,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PageSkeleton, StatCardSkeleton } from "@/components/ui/skeleton-loaders";
 import { Progress } from "@/components/ui/progress";
+import { FinanceNotificationModal } from "@/components/FinanceNotificationModal";
 
 interface Servico {
   id: string;
@@ -136,6 +137,10 @@ export default function Servicos() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingServico, setEditingServico] = useState<Servico | null>(null);
+  
+  // Finance notification modal state
+  const [showFinanceModal, setShowFinanceModal] = useState(false);
+  const [selectedServiceForNotification, setSelectedServiceForNotification] = useState<string | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -383,6 +388,10 @@ export default function Servicos() {
 
       toast({ title: "Serviço renovado com sucesso!" });
       fetchData();
+      
+      // Abrir modal de notificação ao financeiro
+      setSelectedServiceForNotification(servico.id);
+      setShowFinanceModal(true);
     } catch (error: any) {
       toast({
         title: "Erro ao renovar",
@@ -856,6 +865,17 @@ export default function Servicos() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Finance Notification Modal */}
+      <FinanceNotificationModal
+        isOpen={showFinanceModal}
+        onClose={() => {
+          setShowFinanceModal(false);
+          setSelectedServiceForNotification(null);
+        }}
+        servicoId={selectedServiceForNotification || undefined}
+        tipo="servico"
+      />
     </div>
   );
 }

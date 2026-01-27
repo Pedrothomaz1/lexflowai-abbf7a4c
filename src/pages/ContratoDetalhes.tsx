@@ -54,6 +54,7 @@ import {
   ContractAttachments,
   ContractObligations,
 } from "@/components/ContractDetails";
+import { FinanceNotificationModal } from "@/components/FinanceNotificationModal";
 
 type Contrato = {
   id: string;
@@ -100,6 +101,7 @@ const ContratoDetalhes = () => {
   const [analise, setAnalise] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showAnalise, setShowAnalise] = useState(false);
+  const [showFinanceModal, setShowFinanceModal] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -307,6 +309,8 @@ const ContratoDetalhes = () => {
           .update({ status: "vigente" })
           .eq("id", contrato.id);
         fetchContrato();
+        // Abrir modal de notificação ao financeiro
+        setShowFinanceModal(true);
       }
     }
   };
@@ -935,6 +939,14 @@ const ContratoDetalhes = () => {
           </TabsContent>
         </Tabs>
       </FadeIn>
+
+      {/* Finance Notification Modal */}
+      <FinanceNotificationModal
+        isOpen={showFinanceModal}
+        onClose={() => setShowFinanceModal(false)}
+        contratoId={contrato.id}
+        tipo="contrato"
+      />
     </div>
   );
 };
