@@ -1,134 +1,116 @@
 
+## Diagnóstico (o que provavelmente está acontecendo)
+Pelo que você descreveu e pelos logs que temos, existem dois problemas possíveis (e eles podem estar acontecendo juntos):
 
-# Plano: Configurar GitHub Actions para Testes Automatizados
+1) **Erro 403 do próprio Google (“Você não tem acesso a esta página…”)**
+   - Isso costuma acontecer quando, no Google Cloud, a **Tela de consentimento OAuth** está como **“Interno”** (só contas do Workspace da empresa) ou está em **modo “Testing”** sem o seu Gmail cadastrado como **usuário de teste**.
+   - Como você está tentando com **Gmail pessoal**, se o app estiver “Interno” ou restrito, o Google bloqueia com 403.
 
-## Resumo
+2) **Mesmo quando o OAuth redireciona, o app não finaliza a sessão de forma consistente**
+   - Hoje não existe um “callback route” dedicado (ex.: `/auth/callback`) para completar o login do OAuth.
+   - Além disso, páginas com `DashboardLayout` disparam consultas no header/sidebar antes de confirmar a sessão, o que pode gerar erros 401/403 no app e dar a sensação de “não logou”.
 
-Criar um workflow do GitHub Actions que executa automaticamente os testes do Vitest sempre que houver um **push** ou **Pull Request** no repositório.
-
----
-
-## O Que Vamos Fazer
-
-### 1. Criar Estrutura de Pastas
-- Criar pasta `.github/workflows/`
-- Criar arquivo de configuração `tests.yml`
-
-### 2. Adicionar Script de Teste ao package.json
-- Adicionar comando `"test": "vitest run"` nos scripts
+A solução mais robusta é: **corrigir a configuração no Google Cloud** + **ajustar o app para ter fluxo de callback e proteção de rotas centralizada**.
 
 ---
 
-## Arquivo a Ser Criado
+## Parte A — Checklist de configuração (sem mexer em código)
+### A1) Conferir a Tela de consentimento OAuth (Google Cloud)
+No Google Cloud Console → “OAuth consent screen”:
 
-```text
-.github/
-└── workflows/
-    └── tests.yml    (NOVO)
-```
+- **User Type**:
+  - Deve ser **External** (para permitir Gmail pessoal).
+  - Se estiver **Internal**, Gmail pessoal vai dar 403 “Você não tem acesso…”.
 
----
+- **Publishing status**:
+  - Se estiver **Testing**, adicione seu Gmail em **Test users**.
+  - Se estiver **In production**, não precisa de test users (mas precisa que a tela esteja corretamente publicada).
 
-## Como Vai Funcionar
+> Resultado esperado: ao clicar em “Entrar com Google”, você deve conseguir chegar na tela de escolha de conta/permissão sem bloqueio 403.
 
-```text
-┌─────────────────────────────────────────────────────────────┐
-│  Você faz PUSH ou abre um PR no GitHub                      │
-└─────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────────┐
-│  GitHub Actions detecta automaticamente                     │
-└─────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Executa os passos:                                         │
-│  1. Configura Node.js 20                                    │
-│  2. Instala dependências (npm ci)                           │
-│  3. Roda os testes (npm run test)                           │
-└─────────────────────────────────────────────────────────────┘
-                            │
-              ┌─────────────┴─────────────┐
-              ▼                           ▼
-     ┌────────────────┐          ┌────────────────┐
-     │   PASSOU       │          │   FALHOU       │
-     │   (verde)      │          │   (vermelho)   │
-     └────────────────┘          └────────────────┘
-```
+### A2) Conferir Credenciais OAuth (Google Cloud)
+No OAuth Client ID (Web):
+
+- **Authorized JavaScript origins**: incluir o domínio onde você está clicando o botão (ex.: o domínio `...lovableproject.com`).
+- **Authorized redirect URIs**: confirmar que está usando exatamente a URL de callback do seu backend (a que o backend mostra para Google OAuth).
 
 ---
 
-## Benefícios
+## Parte B — Ajustes no app (implementação)
+### Objetivo
+Garantir que:
+- OAuth sempre finalize a sessão no retorno do Google (sem depender de “cair na página certa”).
+- Páginas protegidas não renderizem sidebar/header (que fazem queries) antes de confirmar autenticação.
+- Erros de autenticação fiquem claros (ex.: “login não concluído” vs “sem permissão”).
 
-- **Automático** - Não precisa lembrar de rodar testes
-- **Visível** - Status aparece diretamente no PR do GitHub
-- **Seguro** - Bloqueia merge se testes falharem
-- **Gratuito** - GitHub Actions é gratuito para repositórios públicos (e tem limite generoso para privados)
+### Mudanças planejadas (arquitetura)
+1) **Criar uma rota de callback dedicada para OAuth**
+   - Nova página: `src/pages/AuthCallback.tsx` (ou similar).
+   - Fluxo:
+     - Ao carregar, detecta se há `code`/params no URL.
+     - Chama `supabase.auth.exchangeCodeForSession(...)` (ou fluxo equivalente do SDK).
+     - Em seguida, redireciona para o módulo correto (dashboard/serviços/seletor) usando a mesma lógica já existente.
 
----
+2) **Alterar o Google login para redirecionar para `/auth/callback`**
+   - Em `src/pages/Auth.tsx`, trocar:
+     - `redirectTo: ${window.location.origin}/`
+     - para:
+     - `redirectTo: ${window.location.origin}/auth/callback`
 
-## Detalhes Técnicos
+3) **Centralizar o estado de autenticação (session/user)**
+   - Criar um `AuthProvider` (ex.: `src/contexts/AuthContext.tsx`):
+     - `session`, `user`, `loading`
+     - `onAuthStateChange` para manter estado sincronizado
+   - Assim o app inteiro sabe rapidamente se está logado, evitando consultas “anônimas” em páginas protegidas.
 
-### Configuração do Workflow (.github/workflows/tests.yml)
+4) **Criar um guard de rotas protegidas**
+   - Ex.: componente `ProtectedRoute`:
+     - Se `loading`, mostra skeleton.
+     - Se não tem sessão, navega para `/auth`.
+     - Se tem sessão, renderiza o layout/página.
 
-```yaml
-name: Tests
+5) **Aplicar o guard nos caminhos que hoje usam DashboardLayout**
+   - Ex.: `/dashboard`, `/settings`, `/contratos`, etc.
+   - Isso evita que `AppSidebar` e `GlobalHeader` rodem queries enquanto ainda não há sessão.
 
-on:
-  push:
-    branches: [main, master]
-  pull_request:
-    branches: [main, master]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run tests
-        run: npm run test
-```
-
-### Script a Adicionar no package.json
-
-```json
-{
-  "scripts": {
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
-  }
-}
-```
+6) **Remover chamadas Supabase dentro do callback do `onAuthStateChange` no Auth**
+   - Hoje `Auth.tsx` chama `redirectByModule()` diretamente dentro do `onAuthStateChange`, e isso faz query no banco.
+   - Vamos ajustar para:
+     - No callback: só setar estado (sincrono) ou navegar simples
+     - E deixar a busca de `user_roles` acontecer em um efeito separado (ou via callback page), evitando comportamentos instáveis.
 
 ---
 
-## Onde Ver os Resultados
-
-Após configurar, você verá:
-
-1. **Na aba "Actions" do GitHub** - Histórico de todas as execuções
-2. **Nos Pull Requests** - Ícone verde (passou) ou vermelho (falhou)
-3. **Nos commits** - Check mark indicando status
+## Parte C — Teste guiado (depois das mudanças)
+1) Abrir o app e clicar “Entrar com Google”.
+2) Confirmar que, após o Google, cai em `/auth/callback` e em seguida vai para:
+   - `/dashboard` (contratos) ou `/servicos` ou `/seletor-modulo`, conforme perfil.
+3) Confirmar que:
+   - Não aparecem 403/401 no header/sidebar ao carregar.
+   - `/settings` exige login e não carrega “meio logado”.
 
 ---
 
-## Requisitos
+## Riscos e cuidados
+- Se o 403 continuar aparecendo como página do Google mesmo após as mudanças no app, então é 100% configuração do Google Cloud (principalmente “Internal vs External” e “Testing + test users”).
+- Vamos manter o fluxo atual de login por email/senha intacto.
 
-- Projeto conectado ao GitHub (você já tem isso)
-- Arquivo `vitest.config.ts` configurado (já feito)
-- Testes criados na pasta `src/` (já feito)
+---
 
+## Arquivos que devem ser alterados/criados (na implementação)
+- Alterar:
+  - `src/pages/Auth.tsx` (redirectTo para `/auth/callback`, e ajustar lógica de onAuthStateChange)
+  - `src/App.tsx` (adicionar rota `/auth/callback` e aplicar guard nas rotas protegidas)
+  - `src/components/DashboardLayout.tsx` (se necessário, para depender do estado global de auth)
+- Criar:
+  - `src/pages/AuthCallback.tsx`
+  - `src/contexts/AuthContext.tsx` (ou similar)
+  - `src/components/ProtectedRoute.tsx` (ou similar)
+
+---
+
+## O que eu preciso de você (rápido, antes de eu implementar)
+1) No Google Cloud, confirme se a “Tela de consentimento OAuth” está como **External** (não “Internal”).
+2) Se estiver em **Testing**, adicione seu Gmail na lista de **Test users**.
+
+Se isso estiver OK, a parte de código acima resolve o restante e deixa o login do Google estável no app.
