@@ -86,6 +86,45 @@ export type Database = {
         }
         Relationships: []
       }
+      compliance_logs: {
+        Row: {
+          base_legal: string | null
+          created_at: string
+          dados_afetados: Json | null
+          entidade: string
+          entidade_id: string | null
+          id: string
+          ip_address: string | null
+          justificativa: string | null
+          tipo_evento: string
+          user_id: string | null
+        }
+        Insert: {
+          base_legal?: string | null
+          created_at?: string
+          dados_afetados?: Json | null
+          entidade: string
+          entidade_id?: string | null
+          id?: string
+          ip_address?: string | null
+          justificativa?: string | null
+          tipo_evento: string
+          user_id?: string | null
+        }
+        Update: {
+          base_legal?: string | null
+          created_at?: string
+          dados_afetados?: Json | null
+          entidade?: string
+          entidade_id?: string | null
+          id?: string
+          ip_address?: string | null
+          justificativa?: string | null
+          tipo_evento?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       contract_alerts: {
         Row: {
           contrato_id: string | null
@@ -679,6 +718,48 @@ export type Database = {
           },
         ]
       }
+      data_retention_policies: {
+        Row: {
+          acao_pos_retencao: string
+          base_legal: string | null
+          created_at: string
+          created_by: string | null
+          descricao: string | null
+          entidade: string
+          id: string
+          is_active: boolean | null
+          nome: string
+          periodo_retencao_meses: number
+          ultima_execucao: string | null
+        }
+        Insert: {
+          acao_pos_retencao?: string
+          base_legal?: string | null
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          entidade: string
+          id?: string
+          is_active?: boolean | null
+          nome: string
+          periodo_retencao_meses?: number
+          ultima_execucao?: string | null
+        }
+        Update: {
+          acao_pos_retencao?: string
+          base_legal?: string | null
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          entidade?: string
+          id?: string
+          is_active?: boolean | null
+          nome?: string
+          periodo_retencao_meses?: number
+          ultima_execucao?: string | null
+        }
+        Relationships: []
+      }
       especificacoes_servico: {
         Row: {
           categoria: string
@@ -849,6 +930,77 @@ export type Database = {
         }
         Relationships: []
       }
+      negotiation_metrics: {
+        Row: {
+          contrato_id: string | null
+          created_at: string
+          created_by: string | null
+          data_fim_negociacao: string | null
+          data_inicio_negociacao: string | null
+          economia_percentual: number | null
+          id: string
+          notas: string | null
+          numero_revisoes: number | null
+          partes_envolvidas: Json | null
+          principais_pontos_negociados: Json | null
+          resultado: string | null
+          satisfacao_partes: number | null
+          tempo_por_etapa: Json | null
+          tempo_total_dias: number | null
+          updated_at: string
+          valor_final: number | null
+          valor_inicial: number | null
+        }
+        Insert: {
+          contrato_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_fim_negociacao?: string | null
+          data_inicio_negociacao?: string | null
+          economia_percentual?: number | null
+          id?: string
+          notas?: string | null
+          numero_revisoes?: number | null
+          partes_envolvidas?: Json | null
+          principais_pontos_negociados?: Json | null
+          resultado?: string | null
+          satisfacao_partes?: number | null
+          tempo_por_etapa?: Json | null
+          tempo_total_dias?: number | null
+          updated_at?: string
+          valor_final?: number | null
+          valor_inicial?: number | null
+        }
+        Update: {
+          contrato_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_fim_negociacao?: string | null
+          data_inicio_negociacao?: string | null
+          economia_percentual?: number | null
+          id?: string
+          notas?: string | null
+          numero_revisoes?: number | null
+          partes_envolvidas?: Json | null
+          principais_pontos_negociados?: Json | null
+          resultado?: string | null
+          satisfacao_partes?: number | null
+          tempo_por_etapa?: Json | null
+          tempo_total_dias?: number | null
+          updated_at?: string
+          valor_final?: number | null
+          valor_inicial?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "negotiation_metrics_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_preferences: {
         Row: {
           alert_types: string[]
@@ -920,6 +1072,57 @@ export type Database = {
           id?: string
           phone?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      report_configurations: {
+        Row: {
+          agendamento: string | null
+          colunas: Json | null
+          created_at: string
+          created_by: string | null
+          descricao: string | null
+          destinatarios: string[] | null
+          filtros: Json | null
+          id: string
+          is_public: boolean | null
+          nome: string
+          ordenacao: Json | null
+          tipo_relatorio: string
+          updated_at: string
+          visualizacao: string | null
+        }
+        Insert: {
+          agendamento?: string | null
+          colunas?: Json | null
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          destinatarios?: string[] | null
+          filtros?: Json | null
+          id?: string
+          is_public?: boolean | null
+          nome: string
+          ordenacao?: Json | null
+          tipo_relatorio?: string
+          updated_at?: string
+          visualizacao?: string | null
+        }
+        Update: {
+          agendamento?: string | null
+          colunas?: Json | null
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          destinatarios?: string[] | null
+          filtros?: Json | null
+          id?: string
+          is_public?: boolean | null
+          nome?: string
+          ordenacao?: Json | null
+          tipo_relatorio?: string
+          updated_at?: string
+          visualizacao?: string | null
         }
         Relationships: []
       }
