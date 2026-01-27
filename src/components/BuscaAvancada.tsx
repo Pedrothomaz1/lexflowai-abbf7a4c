@@ -101,16 +101,16 @@ export const BuscaAvancada = ({ filtros, onFiltrosChange, fornecedores = [] }: P
             <div className="space-y-2">
               <Label>Tipo de Contrato</Label>
               <Select
-                value={localFiltros.tipo || ""}
+                value={localFiltros.tipo || "all"}
                 onValueChange={(value) =>
-                  setLocalFiltros({ ...localFiltros, tipo: value || undefined })
+                  setLocalFiltros({ ...localFiltros, tipo: value === "all" ? undefined : value })
                 }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Todos os tipos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="servico">Serviço</SelectItem>
                   <SelectItem value="compra">Compra</SelectItem>
                   <SelectItem value="locacao">Locação</SelectItem>
@@ -122,16 +122,16 @@ export const BuscaAvancada = ({ filtros, onFiltrosChange, fornecedores = [] }: P
             <div className="space-y-2">
               <Label>Status</Label>
               <Select
-                value={localFiltros.status || ""}
+                value={localFiltros.status || "all"}
                 onValueChange={(value) =>
-                  setLocalFiltros({ ...localFiltros, status: value || undefined })
+                  setLocalFiltros({ ...localFiltros, status: value === "all" ? undefined : value })
                 }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Todos os status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="rascunho">Rascunho</SelectItem>
                   <SelectItem value="em_aprovacao">Em Aprovação</SelectItem>
                   <SelectItem value="aprovado">Aprovado</SelectItem>
@@ -146,16 +146,16 @@ export const BuscaAvancada = ({ filtros, onFiltrosChange, fornecedores = [] }: P
               <div className="space-y-2">
                 <Label>Fornecedor</Label>
                 <Select
-                  value={localFiltros.fornecedor || ""}
+                  value={localFiltros.fornecedor || "all"}
                   onValueChange={(value) =>
-                    setLocalFiltros({ ...localFiltros, fornecedor: value || undefined })
+                    setLocalFiltros({ ...localFiltros, fornecedor: value === "all" ? undefined : value })
                   }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Todos os fornecedores" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos</SelectItem>
+                    <SelectItem value="all">Todos</SelectItem>
                     {fornecedores.map((f) => (
                       <SelectItem key={f.id} value={f.id}>
                         {f.nome}
