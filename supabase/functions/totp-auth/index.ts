@@ -9,15 +9,34 @@ const corsHeaders = {
 // Base32 alphabet for TOTP
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
-// Generate a random base32 secret
-function generateSecret(length = 20): string {
-  const buffer = new Uint8Array(length);
-  crypto.getRandomValues(buffer);
-  let secret = '';
-  for (let i = 0; i < buffer.length; i++) {
-    secret += BASE32_ALPHABET[buffer[i] % 32];
+// Generate a random base32 secret (20 bytes = 32 Base32 characters)
+function generateSecret(): string {
+  const bytes = new Uint8Array(20);
+  crypto.getRandomValues(bytes);
+  return base32Encode(bytes);
+}
+
+// Encode bytes to Base32 (RFC 4648)
+function base32Encode(data: Uint8Array): string {
+  let result = '';
+  let buffer = 0;
+  let bitsLeft = 0;
+
+  for (const byte of data) {
+    buffer = (buffer << 8) | byte;
+    bitsLeft += 8;
+
+    while (bitsLeft >= 5) {
+      bitsLeft -= 5;
+      result += BASE32_ALPHABET[(buffer >> bitsLeft) & 0x1f];
+    }
   }
-  return secret;
+
+  if (bitsLeft > 0) {
+    result += BASE32_ALPHABET[(buffer << (5 - bitsLeft)) & 0x1f];
+  }
+
+  return result;
 }
 
 // Decode base32 to bytes
@@ -53,16 +72,18 @@ async function hmacSha1(key: Uint8Array, data: Uint8Array): Promise<Uint8Array> 
   return new Uint8Array(signature);
 }
 
-// Generate TOTP code
+// Generate TOTP code with correct 8-byte counter
 async function generateTOTP(secret: string, timeStep = 30): Promise<string> {
   const key = base32Decode(secret);
-  const time = Math.floor(Date.now() / 1000 / timeStep);
+  const counter = Math.floor(Date.now() / 1000 / timeStep);
   
-  const timeBuffer = new ArrayBuffer(8);
-  const timeView = new DataView(timeBuffer);
-  timeView.setUint32(4, time, false);
+  const buffer = new ArrayBuffer(8);
+  const view = new DataView(buffer);
+  // Correctly set 8-byte counter: high 32 bits + low 32 bits
+  view.setUint32(0, Math.floor(counter / 0x100000000), false);
+  view.setUint32(4, counter >>> 0, false);
   
-  const hmac = await hmacSha1(key, new Uint8Array(timeBuffer));
+  const hmac = await hmacSha1(key, new Uint8Array(buffer));
   const offset = hmac[hmac.length - 1] & 0x0f;
   
   const code = (
@@ -75,18 +96,22 @@ async function generateTOTP(secret: string, timeStep = 30): Promise<string> {
   return code.toString().padStart(6, '0');
 }
 
-// Verify TOTP code with time window
+// Verify TOTP code with time window (correct 8-byte counter)
 async function verifyTOTP(secret: string, code: string, window = 1): Promise<boolean> {
+  const key = base32Decode(secret);
+  const timeStep = 30;
+  const currentCounter = Math.floor(Date.now() / 1000 / timeStep);
+  
   for (let i = -window; i <= window; i++) {
-    const timeStep = 30;
-    const time = Math.floor(Date.now() / 1000 / timeStep) + i;
+    const counter = currentCounter + i;
     
-    const timeBuffer = new ArrayBuffer(8);
-    const timeView = new DataView(timeBuffer);
-    timeView.setUint32(4, time, false);
+    const buffer = new ArrayBuffer(8);
+    const view = new DataView(buffer);
+    // Correctly set 8-byte counter: high 32 bits + low 32 bits
+    view.setUint32(0, Math.floor(counter / 0x100000000), false);
+    view.setUint32(4, counter >>> 0, false);
     
-    const key = base32Decode(secret);
-    const hmac = await hmacSha1(key, new Uint8Array(timeBuffer));
+    const hmac = await hmacSha1(key, new Uint8Array(buffer));
     const offset = hmac[hmac.length - 1] & 0x0f;
     
     const generatedCode = (
@@ -157,8 +182,8 @@ serve(async (req) => {
 
     switch (action) {
       case 'setup': {
-        // Generate new TOTP secret
-        const secret = generateSecret(20);
+        // Generate new TOTP secret (20 bytes = 32 Base32 chars)
+        const secret = generateSecret();
         const backupCodes = generateBackupCodes(10);
         
         // Generate otpauth URL for QR code
