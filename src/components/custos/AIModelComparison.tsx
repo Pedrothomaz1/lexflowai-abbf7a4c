@@ -2,9 +2,10 @@ import { useMemo } from "react";
 import { AnimatedCard, AnimatedCardContent, AnimatedCardHeader } from "@/components/ui/animated-card";
 import { FadeIn } from "@/components/ui/motion-container";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Lightbulb, Target, Check, TrendingDown, TrendingUp, AlertTriangle, Zap, Clock, Star } from "lucide-react";
+import { Lightbulb, Target, Check, TrendingDown, TrendingUp, AlertTriangle, Zap, Clock, Star, Sparkles, CircleDollarSign } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type ModelPricing = {
   custoMil: number;
@@ -45,13 +46,27 @@ const modelPricing: Record<string, ModelPricing> = {
   },
 };
 
-const velocidadeIcon = {
-  Rápido: <Zap className="h-3 w-3" />,
-  Médio: <Clock className="h-3 w-3" />,
-  Lento: <Clock className="h-3 w-3" />,
+const getProviderInfo = (modelo: string) => {
+  if (modelo.startsWith("google/")) {
+    return { nome: "Google", cor: "bg-blue-500/10 text-blue-600 border-blue-500/20" };
+  }
+  return { nome: "OpenAI", cor: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" };
 };
 
-const qualidadeIcon = {
+const getNomeLimpo = (modelo: string) => {
+  return modelo.split("/")[1]
+    .replace("gemini-", "Gemini ")
+    .replace("gpt-", "GPT-")
+    .replace("-flash-lite", " Flash Lite")
+    .replace("-flash", " Flash")
+    .replace("-pro", " Pro")
+    .replace("-nano", " Nano")
+    .replace("-mini", " Mini")
+    .replace("2.5", "2.5")
+    .replace("5", "5");
+};
+
+const qualidadeStars = {
   Básica: 1,
   Boa: 2,
   Excelente: 3,
@@ -61,6 +76,170 @@ type AIModelComparisonProps = {
   totalTokens: number;
   custoAtual: number;
   modeloAtual?: string;
+};
+
+type ModelCardProps = {
+  modelo: string;
+  nomeExibicao: string;
+  custoMil: number;
+  velocidade: "Rápido" | "Médio" | "Lento";
+  qualidade: "Básica" | "Boa" | "Excelente";
+  custoSimulado: number;
+  diferenca: number;
+  percentual: number;
+  isAtual: boolean;
+};
+
+const ModelCard = ({
+  modelo,
+  nomeExibicao,
+  custoMil,
+  velocidade,
+  qualidade,
+  custoSimulado,
+  diferenca,
+  percentual,
+  isAtual,
+}: ModelCardProps) => {
+  const provider = getProviderInfo(modelo);
+  const nomeLimpo = getNomeLimpo(modelo);
+  const isCheaper = diferenca < 0;
+  const isMoreExpensive = diferenca > 0;
+
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+      minimumFractionDigits: 4,
+      maximumFractionDigits: 4,
+    }).format(value);
+
+  return (
+    <div
+      className={cn(
+        "relative rounded-xl border p-4 transition-all duration-300",
+        isAtual 
+          ? "border-primary bg-gradient-to-br from-primary/5 via-primary/3 to-transparent shadow-lg shadow-primary/10 ring-1 ring-primary/20" 
+          : isCheaper
+          ? "border-emerald-500/30 bg-gradient-to-br from-emerald-500/5 via-emerald-500/3 to-transparent hover:shadow-md hover:shadow-emerald-500/10"
+          : isMoreExpensive
+          ? "border-destructive/20 bg-gradient-to-br from-destructive/5 via-destructive/3 to-transparent"
+          : "border-border bg-card hover:shadow-sm"
+      )}
+    >
+      {/* Current model indicator */}
+      {isAtual && (
+        <div className="absolute -top-2.5 left-4">
+          <Badge className="bg-primary text-primary-foreground gap-1 shadow-sm">
+            <Check className="h-3 w-3" />
+            Modelo Atual
+          </Badge>
+        </div>
+      )}
+
+      {/* Header: Name + Provider */}
+      <div className={cn("flex items-start justify-between gap-2", isAtual && "mt-2")}>
+        <div className="space-y-1">
+          <h4 className="font-semibold text-foreground leading-tight">{nomeLimpo}</h4>
+          <Badge variant="outline" className={cn("text-xs font-medium", provider.cor)}>
+            {provider.nome}
+          </Badge>
+        </div>
+        <div className="text-right">
+          <div className="text-lg font-bold text-foreground">{formatCurrency(custoMil)}</div>
+          <div className="text-xs text-muted-foreground">/1K tokens</div>
+        </div>
+      </div>
+
+      {/* Speed & Quality indicators */}
+      <div className="flex items-center gap-3 mt-4">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center gap-1.5">
+                {velocidade === "Rápido" ? (
+                  <Zap className="h-4 w-4 text-amber-500" />
+                ) : (
+                  <Clock className={cn("h-4 w-4", velocidade === "Médio" ? "text-muted-foreground" : "text-muted-foreground/60")} />
+                )}
+                <span className={cn(
+                  "text-xs font-medium",
+                  velocidade === "Rápido" ? "text-amber-600" : "text-muted-foreground"
+                )}>
+                  {velocidade}
+                </span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              {velocidade === "Rápido"
+                ? "Resposta mais rápida, ideal para alto volume"
+                : velocidade === "Médio"
+                ? "Equilíbrio entre velocidade e qualidade"
+                : "Mais lento, mas com melhor qualidade"}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        <div className="h-4 w-px bg-border" />
+
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Star
+                    key={i}
+                    className={cn(
+                      "h-3.5 w-3.5",
+                      i < qualidadeStars[qualidade]
+                        ? "fill-amber-400 text-amber-400"
+                        : "text-muted-foreground/30"
+                    )}
+                  />
+                ))}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              {qualidade === "Básica"
+                ? "Adequado para tarefas simples"
+                : qualidade === "Boa"
+                ? "Bom para a maioria das tarefas"
+                : "Excelente para tarefas complexas"}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+
+      {/* Simulated cost */}
+      <div className="mt-4 pt-3 border-t border-border/50">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">Custo simulado</span>
+          <span className="font-mono font-semibold text-foreground">{formatCurrency(custoSimulado)}</span>
+        </div>
+      </div>
+
+      {/* Savings/Cost badge */}
+      {!isAtual && (
+        <div className="mt-3">
+          {isCheaper ? (
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-500/10">
+              <TrendingDown className="h-4 w-4 text-emerald-600" />
+              <span className="text-sm font-semibold text-emerald-600">
+                Economia de {Math.abs(percentual).toFixed(0)}%
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-destructive/10">
+              <TrendingUp className="h-4 w-4 text-destructive" />
+              <span className="text-sm font-semibold text-destructive">
+                +{percentual.toFixed(0)}% mais caro
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 };
 
 export const AIModelComparison = ({
@@ -106,184 +285,110 @@ export const AIModelComparison = ({
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-3">
-      {/* Tabela de Comparação */}
-      <FadeIn delay={0.35}>
-        <AnimatedCard hoverScale={1} className="lg:col-span-2">
-          <AnimatedCardHeader>
-            <div className="flex items-center gap-2">
-              <Lightbulb className="h-5 w-5 text-amber-500" />
-              <h3 className="text-lg font-semibold">Comparação de Custos por Modelo IA</h3>
+    <div className="space-y-6">
+      {/* Header Section */}
+      <FadeIn delay={0.3}>
+        <AnimatedCard hoverScale={1}>
+          <AnimatedCardHeader className="pb-2">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-amber-500/10">
+                <Lightbulb className="h-6 w-6 text-amber-500" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold">Comparação de Custos por Modelo IA</h3>
+                <p className="text-sm text-muted-foreground">
+                  Baseado em <span className="font-semibold text-foreground">{totalTokens.toLocaleString("pt-BR")}</span> tokens consumidos no período
+                </p>
+              </div>
             </div>
-            <p className="text-sm text-muted-foreground mt-1">
-              Baseado em {totalTokens.toLocaleString("pt-BR")} tokens consumidos no período
-            </p>
           </AnimatedCardHeader>
           <AnimatedCardContent>
-            <TooltipProvider>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Modelo</TableHead>
-                    <TableHead className="text-right">Custo/1K</TableHead>
-                    <TableHead className="text-center">Velocidade</TableHead>
-                    <TableHead className="text-center">Qualidade</TableHead>
-                    <TableHead className="text-right">Custo Simulado</TableHead>
-                    <TableHead className="text-right">Economia</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {comparacoes.map((item) => (
-                    <TableRow
-                      key={item.modelo}
-                      className={item.isAtual ? "bg-primary/5 border-primary/20" : ""}
-                    >
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          {item.isAtual && (
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <Check className="h-4 w-4 text-primary" />
-                              </TooltipTrigger>
-                              <TooltipContent>Modelo atual em uso</TooltipContent>
-                            </Tooltip>
-                          )}
-                          <span className={item.isAtual ? "text-primary font-semibold" : ""}>
-                            {item.nomeExibicao}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-sm">
-                        {formatCurrency(item.custoMil)}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Badge
-                              variant="outline"
-                              className={`gap-1 ${
-                                item.velocidade === "Rápido"
-                                  ? "border-emerald-500 text-emerald-600"
-                                  : item.velocidade === "Médio"
-                                  ? "border-amber-500 text-amber-600"
-                                  : "border-muted-foreground"
-                              }`}
-                            >
-                              {velocidadeIcon[item.velocidade]}
-                              {item.velocidade}
-                            </Badge>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {item.velocidade === "Rápido"
-                              ? "Resposta mais rápida, ideal para alto volume"
-                              : item.velocidade === "Médio"
-                              ? "Equilíbrio entre velocidade e qualidade"
-                              : "Mais lento, mas com melhor qualidade"}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <div className="flex items-center justify-center gap-0.5">
-                              {Array.from({ length: 3 }).map((_, i) => (
-                                <Star
-                                  key={i}
-                                  className={`h-3 w-3 ${
-                                    i < qualidadeIcon[item.qualidade]
-                                      ? "fill-amber-400 text-amber-400"
-                                      : "text-muted"
-                                  }`}
-                                />
-                              ))}
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {item.qualidade === "Básica"
-                              ? "Adequado para tarefas simples"
-                              : item.qualidade === "Boa"
-                              ? "Bom para a maioria das tarefas"
-                              : "Excelente para tarefas complexas"}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-sm">
-                        {formatCurrency(item.custoSimulado)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {item.isAtual ? (
-                          <Badge variant="secondary">Atual</Badge>
-                        ) : item.diferenca < 0 ? (
-                          <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 gap-1">
-                            <TrendingDown className="h-3 w-3" />
-                            {Math.abs(item.percentual).toFixed(0)}%
-                          </Badge>
-                        ) : (
-                          <Badge variant="destructive" className="gap-1">
-                            <TrendingUp className="h-3 w-3" />+{item.percentual.toFixed(0)}%
-                          </Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TooltipProvider>
+            {/* Model Cards Grid */}
+            <div className="grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+              {comparacoes.map((item, index) => (
+                <FadeIn key={item.modelo} delay={0.35 + index * 0.05}>
+                  <ModelCard {...item} />
+                </FadeIn>
+              ))}
+            </div>
           </AnimatedCardContent>
         </AnimatedCard>
       </FadeIn>
 
-      {/* Card de Recomendação */}
-      <FadeIn delay={0.4}>
-        <AnimatedCard hoverScale={1.02} className="border-emerald-500/30 bg-gradient-to-br from-emerald-500/5 to-transparent">
-          <AnimatedCardHeader>
-            <div className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-emerald-500" />
-              <h3 className="text-lg font-semibold">Recomendação de Economia</h3>
-            </div>
-          </AnimatedCardHeader>
-          <AnimatedCardContent className="space-y-4">
-            {economiaPotencial > 0 ? (
-              <>
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">
-                    Usando <span className="font-semibold text-foreground">{modeloMaisBarato.nomeExibicao}</span> você economizaria:
+      {/* Recommendation Card */}
+      {economiaPotencial > 0 && (
+        <FadeIn delay={0.5}>
+          <AnimatedCard hoverScale={1.01} className="border-emerald-500/30 bg-gradient-to-br from-emerald-500/5 via-emerald-500/3 to-transparent overflow-hidden">
+            <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+            <AnimatedCardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-emerald-500/10">
+                  <Target className="h-6 w-6 text-emerald-500" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold">Recomendação de Economia</h3>
+                  <p className="text-sm text-muted-foreground">Otimize seus custos com IA</p>
+                </div>
+              </div>
+            </AnimatedCardHeader>
+            <AnimatedCardContent className="space-y-5">
+              {/* Main Savings Display */}
+              <div className="flex items-center gap-6">
+                <div className="p-4 rounded-2xl bg-emerald-500/10">
+                  <CircleDollarSign className="h-10 w-10 text-emerald-500" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm text-muted-foreground mb-1">
+                    Economia potencial com <span className="font-semibold text-foreground">{getNomeLimpo(modeloMaisBarato.modelo)}</span>
                   </p>
-                  <div className="flex items-baseline gap-2">
+                  <div className="flex items-baseline gap-3">
                     <span className="text-3xl font-bold text-emerald-600">
                       {formatCurrency(economiaPotencial)}
                     </span>
-                    <Badge className="bg-emerald-500/10 text-emerald-600">
+                    <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
                       {percentualEconomia.toFixed(0)}% menor
                     </Badge>
                   </div>
                 </div>
+              </div>
 
-                <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                  <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-                  <div className="text-sm">
-                    <p className="font-medium text-amber-600">Trade-off</p>
-                    <p className="text-muted-foreground">
-                      Qualidade {modeloMaisBarato.qualidade.toLowerCase()}, ideal para tarefas simples como extração de metadados.
-                    </p>
-                  </div>
+              {/* Progress Bar */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Economia potencial</span>
+                  <span className="font-semibold text-emerald-600">{percentualEconomia.toFixed(0)}%</span>
                 </div>
+                <div className="relative h-3 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="absolute inset-y-0 left-0 bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(percentualEconomia, 100)}%` }}
+                  />
+                </div>
+              </div>
 
-                <div className="pt-2 border-t">
-                  <p className="text-xs text-muted-foreground">
-                    💡 Para análises complexas de contratos, considere manter o modelo atual ou usar{" "}
-                    <span className="font-medium">gemini-2.5-pro</span> para maior precisão.
+              {/* Trade-off Warning */}
+              <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-medium text-amber-600">Trade-off</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Qualidade {modeloMaisBarato.qualidade.toLowerCase()}, ideal para tarefas simples como extração de metadados básicos.
                   </p>
                 </div>
-              </>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Você já está usando o modelo mais econômico disponível!
-              </p>
-            )}
-          </AnimatedCardContent>
-        </AnimatedCard>
-      </FadeIn>
+              </div>
+
+              {/* Pro Tip */}
+              <div className="flex items-start gap-3 pt-3 border-t border-border/50">
+                <Sparkles className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                <p className="text-sm text-muted-foreground">
+                  Para análises complexas de contratos, considere manter o modelo atual ou usar{" "}
+                  <span className="font-medium text-foreground">Gemini 2.5 Pro</span> para maior precisão.
+                </p>
+              </div>
+            </AnimatedCardContent>
+          </AnimatedCard>
+        </FadeIn>
+      )}
     </div>
   );
 };
