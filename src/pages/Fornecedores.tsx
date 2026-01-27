@@ -1,28 +1,17 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Plus, Mail, Phone, MapPin, Download, Building2 } from "lucide-react";
+import { Plus, Mail, Phone, MapPin, Download, Building2, Eye, CheckCircle2, XCircle } from "lucide-react";
 import { exportFornecedoresPDF } from "@/utils/pdfExport";
 import { PageHeader } from "@/components/ui/page-header";
 import { DataTable, DataTableColumn } from "@/components/ui/data-table";
@@ -31,8 +20,9 @@ import { PageSkeleton } from "@/components/ui/skeleton-loaders";
 import { AnimatedButton } from "@/components/ui/animated-button";
 import { StaggerContainer, StaggerItem, FadeIn } from "@/components/ui/motion-container";
 import { AnimatedCard, AnimatedCardContent, AnimatedCardHeader } from "@/components/ui/animated-card";
-import { DocumentInput } from "@/components/ui/document-input";
-import { validateCPF, validateCNPJ, cleanDocument, formatCPF, formatCNPJ } from "@/utils/documentValidation";
+import { formatCPF, formatCNPJ } from "@/utils/documentValidation";
+import { FornecedorForm } from "@/components/Fornecedores";
+import { Button } from "@/components/ui/button";
 
 type Fornecedor = {
   id: string;
@@ -42,33 +32,42 @@ type Fornecedor = {
   cpf: string | null;
   email: string | null;
   telefone: string | null;
-  endereco: string | null;
   cidade: string | null;
   estado: string | null;
-  cep: string | null;
-  notas: string | null;
+  is_active: boolean | null;
   created_at: string;
+};
+
+type FornecedorCategoria = {
+  fornecedor_id: string;
+  categoria: string;
+};
+
+const CATEGORIA_COLORS: Record<string, string> = {
+  seguranca: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+  manutencao: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+  higiene: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+  infraestrutura: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+  veiculos: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
+  outros: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
+};
+
+const CATEGORIA_LABELS: Record<string, string> = {
+  seguranca: "Segurança",
+  manutencao: "Manutenção",
+  higiene: "Higiene",
+  infraestrutura: "Infraestrutura",
+  veiculos: "Veículos",
+  outros: "Outros",
 };
 
 const Fornecedores = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
+  const [categorias, setCategorias] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    nome: "",
-    tipo_pessoa: "juridica",
-    cnpj: "",
-    cpf: "",
-    email: "",
-    telefone: "",
-    endereco: "",
-    cidade: "",
-    estado: "",
-    cep: "",
-    notas: "",
-  });
-  const [documentValid, setDocumentValid] = useState(false);
 
   useEffect(() => {
     fetchFornecedores();
@@ -76,116 +75,66 @@ const Fornecedores = () => {
 
   const fetchFornecedores = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    
+    // Fetch fornecedores
+    const { data: fornecedoresData, error: fornecedoresError } = await supabase
       .from("fornecedores")
-      .select("*")
+      .select("id, nome, tipo_pessoa, cnpj, cpf, email, telefone, cidade, estado, is_active, created_at")
       .order("nome");
 
-    if (error) {
+    if (fornecedoresError) {
       toast({
         variant: "destructive",
         title: "Erro ao carregar fornecedores",
-        description: error.message,
+        description: fornecedoresError.message,
       });
-    } else {
-      setFornecedores(data || []);
+      setLoading(false);
+      return;
     }
+
+    // Fetch categories for all fornecedores
+    const { data: categoriasData } = await supabase
+      .from("fornecedor_categorias_servico")
+      .select("fornecedor_id, categoria");
+
+    // Group categories by fornecedor_id
+    const categoriasMap: Record<string, string[]> = {};
+    if (categoriasData) {
+      categoriasData.forEach((cat: FornecedorCategoria) => {
+        if (!categoriasMap[cat.fornecedor_id]) {
+          categoriasMap[cat.fornecedor_id] = [];
+        }
+        categoriasMap[cat.fornecedor_id].push(cat.categoria);
+      });
+    }
+
+    setFornecedores(fornecedoresData || []);
+    setCategorias(categoriasMap);
     setLoading(false);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    // Validação de documento obrigatório
-    if (formData.tipo_pessoa === "juridica") {
-      if (!formData.cnpj) {
-        toast({
-          variant: "destructive",
-          title: "CNPJ obrigatório",
-          description: "Para pessoa jurídica, o CNPJ é obrigatório",
-        });
-        return;
-      }
-      if (!validateCNPJ(formData.cnpj)) {
-        toast({
-          variant: "destructive",
-          title: "CNPJ inválido",
-          description: "O CNPJ informado não é válido. Verifique os dígitos.",
-        });
-        return;
-      }
-    }
-
-    if (formData.tipo_pessoa === "fisica") {
-      if (!formData.cpf) {
-        toast({
-          variant: "destructive",
-          title: "CPF obrigatório",
-          description: "Para pessoa física, o CPF é obrigatório",
-        });
-        return;
-      }
-      if (!validateCPF(formData.cpf)) {
-        toast({
-          variant: "destructive",
-          title: "CPF inválido",
-          description: "O CPF informado não é válido. Verifique os dígitos.",
-        });
-        return;
-      }
-    }
-
-    // Limpa formatação antes de salvar
-    const { error } = await supabase.from("fornecedores").insert([
-      {
-        ...formData,
-        cnpj: formData.tipo_pessoa === "juridica" ? cleanDocument(formData.cnpj) : null,
-        cpf: formData.tipo_pessoa === "fisica" ? cleanDocument(formData.cpf) : null,
-        created_by: user.id,
-      },
-    ]);
-
-    if (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao criar fornecedor",
-        description: error.message,
-      });
-    } else {
-      toast({
-        title: "Fornecedor criado com sucesso!",
-      });
-      setDialogOpen(false);
-      setFormData({
-        nome: "",
-        tipo_pessoa: "juridica",
-        cnpj: "",
-        cpf: "",
-        email: "",
-        telefone: "",
-        endereco: "",
-        cidade: "",
-        estado: "",
-        cep: "",
-        notas: "",
-      });
-      fetchFornecedores();
-    }
   };
 
   const handleExportPDF = () => {
     exportFornecedoresPDF(fornecedores);
   };
 
+  const handleFormSuccess = () => {
+    setDialogOpen(false);
+    fetchFornecedores();
+  };
+
   const columns: DataTableColumn<Fornecedor>[] = [
     {
       key: "nome",
       header: "Nome",
-      render: (value) => (
-        <span className="font-medium text-foreground">{value}</span>
+      render: (value, row) => (
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-foreground">{value}</span>
+          {row.is_active === false && (
+            <Badge variant="outline" className="text-destructive border-destructive text-xs">
+              Inativo
+            </Badge>
+          )}
+        </div>
       ),
     },
     {
@@ -203,7 +152,6 @@ const Fornecedores = () => {
       render: (_, row) => {
         const doc = row.cnpj || row.cpf;
         if (!doc) return <span className="text-muted-foreground">—</span>;
-        // Formata o documento para exibição
         const formatted = row.cnpj ? formatCNPJ(doc) : formatCPF(doc);
         return (
           <span className="font-mono text-sm text-muted-foreground">
@@ -233,6 +181,32 @@ const Fornecedores = () => {
       ),
     },
     {
+      key: "id",
+      header: "Serviços",
+      render: (_, row) => {
+        const cats = categorias[row.id] || [];
+        if (cats.length === 0) return <span className="text-muted-foreground">—</span>;
+        return (
+          <div className="flex flex-wrap gap-1">
+            {cats.slice(0, 2).map((cat) => (
+              <Badge
+                key={cat}
+                variant="secondary"
+                className={`text-xs ${CATEGORIA_COLORS[cat] || ""}`}
+              >
+                {CATEGORIA_LABELS[cat] || cat}
+              </Badge>
+            ))}
+            {cats.length > 2 && (
+              <Badge variant="secondary" className="text-xs">
+                +{cats.length - 2}
+              </Badge>
+            )}
+          </div>
+        );
+      },
+    },
+    {
       key: "cidade",
       header: "Localização",
       render: (_, row) =>
@@ -246,6 +220,19 @@ const Fornecedores = () => {
         ) : (
           <span className="text-muted-foreground">—</span>
         ),
+    },
+    {
+      key: "id",
+      header: "",
+      render: (_, row) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate(`/fornecedores/${row.id}`)}
+        >
+          <Eye className="h-4 w-4" />
+        </Button>
+      ),
     },
   ];
 
@@ -272,168 +259,17 @@ const Fornecedores = () => {
                     Novo Fornecedor
                   </AnimatedButton>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Novo Fornecedor</DialogTitle>
                     <DialogDescription>
-                      Preencha os dados do fornecedor
+                      Preencha os dados do fornecedor. Campos com * são obrigatórios.
                     </DialogDescription>
                   </DialogHeader>
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="nome">Nome / Razão Social *</Label>
-                      <Input
-                        id="nome"
-                        value={formData.nome}
-                        onChange={(e) =>
-                          setFormData({ ...formData, nome: e.target.value })
-                        }
-                        required
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="tipo_pessoa">Tipo de Pessoa *</Label>
-                        <Select
-                          value={formData.tipo_pessoa}
-                          onValueChange={(value) =>
-                            setFormData({ ...formData, tipo_pessoa: value })
-                          }
-                          required
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="juridica">Pessoa Jurídica</SelectItem>
-                            <SelectItem value="fisica">Pessoa Física</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {formData.tipo_pessoa === "juridica" ? (
-                        <div className="space-y-2">
-                          <Label htmlFor="cnpj">CNPJ *</Label>
-                          <DocumentInput
-                            id="cnpj"
-                            documentType="cnpj"
-                            value={formData.cnpj}
-                            onChange={(value, isValid) => {
-                              setFormData({ ...formData, cnpj: value });
-                              setDocumentValid(isValid);
-                            }}
-                            required={formData.tipo_pessoa === "juridica"}
-                          />
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          <Label htmlFor="cpf">CPF *</Label>
-                          <DocumentInput
-                            id="cpf"
-                            documentType="cpf"
-                            value={formData.cpf}
-                            onChange={(value, isValid) => {
-                              setFormData({ ...formData, cpf: value });
-                              setDocumentValid(isValid);
-                            }}
-                            required={formData.tipo_pessoa === "fisica"}
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={formData.email}
-                          onChange={(e) =>
-                            setFormData({ ...formData, email: e.target.value })
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="telefone">Telefone</Label>
-                        <Input
-                          id="telefone"
-                          value={formData.telefone}
-                          onChange={(e) =>
-                            setFormData({ ...formData, telefone: e.target.value })
-                          }
-                          placeholder="(00) 00000-0000"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="endereco">Endereço</Label>
-                      <Input
-                        id="endereco"
-                        value={formData.endereco}
-                        onChange={(e) =>
-                          setFormData({ ...formData, endereco: e.target.value })
-                        }
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="cidade">Cidade</Label>
-                        <Input
-                          id="cidade"
-                          value={formData.cidade}
-                          onChange={(e) =>
-                            setFormData({ ...formData, cidade: e.target.value })
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="estado">Estado</Label>
-                        <Input
-                          id="estado"
-                          value={formData.estado}
-                          onChange={(e) =>
-                            setFormData({ ...formData, estado: e.target.value })
-                          }
-                          maxLength={2}
-                          placeholder="SP"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="cep">CEP</Label>
-                        <Input
-                          id="cep"
-                          value={formData.cep}
-                          onChange={(e) =>
-                            setFormData({ ...formData, cep: e.target.value })
-                          }
-                          placeholder="00000-000"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="notas">Observações</Label>
-                      <Textarea
-                        id="notas"
-                        value={formData.notas}
-                        onChange={(e) =>
-                          setFormData({ ...formData, notas: e.target.value })
-                        }
-                        rows={3}
-                      />
-                    </div>
-
-                    <DialogFooter>
-                      <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                        Cancelar
-                      </Button>
-                      <Button type="submit">Criar Fornecedor</Button>
-                    </DialogFooter>
-                  </form>
+                  <FornecedorForm
+                    onSuccess={handleFormSuccess}
+                    onCancel={() => setDialogOpen(false)}
+                  />
                 </DialogContent>
               </Dialog>
             </div>

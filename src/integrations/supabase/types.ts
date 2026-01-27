@@ -813,6 +813,76 @@ export type Database = {
           },
         ]
       }
+      fornecedor_anexos: {
+        Row: {
+          arquivo_url: string
+          created_at: string | null
+          fornecedor_id: string
+          id: string
+          nome_arquivo: string
+          tamanho_bytes: number | null
+          tipo_documento: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          arquivo_url: string
+          created_at?: string | null
+          fornecedor_id: string
+          id?: string
+          nome_arquivo: string
+          tamanho_bytes?: number | null
+          tipo_documento?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          arquivo_url?: string
+          created_at?: string | null
+          fornecedor_id?: string
+          id?: string
+          nome_arquivo?: string
+          tamanho_bytes?: number | null
+          tipo_documento?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fornecedor_anexos_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fornecedor_categorias_servico: {
+        Row: {
+          categoria: string
+          created_at: string | null
+          fornecedor_id: string
+          id: string
+        }
+        Insert: {
+          categoria: string
+          created_at?: string | null
+          fornecedor_id: string
+          id?: string
+        }
+        Update: {
+          categoria?: string
+          created_at?: string | null
+          fornecedor_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fornecedor_categorias_servico_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fornecedores: {
         Row: {
           agencia: string | null
@@ -821,6 +891,10 @@ export type Database = {
           cidade: string | null
           cnpj: string | null
           conta: string | null
+          contato_cargo: string | null
+          contato_email: string | null
+          contato_nome: string | null
+          contato_telefone: string | null
           cpf: string | null
           created_at: string
           created_by: string | null
@@ -829,13 +903,18 @@ export type Database = {
           endereco: string | null
           estado: string | null
           id: string
+          inscricao_estadual: string | null
+          inscricao_municipal: string | null
+          is_active: boolean | null
           nome: string
           notas: string | null
           pix: string | null
+          porte_empresa: string | null
           telefone: string | null
           tipo_pessoa: string | null
           titular_conta: string | null
           updated_at: string
+          website: string | null
         }
         Insert: {
           agencia?: string | null
@@ -844,6 +923,10 @@ export type Database = {
           cidade?: string | null
           cnpj?: string | null
           conta?: string | null
+          contato_cargo?: string | null
+          contato_email?: string | null
+          contato_nome?: string | null
+          contato_telefone?: string | null
           cpf?: string | null
           created_at?: string
           created_by?: string | null
@@ -852,13 +935,18 @@ export type Database = {
           endereco?: string | null
           estado?: string | null
           id?: string
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
+          is_active?: boolean | null
           nome: string
           notas?: string | null
           pix?: string | null
+          porte_empresa?: string | null
           telefone?: string | null
           tipo_pessoa?: string | null
           titular_conta?: string | null
           updated_at?: string
+          website?: string | null
         }
         Update: {
           agencia?: string | null
@@ -867,6 +955,10 @@ export type Database = {
           cidade?: string | null
           cnpj?: string | null
           conta?: string | null
+          contato_cargo?: string | null
+          contato_email?: string | null
+          contato_nome?: string | null
+          contato_telefone?: string | null
           cpf?: string | null
           created_at?: string
           created_by?: string | null
@@ -875,13 +967,18 @@ export type Database = {
           endereco?: string | null
           estado?: string | null
           id?: string
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
+          is_active?: boolean | null
           nome?: string
           notas?: string | null
           pix?: string | null
+          porte_empresa?: string | null
           telefone?: string | null
           tipo_pessoa?: string | null
           titular_conta?: string | null
           updated_at?: string
+          website?: string | null
         }
         Relationships: []
       }
