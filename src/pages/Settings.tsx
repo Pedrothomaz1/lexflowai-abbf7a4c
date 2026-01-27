@@ -31,6 +31,7 @@ import {
 import { User } from "@supabase/supabase-js";
 import { 
   Shield, 
+  ShieldCheck,
   CheckCircle2, 
   FileSignature, 
   Bell, 
@@ -415,6 +416,29 @@ const Settings = () => {
               Para solicitar alteração de perfil, entre em contato com um administrador.
             </p>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Two-Factor Authentication */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5" />
+            Autenticação de Dois Fatores (2FA)
+          </CardTitle>
+          <CardDescription>
+            Adicione uma camada extra de segurança com verificação TOTP
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button 
+            variant="outline" 
+            className="w-full sm:w-auto"
+            onClick={() => navigate('/settings/2fa')}
+          >
+            <ShieldCheck className="h-4 w-4 mr-2" />
+            Configurar 2FA
+          </Button>
         </CardContent>
       </Card>
 

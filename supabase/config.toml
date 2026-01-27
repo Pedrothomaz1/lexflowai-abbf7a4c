@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.extrair-dados-pdf]
 verify_jwt = true
+
+[functions.totp-auth]
+verify_jwt = false
