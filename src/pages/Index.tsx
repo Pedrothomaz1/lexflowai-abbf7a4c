@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Scale, FileText, Users, BarChart3, Shield } from "lucide-react";
 
@@ -87,6 +87,23 @@ const Index = () => {
           </div>
         </section>
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-border py-8">
+        <div className="container mx-auto px-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+          <p className="text-sm text-muted-foreground">
+            © 2026 LexFlow. Todos os direitos reservados.
+          </p>
+          <div className="flex gap-4">
+            <Link
+              to="/privacidade"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Política de Privacidade
+            </Link>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
