@@ -1,527 +1,271 @@
 
-
-# Plano: Implementação de 10 Funcionalidades Enterprise CLM
+# Plano: Avatar de Usuário, Documentação API de Compras e Cadastro de Fornecedores Completo
 
 ## Visão Geral
 
-Este plano cobre a implementação completa de 10 funcionalidades de nível enterprise para o LexFlow, organizadas em 4 fases sequenciais para garantir estabilidade e permitir testes incrementais.
+Este plano abrange três requisitos principais:
+1. Upload de foto de avatar no perfil do usuário
+2. Documentação sobre configuração da API do Sistema de Compras
+3. Melhorias no cadastro de fornecedores (tipos de serviço e anexos)
 
 ---
 
-## Funcionalidades a Implementar
+## 1. Upload de Foto do Avatar
 
-| # | Funcionalidade | Prioridade | Fase |
-|---|---------------|------------|------|
-| 1 | Versionamento de Contratos | Alta | 1 |
-| 2 | Trilha de Auditoria (Audit Trail) | Alta | 1 |
-| 3 | Redlining / Markup | Alta | 2 |
-| 4 | Extração Automática por IA (OCR) | Alta | 2 |
-| 5 | Relatórios Customizáveis | Média | 3 |
-| 6 | Compliance LGPD/GDPR | Média | 3 |
-| 7 | Métricas de Negociação | Média | 3 |
-| 8 | Mobile App / PWA | Média | 4 |
-| 9 | Multi-idioma (i18n) | Média | 4 |
-| 10 | Chatbot Interno | Baixa | 4 |
+### Situação Atual
+A tabela `profiles` já possui a coluna `avatar_url` (text, nullable), mas a funcionalidade de upload não está implementada na página de configurações.
+
+### Implementação
+
+#### Componente de Upload
+Criar componente `AvatarUpload.tsx` com:
+- Preview da foto atual ou iniciais do usuário
+- Botão para upload de nova imagem
+- Validação de tamanho (max 2MB) e tipo (JPG, PNG, WEBP)
+- Indicador de progresso durante upload
+- Opção de remover foto
+
+#### Modificação na Página Settings
+Adicionar seção de avatar no card "Perfil do Usuário":
+- Avatar clicável para trocar foto
+- Usar bucket existente `contratos-documentos` com pasta `avatars/{user_id}/`
+- Atualizar `avatar_url` na tabela `profiles`
+
+#### Exibição do Avatar
+Atualizar `GlobalHeader.tsx` e outros componentes para exibir o avatar do usuário logado quando disponível.
 
 ---
 
-## FASE 1: Rastreabilidade e Histórico
+## 2. Documentação - Configuração API Sistema de Compras
 
-### 1.1 Versionamento de Contratos
+Baseado na análise da imagem e do código da Edge Function `enviar-solicitacao-compras`, aqui está o que você precisa solicitar ao responsável pelo sistema de compras:
 
-**Objetivo**: Registrar todas as versões do contrato com histórico completo e permitir comparação (diff) e restauração.
+### Informações Necessárias para Configurar a Integração
 
-**Banco de Dados**:
+| Item | Descrição | Exemplo |
+|------|-----------|---------|
+| **URL da API** | Endpoint que receberá as solicitações via POST | `https://api.seuserp.com.br/solicitacao-compra` |
+| **Tipo de Autenticação** | Como o sistema valida as requisições | API Key, Bearer Token ou Basic Auth |
+| **Chave de Autenticação** | Token/credencial para acesso à API | Chave alfanumérica fornecida pelo ERP |
+
+### Payload Enviado pelo LexFlow
+
+O sistema enviará um JSON com a seguinte estrutura:
+
 ```text
-Nova tabela: contract_versions
-+------------------+------------+----------------------------------------+
-| Coluna           | Tipo       | Descrição                              |
-+------------------+------------+----------------------------------------+
-| id               | uuid       | Identificador único                    |
-| contrato_id      | uuid       | Referência ao contrato                 |
-| versao           | integer    | Número da versão (1, 2, 3...)          |
-| snapshot         | jsonb      | Snapshot completo dos dados            |
-| alteracoes       | jsonb      | Lista detalhada de campos alterados    |
-| motivo           | text       | Justificativa da alteração (opcional)  |
-| created_by       | uuid       | Usuário que criou a versão             |
-| created_at       | timestamptz| Data de criação                        |
-+------------------+------------+----------------------------------------+
+┌─────────────────────────────────────────────────────────────────┐
+│                      PAYLOAD DA SOLICITAÇÃO                      │
+├─────────────────────────────────────────────────────────────────┤
+│ origem: "LEXFLOW"                                                │
+│ tipo: "SERVICO_PERIODICO"                                        │
+│ data_solicitacao: "2026-01-27T10:30:00.000Z"                     │
+│ urgencia: "normal" | "media" | "alta" | "critica"                │
+│                                                                  │
+│ servico: {                                                       │
+│   id, especificacao, categoria, itens_detalhados,                │
+│   quantidade, localizacao, data_vencimento, prioridade,          │
+│   orgao_regulador                                                │
+│ }                                                                │
+│                                                                  │
+│ unidade: {                                                       │
+│   nome, endereco, cidade, estado,                                │
+│   responsavel, email_responsavel                                 │
+│ }                                                                │
+│                                                                  │
+│ estimativas: {                                                   │
+│   valor_estimado, valor_ultima_execucao,                         │
+│   fornecedor_preferencial: { nome, cnpj, telefone }              │
+│ }                                                                │
+│                                                                  │
+│ historico: [ { data, valor, fornecedor, observacoes } ]          │
+│ observacoes: "texto livre"                                       │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-**Novos Componentes**:
-| Arquivo | Descrição |
-|---------|-----------|
-| `src/components/ContractDetails/ContractVersionHistory.tsx` | Timeline visual de versões |
-| `src/components/ContractDetails/ContractVersionDiff.tsx` | Comparação lado a lado entre versões |
-| `src/components/ContractDetails/ContractVersionRestore.tsx` | Dialog para restaurar versão anterior |
+### Headers da Requisição
 
-**Lógica**:
-- Trigger automático no banco ao atualizar `contratos` → cria nova versão
-- Interface mostra timeline com todas as versões
-- Diff visual destaca campos alterados (verde/vermelho)
-- Restaurar cria nova versão com dados antigos (não sobrescreve)
+Dependendo do tipo de autenticação configurado:
 
----
+| Tipo | Header Enviado |
+|------|----------------|
+| API Key | `X-API-Key: {chave}` |
+| Bearer Token | `Authorization: Bearer {token}` |
+| Basic Auth | `Authorization: Basic {credenciais}` |
 
-### 1.2 Trilha de Auditoria (Audit Trail)
+### Resposta Esperada da API
 
-**Objetivo**: Registrar todas as ações dos usuários no sistema para compliance e rastreabilidade.
+O sistema espera um JSON de retorno com:
+- `numero_solicitacao` ou `id`: Código da solicitação gerada
+- Status HTTP 2xx para sucesso
 
-**Banco de Dados**:
-```text
-Nova tabela: audit_logs
-+------------------+------------+----------------------------------------+
-| Coluna           | Tipo       | Descrição                              |
-+------------------+------------+----------------------------------------+
-| id               | uuid       | Identificador único                    |
-| user_id          | uuid       | Usuário que executou a ação            |
-| acao             | text       | Tipo: view, create, update, delete...  |
-| entidade         | text       | Tipo: contrato, fornecedor, etc.       |
-| entidade_id      | uuid       | ID do registro afetado                 |
-| dados_anteriores | jsonb      | Estado antes da ação                   |
-| dados_novos      | jsonb      | Estado após a ação                     |
-| ip_address       | text       | IP do usuário                          |
-| user_agent       | text       | Browser/dispositivo                    |
-| metadata         | jsonb      | Contexto adicional                     |
-| created_at       | timestamptz| Timestamp da ação                      |
-+------------------+------------+----------------------------------------+
-```
+### Próximos Passos para Configurar
 
-**Tipos de Ação**:
-- `view` - Visualização
-- `create` - Criação
-- `update` - Atualização
-- `delete` - Exclusão
-- `approve` - Aprovação
-- `reject` - Rejeição
-- `download` - Download
-- `upload` - Upload
-- `sign` - Assinatura
-- `export` - Exportação
-- `analyze` - Análise IA
+1. **Obter do responsável pelo ERP:**
+   - URL do endpoint de solicitação de compras
+   - Tipo de autenticação suportado
+   - Chave/token de acesso
 
-**Novos Arquivos**:
-| Arquivo | Descrição |
-|---------|-----------|
-| `src/pages/AuditLogs.tsx` | Página de visualização de logs (admin) |
-| `src/components/AuditLog/AuditTimeline.tsx` | Timeline visual de atividades |
-| `src/components/AuditLog/AuditFilters.tsx` | Filtros por usuário, ação, data, entidade |
-| `src/hooks/useAuditLog.ts` | Hook para registrar ações facilmente |
+2. **Configurar no LexFlow (Configurações > Integrações):**
+   - Ativar a integração
+   - Informar a URL da API
+   - Selecionar tipo de autenticação
 
-**Integração**:
-- Hook `useAuditLog` chamado em todas as páginas principais
-- Registro automático de visualizações, downloads, aprovações
-- Página `/audit-logs` visível apenas para administradores
+3. **Configurar o secret no backend:**
+   - A chave de autenticação precisa ser cadastrada como secret `COMPRAS_API_KEY`
+   - Isso será solicitado pelo sistema quando necessário
 
 ---
 
-## FASE 2: Edição Avançada e IA
+## 3. Cadastro Completo de Fornecedores
 
-### 2.1 Redlining / Markup
+### Alterações no Banco de Dados
 
-**Objetivo**: Permitir edição colaborativa de textos contratuais com marcações visíveis (como Track Changes do Word).
+#### Novos Campos na Tabela `fornecedores`
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| inscricao_estadual | text | Inscrição Estadual ou "Isento" |
+| inscricao_municipal | text | Inscrição Municipal |
+| website | text | Site do fornecedor |
+| contato_nome | text | Nome do contato principal |
+| contato_cargo | text | Cargo do contato |
+| contato_email | text | Email secundário/contato |
+| contato_telefone | text | Telefone direto |
+| porte_empresa | text | MEI, ME, EPP, Médio, Grande |
+| is_active | boolean | Status ativo/inativo |
 
-**Banco de Dados**:
-```text
-Nova tabela: contract_redlines
-+------------------+------------+----------------------------------------+
-| Coluna           | Tipo       | Descrição                              |
-+------------------+------------+----------------------------------------+
-| id               | uuid       | Identificador único                    |
-| contrato_id      | uuid       | Referência ao contrato                 |
-| versao           | integer    | Versão do contrato                     |
-| conteudo_original| text       | Texto original                         |
-| conteudo_marcado | text       | Texto com marcações HTML               |
-| alteracoes       | jsonb      | Lista de alterações individuais        |
-| status           | text       | draft, pending_review, accepted        |
-| created_by       | uuid       | Autor das alterações                   |
-| reviewed_by      | uuid       | Revisor (se aplicável)                 |
-| created_at       | timestamptz| Data de criação                        |
-| reviewed_at      | timestamptz| Data de revisão                        |
-+------------------+------------+----------------------------------------+
-```
+#### Nova Tabela: `fornecedor_categorias_servico`
+Relacionamento N:N entre fornecedores e tipos de serviço:
+- `id` (uuid, PK)
+- `fornecedor_id` (uuid, FK)
+- `categoria` (text - segurança, manutenção, higiene, etc.)
+- `created_at` (timestamp)
 
-**Novos Componentes**:
+#### Nova Tabela: `fornecedor_anexos`
+Documentos do fornecedor:
+- `id` (uuid, PK)
+- `fornecedor_id` (uuid, FK)
+- `nome_arquivo` (text)
+- `arquivo_url` (text)
+- `tipo_documento` (text - Contrato Social, Certidões, etc.)
+- `tamanho_bytes` (bigint)
+- `uploaded_by` (uuid)
+- `created_at` (timestamp)
+
+### Novos Componentes
+
 | Arquivo | Descrição |
 |---------|-----------|
-| `src/components/ContractDetails/ContractRedlineEditor.tsx` | Editor com marcações visuais |
-| `src/components/ContractDetails/RedlineToolbar.tsx` | Toolbar com ações de markup |
-| `src/components/ContractDetails/RedlineComparison.tsx` | Visualização original vs marcado |
+| `src/components/Fornecedores/FornecedorForm.tsx` | Formulário completo com abas |
+| `src/components/Fornecedores/FornecedorAnexos.tsx` | Upload/gestão de anexos |
+| `src/components/Fornecedores/FornecedorCategorias.tsx` | Seleção de tipos de serviço |
+| `src/pages/FornecedorDetalhes.tsx` | Página de detalhes do fornecedor |
 
-**Funcionalidades**:
-- Inserções em **verde**
-- Exclusões em ~~vermelho riscado~~
-- Comentários inline
-- Aceitar/Rejeitar alterações individuais
-- Aceitar/Rejeitar todas
-- Histórico de redlines por versão
+### Reorganização do Formulário
+
+**Aba 1: Dados Básicos**
+- Nome/Razão Social, Tipo Pessoa, CNPJ/CPF
+- Inscrição Estadual, Inscrição Municipal
+- Porte da Empresa, Website, Status Ativo
+
+**Aba 2: Contato**
+- Email principal, Telefone principal
+- Contato secundário (nome, cargo, email, telefone)
+
+**Aba 3: Endereço**
+- Endereço, Cidade, Estado, CEP
+
+**Aba 4: Dados Bancários**
+- Banco, Agência, Conta, PIX, Titular
+
+**Aba 5: Tipos de Serviço**
+- Checkboxes com categorias: Segurança, Manutenção, Higiene, Infraestrutura, Veículos, Outros
+- Campo de observações/especialidades
+
+**Aba 6: Anexos**
+- Upload de documentos (Contrato Social, Certidões, Atestados)
+- Listagem com download e exclusão
 
 ---
 
-### 2.2 Extração Automática por IA (OCR)
+## Arquivos a Criar
 
-**Objetivo**: Extrair automaticamente dados de contratos em PDF usando IA para pré-preencher formulários.
-
-**Nova Edge Function**: `supabase/functions/extrair-dados-pdf/index.ts`
-
-**Dados Extraídos**:
-- Partes envolvidas (contratante/contratada)
-- CNPJ/CPF das partes
-- Valor do contrato
-- Data de início e término
-- Objeto do contrato
-- Cláusulas principais
-
-**Fluxo**:
-```text
-1. Usuário faz upload do PDF
-2. Clica em "Extrair dados automaticamente"
-3. Edge Function processa com Lovable AI (Gemini)
-4. Retorna dados estruturados
-5. Formulário é pré-preenchido
-6. Usuário revisa e confirma
-```
-
-**Novos Arquivos**:
 | Arquivo | Descrição |
 |---------|-----------|
-| `supabase/functions/extrair-dados-pdf/index.ts` | Edge function com OCR/IA |
-| `src/components/ContractImport/PDFExtractor.tsx` | UI para extração e revisão |
-
----
-
-## FASE 3: Relatórios e Compliance
-
-### 3.1 Relatórios Customizáveis
-
-**Objetivo**: Permitir criação de relatórios sob demanda com filtros personalizados.
-
-**Banco de Dados**:
-```text
-Nova tabela: saved_reports
-+------------------+------------+----------------------------------------+
-| Coluna           | Tipo       | Descrição                              |
-+------------------+------------+----------------------------------------+
-| id               | uuid       | Identificador único                    |
-| nome             | text       | Nome do relatório                      |
-| descricao        | text       | Descrição                              |
-| tipo             | text       | contratos, fornecedores, obrigacoes    |
-| filtros          | jsonb      | Configuração de filtros                |
-| colunas          | jsonb      | Colunas selecionadas                   |
-| ordenacao        | jsonb      | Configuração de ordenação              |
-| agrupamento      | text       | Campo de agrupamento                   |
-| is_public        | boolean    | Visível para todos?                    |
-| created_by       | uuid       | Criador                                |
-| created_at       | timestamptz| Data de criação                        |
-+------------------+------------+----------------------------------------+
-```
-
-**Novos Arquivos**:
-| Arquivo | Descrição |
-|---------|-----------|
-| `src/pages/Relatorios.tsx` | Página principal de relatórios |
-| `src/components/Reports/ReportBuilder.tsx` | Construtor de relatórios |
-| `src/components/Reports/ReportFilters.tsx` | Configurador de filtros |
-| `src/components/Reports/ReportPreview.tsx` | Visualização do relatório |
-| `src/components/Reports/ReportExport.tsx` | Exportação PDF/Excel |
-
-**Funcionalidades**:
-- Selecionar colunas a exibir
-- Definir filtros (status, data, valor, fornecedor)
-- Agrupar por campo (tipo, status, mês)
-- Salvar relatórios favoritos
-- Exportar para PDF/Excel
-- Agendar envio por email (futuro)
-
----
-
-### 3.2 Compliance LGPD/GDPR
-
-**Objetivo**: Módulo específico para rastreamento de conformidade com leis de proteção de dados.
-
-**Banco de Dados**:
-```text
-Nova tabela: compliance_items
-+------------------+------------+----------------------------------------+
-| Coluna           | Tipo       | Descrição                              |
-+------------------+------------+----------------------------------------+
-| id               | uuid       | Identificador único                    |
-| contrato_id      | uuid       | Referência ao contrato                 |
-| tipo             | text       | lgpd, gdpr, lei_geral                  |
-| requisito        | text       | Descrição do requisito                 |
-| status           | text       | pendente, conforme, nao_conforme       |
-| evidencia        | text       | Evidência de conformidade              |
-| responsavel_id   | uuid       | Responsável pela verificação           |
-| verificado_em    | timestamptz| Data da verificação                    |
-| proxima_revisao  | date       | Data da próxima revisão                |
-| created_at       | timestamptz| Data de criação                        |
-+------------------+------------+----------------------------------------+
-
-Nova tabela: data_processing_records
-+------------------+------------+----------------------------------------+
-| Coluna           | Tipo       | Descrição                              |
-+------------------+------------+----------------------------------------+
-| id               | uuid       | Identificador único                    |
-| contrato_id      | uuid       | Referência ao contrato                 |
-| dados_tratados   | text[]     | Tipos de dados pessoais tratados       |
-| base_legal       | text       | Base legal (consentimento, contrato)   |
-| finalidade       | text       | Finalidade do tratamento               |
-| compartilhamento | text       | Com quem é compartilhado               |
-| retencao         | text       | Período de retenção                    |
-| created_at       | timestamptz| Data de criação                        |
-+------------------+------------+----------------------------------------+
-```
-
-**Novos Arquivos**:
-| Arquivo | Descrição |
-|---------|-----------|
-| `src/pages/Compliance.tsx` | Dashboard de compliance |
-| `src/components/Compliance/ComplianceChecklist.tsx` | Checklist por contrato |
-| `src/components/Compliance/ComplianceStatus.tsx` | Status geral |
-| `src/components/Compliance/DataProcessingForm.tsx` | Registro de tratamento |
-
-**Funcionalidades**:
-- Checklist LGPD/GDPR por contrato
-- Dashboard de status de conformidade
-- Alertas de revisão periódica
-- Registro de atividades de tratamento
-- Exportação para DPO/Encarregado
-
----
-
-### 3.3 Métricas de Negociação
-
-**Objetivo**: Medir performance do processo de negociação de contratos.
-
-**Métricas Calculadas**:
-- Tempo médio de negociação (rascunho → assinado)
-- Taxa de aprovação na primeira tentativa
-- Tempo médio por etapa do workflow
-- Quantidade de redlines por contrato
-- Taxa de aceitação de termos
-- Contratos por tipo/mês/fornecedor
-
-**Novos Arquivos**:
-| Arquivo | Descrição |
-|---------|-----------|
-| `src/components/Dashboard/NegotiationMetrics.tsx` | Cards de métricas |
-| `src/components/Dashboard/NegotiationCharts.tsx` | Gráficos de evolução |
-| `src/components/Dashboard/PerformanceTable.tsx` | Tabela de performance |
-
-**Integração**:
-- Adicionar seção no Dashboard principal
-- Calcular métricas com base em `contract_history` e timestamps
-
----
-
-## FASE 4: Mobile, i18n e IA Conversacional
-
-### 4.1 Mobile App / PWA
-
-**Objetivo**: Permitir aprovações e visualização via celular.
-
-**Implementação**:
-- Configurar `vite-plugin-pwa`
-- Criar manifest.json com ícones
-- Adicionar meta tags para mobile
-- Criar página `/install` para instalação
-- Otimizar layouts para telas pequenas
-
-**Arquivos Modificados/Criados**:
-| Arquivo | Alteração |
-|---------|-----------|
-| `vite.config.ts` | Adicionar plugin PWA |
-| `public/manifest.json` | Manifest do PWA |
-| `public/icons/` | Ícones em vários tamanhos |
-| `index.html` | Meta tags mobile |
-| `src/pages/Install.tsx` | Página de instalação |
-
-**Funcionalidades Offline**:
-- Cache de dados básicos
-- Visualização de contratos
-- Fila de aprovações pendentes
-- Sincronização quando online
-
----
-
-### 4.2 Multi-idioma (i18n)
-
-**Objetivo**: Suporte a contratos e interface em múltiplos idiomas.
-
-**Implementação**:
-- Instalar `react-i18next`
-- Criar arquivos de tradução (pt-BR, en-US, es)
-- Componente de seleção de idioma
-- Persistir preferência do usuário
-
-**Estrutura de Arquivos**:
-```text
-src/
-├── i18n/
-│   ├── index.ts
-│   └── locales/
-│       ├── pt-BR.json
-│       ├── en-US.json
-│       └── es.json
-```
-
-**Áreas Traduzidas**:
-- Interface completa (menus, botões, labels)
-- Mensagens de erro e sucesso
-- Status e tipos de contrato
-- Relatórios e exportações
-
----
-
-### 4.3 Chatbot Interno
-
-**Objetivo**: Permitir perguntas sobre contratos via chat com IA.
-
-**Nova Edge Function**: `supabase/functions/chatbot-contratos/index.ts`
-
-**Funcionalidades**:
-- "Qual o valor total dos contratos vigentes?"
-- "Quantos contratos vencem este mês?"
-- "Mostre contratos do fornecedor X"
-- "Qual o status do contrato CT-2024-001?"
-
-**Novos Arquivos**:
-| Arquivo | Descrição |
-|---------|-----------|
-| `supabase/functions/chatbot-contratos/index.ts` | Edge function com Lovable AI |
-| `src/components/Chatbot/ChatbotWidget.tsx` | Widget flutuante |
-| `src/components/Chatbot/ChatbotDialog.tsx` | Interface de chat |
-| `src/components/Chatbot/ChatMessage.tsx` | Componente de mensagem |
-
-**Implementação**:
-- Widget flutuante no canto inferior direito
-- Histórico de conversas por sessão
-- Integração com Lovable AI (Gemini)
-- Sugestões de perguntas frequentes
-
----
-
-## Arquivos a Criar (Resumo)
-
-### Edge Functions
-| Arquivo | Descrição |
-|---------|-----------|
-| `supabase/functions/extrair-dados-pdf/index.ts` | OCR/Extração IA |
-| `supabase/functions/chatbot-contratos/index.ts` | Chatbot com IA |
-
-### Páginas
-| Arquivo | Descrição |
-|---------|-----------|
-| `src/pages/AuditLogs.tsx` | Trilha de auditoria |
-| `src/pages/Relatorios.tsx` | Relatórios customizáveis |
-| `src/pages/Compliance.tsx` | Compliance LGPD/GDPR |
-| `src/pages/Install.tsx` | Instalação PWA |
-
-### Componentes
-| Diretório | Componentes |
-|-----------|-------------|
-| `src/components/ContractDetails/` | VersionHistory, VersionDiff, VersionRestore, RedlineEditor |
-| `src/components/AuditLog/` | AuditTimeline, AuditFilters |
-| `src/components/Reports/` | ReportBuilder, ReportFilters, ReportPreview, ReportExport |
-| `src/components/Compliance/` | ComplianceChecklist, ComplianceStatus, DataProcessingForm |
-| `src/components/Dashboard/` | NegotiationMetrics, NegotiationCharts |
-| `src/components/Chatbot/` | ChatbotWidget, ChatbotDialog, ChatMessage |
-
-### Hooks
-| Arquivo | Descrição |
-|---------|-----------|
-| `src/hooks/useAuditLog.ts` | Registro de ações |
-| `src/hooks/useVersioning.ts` | Operações de versionamento |
-
-### i18n
-| Arquivo | Descrição |
-|---------|-----------|
-| `src/i18n/index.ts` | Configuração i18next |
-| `src/i18n/locales/*.json` | Arquivos de tradução |
-
----
+| `src/components/Settings/AvatarUpload.tsx` | Componente de upload de avatar |
+| `src/components/Fornecedores/FornecedorForm.tsx` | Formulário completo |
+| `src/components/Fornecedores/FornecedorAnexos.tsx` | Gestão de anexos |
+| `src/components/Fornecedores/FornecedorCategorias.tsx` | Seleção de categorias |
+| `src/components/Fornecedores/index.ts` | Exports |
+| `src/pages/FornecedorDetalhes.tsx` | Página de detalhes |
 
 ## Arquivos a Modificar
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/App.tsx` | Adicionar rotas: /audit-logs, /relatorios, /compliance, /install |
-| `src/components/AppSidebar.tsx` | Adicionar links para novas páginas |
-| `src/pages/ContratoDetalhes.tsx` | Integrar versões, redlines, compliance, audit log |
-| `src/pages/Contratos.tsx` | Adicionar extração IA no fluxo de criação |
-| `src/pages/Dashboard.tsx` | Adicionar métricas de negociação |
-| `src/pages/Settings.tsx` | Adicionar configuração de idioma |
-| `supabase/config.toml` | Adicionar novas edge functions |
-| `vite.config.ts` | Adicionar plugin PWA |
-| `index.html` | Adicionar meta tags mobile |
+| `src/pages/Settings.tsx` | Adicionar upload de avatar no card de perfil |
+| `src/pages/Fornecedores.tsx` | Usar novo formulário com abas |
+| `src/components/GlobalHeader.tsx` | Exibir avatar do usuário |
+| `src/App.tsx` | Adicionar rota `/fornecedores/:id` |
 
----
+## Migração SQL
 
-## Migrações de Banco de Dados
+```sql
+-- Novos campos em fornecedores
+ALTER TABLE fornecedores ADD COLUMN inscricao_estadual text;
+ALTER TABLE fornecedores ADD COLUMN inscricao_municipal text;
+ALTER TABLE fornecedores ADD COLUMN website text;
+ALTER TABLE fornecedores ADD COLUMN contato_nome text;
+ALTER TABLE fornecedores ADD COLUMN contato_cargo text;
+ALTER TABLE fornecedores ADD COLUMN contato_email text;
+ALTER TABLE fornecedores ADD COLUMN contato_telefone text;
+ALTER TABLE fornecedores ADD COLUMN porte_empresa text;
+ALTER TABLE fornecedores ADD COLUMN is_active boolean DEFAULT true;
 
-| Migração | Tabelas/Alterações |
-|----------|-------------------|
-| 001 | `contract_versions` + RLS + trigger auto-versão |
-| 002 | `audit_logs` + RLS + índices |
-| 003 | `contract_redlines` + RLS |
-| 004 | `saved_reports` + RLS |
-| 005 | `compliance_items` + `data_processing_records` + RLS |
+-- Tabela de categorias
+CREATE TABLE fornecedor_categorias_servico (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  fornecedor_id uuid REFERENCES fornecedores(id) ON DELETE CASCADE NOT NULL,
+  categoria text NOT NULL,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE(fornecedor_id, categoria)
+);
+
+-- Tabela de anexos
+CREATE TABLE fornecedor_anexos (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  fornecedor_id uuid REFERENCES fornecedores(id) ON DELETE CASCADE NOT NULL,
+  nome_arquivo text NOT NULL,
+  arquivo_url text NOT NULL,
+  tipo_documento text,
+  tamanho_bytes bigint,
+  uploaded_by uuid,
+  created_at timestamptz DEFAULT now()
+);
+
+-- RLS
+ALTER TABLE fornecedor_categorias_servico ENABLE ROW LEVEL SECURITY;
+ALTER TABLE fornecedor_anexos ENABLE ROW LEVEL SECURITY;
+
+-- Políticas
+CREATE POLICY "View fornecedor categories" ON fornecedor_categorias_servico
+  FOR SELECT USING (true);
+CREATE POLICY "Manage fornecedor categories" ON fornecedor_categorias_servico
+  FOR ALL USING (has_any_role(auth.uid(), ARRAY['analista_juridico','consultoria_juridica','administrador']));
+
+CREATE POLICY "View fornecedor attachments" ON fornecedor_anexos
+  FOR SELECT USING (true);
+CREATE POLICY "Manage fornecedor attachments" ON fornecedor_anexos
+  FOR ALL USING (has_any_role(auth.uid(), ARRAY['analista_juridico','consultoria_juridica','administrador']));
+```
 
 ---
 
 ## Ordem de Implementação
 
-```text
-FASE 1 (Semana 1-2)
-├── Migração: contract_versions
-├── Migração: audit_logs
-├── Hook: useAuditLog
-├── Hook: useVersioning
-├── Componentes: VersionHistory, VersionDiff
-├── Página: AuditLogs
-└── Integração em ContratoDetalhes
-
-FASE 2 (Semana 3-4)
-├── Migração: contract_redlines
-├── Edge Function: extrair-dados-pdf
-├── Componentes: RedlineEditor, PDFExtractor
-└── Integração em fluxo de criação
-
-FASE 3 (Semana 5-6)
-├── Migração: saved_reports
-├── Migração: compliance_items + data_processing_records
-├── Página: Relatorios
-├── Página: Compliance
-├── Componentes: NegotiationMetrics
-└── Integração no Dashboard
-
-FASE 4 (Semana 7-8)
-├── Configuração PWA
-├── Configuração i18n
-├── Edge Function: chatbot-contratos
-├── Componentes: Chatbot
-└── Página: Install
-```
-
----
-
-## Considerações Técnicas
-
-### Segurança
-- Audit logs visíveis apenas para administradores
-- Versões seguem mesmas permissões do contrato
-- Compliance restrito a roles específicas
-- Chatbot valida permissões antes de retornar dados
-
-### Performance
-- Audit logs com índices em `user_id`, `entidade`, `created_at`
-- Versões limitadas a últimas 50 na listagem
-- Paginação em todas as listagens grandes
-- Cache de traduções no localStorage
-
-### LGPD/Compliance
-- Audit trail atende requisitos de rastreabilidade
-- Logs incluem IP e user agent para investigação
-- Retenção de logs configurável (sugestão: 2 anos)
-- Registro de atividades de tratamento
+1. **Migração do banco** - Adicionar campos e tabelas
+2. **Avatar Upload** - Componente e integração em Settings
+3. **Componentes Fornecedor** - Form, Anexos, Categorias
+4. **Página Fornecedores** - Integrar novos componentes
+5. **Página Detalhes** - Criar visualização completa
+6. **Testes** - Validar upload de avatar e anexos, salvar categorias
 
