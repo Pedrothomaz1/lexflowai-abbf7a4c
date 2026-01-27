@@ -115,12 +115,12 @@ const handler = async (req: Request): Promise<Response> => {
         fornecedor = fornecedorData;
       }
 
-      // Fetch obrigacoes de pagamento
+      // Fetch obrigacoes com valor (parcelas de pagamento)
       const { data: obrigacoes } = await supabase
         .from("contract_obligations")
         .select("*")
         .eq("contrato_id", contratoId)
-        .eq("tipo", "pagamento")
+        .not("valor", "is", null)
         .order("data_vencimento", { ascending: true });
 
       emailSubject = `[LexFlow] Aprovação de Contrato - ${contrato.numero_contrato}`;
