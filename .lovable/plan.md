@@ -1,106 +1,121 @@
 
-# Plano: Reestruturação do Menu Sidebar
+# Plano: Correção de Obrigações + Novo Prompt de Análise IA
 
-## Objetivo
-Reorganizar o menu lateral para seguir um padrão uniforme de listas suspensas (colapsáveis) em todas as seções, conforme nova estrutura definida.
+## Problema 1: Obrigações no Contrato
 
-## Nova Estrutura do Menu
+O componente `ContractObligations` possui um `SelectItem` com `value=""` na linha 436, causando erro do Radix UI Select.
 
-### 1. Principal (simples)
-- Dashboard
+### Correção no Arquivo: `src/components/ContractDetails/ContractObligations.tsx`
 
-### 2. Gestao (colapsavel com submenus)
-- Contratos
-  - Novo Contrato (submenu)
+**Linha 429**: Ajustar valor do Select
+```tsx
+// Antes
+value={formData.responsavel_id}
 
-### 3. Cadastro (colapsavel com submenus)
-- Templates
-- Fornecedores
-- Workflows (movido de Gestao)
-- Usuarios (apenas administrador)
-
-### 4. Sistema (simples)
-- Configuracoes
-
-## Alteracoes Tecnicas
-
-### Arquivo: `src/components/AppSidebar.tsx`
-
-1. **Atualizar estrutura de dados do menu**
-   - Modificar `contratosMenuItems` para nova organizacao
-   - Adicionar suporte a submenus aninhados
-   - Mover Workflows para cadastro
-   - Remover Obrigacoes
-
-2. **Criar nova interface para menus com submenus**
-   ```text
-   interface MenuItemWithSubmenu {
-     title: string;
-     url: string;
-     icon: LucideIcon;
-     roles: string[];
-     subItems?: { title: string; url: string; icon: LucideIcon }[];
-   }
-   ```
-
-3. **Implementar componente CollapsibleMenuItem**
-   - Criar novo componente para itens com submenus
-   - Usar Collapsible do Radix UI (ja instalado)
-   - Manter icones de seta (ChevronDown/ChevronRight)
-
-4. **Transformar Gestao em menu colapsavel**
-   - Aplicar mesmo padrao do Cadastro atual
-   - Contratos como item principal com submenu
-   - "Novo Contrato" como subitem
-
-5. **Atualizar logica de estado**
-   - Adicionar `gestaoOpen` state para controlar colapso
-   - Manter `configOpen` existente para Cadastro
-
-## Detalhamento Visual
-
-### Antes (atual):
-```text
-PRINCIPAL
-  - Dashboard
-  - Contratos
-
-GESTAO
-  - Obrigacoes
-  - Workflows
-
-CADASTRO (colapsavel)
-  - Templates
-  - Fornecedores
-  - Usuarios
+// Depois
+value={formData.responsavel_id || "none"}
 ```
 
-### Depois (novo):
-```text
-PRINCIPAL
-  - Dashboard
+**Linha 430**: Ajustar onValueChange
+```tsx
+// Antes
+onValueChange={(v) => setFormData({ ...formData, responsavel_id: v })}
 
-GESTAO (colapsavel)
-  - Contratos
-    - Novo Contrato
-
-CADASTRO (colapsavel)
-  - Templates
-  - Fornecedores
-  - Workflows
-  - Usuarios
+// Depois
+onValueChange={(v) => setFormData({ ...formData, responsavel_id: v === "none" ? "" : v })}
 ```
 
-## Arquivos a Modificar
+**Linha 436**: Alterar valor vazio
+```tsx
+// Antes
+<SelectItem value="">Nenhum</SelectItem>
 
-| Arquivo | Alteracao |
+// Depois
+<SelectItem value="none">Nenhum</SelectItem>
+```
+
+---
+
+## Problema 2: Atualizar Prompt de Análise de Contratos
+
+### Correção no Arquivo: `supabase/functions/analisar-contrato-ia/index.ts`
+
+Substituir o prompt atual (linhas ~97-110) pelo novo prompt aprimorado:
+
+**Prompt Atual (simplificado):**
+```text
+Você é um especialista jurídico em análise de contratos. Analise o contrato fornecido e identifique:
+1. Riscos potenciais (jurídicos, financeiros, operacionais)
+2. Cláusulas importantes e críticas
+3. Sugestões de melhorias
+4. Score de risco geral (0 a 10)
+```
+
+**Novo Prompt (completo):**
+
+```text
+Atue como um especialista jurídico (direito contratual) e revisor técnico-linguístico. Analise integralmente o contrato fornecido pelo usuário para identificar: (1) riscos potenciais (jurídicos, financeiros e operacionais), (2) cláusulas importantes e críticas, (3) erros gramaticais/ambiguidade/redação que possam gerar interpretações conflitantes, e (4) oportunidades de melhoria para reduzir risco e aumentar clareza e executabilidade. Ao final, atribua um score de risco geral de 0 a 10 (0 = sem risco relevante; 10 = risco altíssimo).
+
+Retorne APENAS um JSON válido (sem comentários, sem markdown, sem texto fora do JSON) com as seguintes chaves e estruturas:
+
+{
+  "riscos_identificados": [
+    {
+      "tipo": "juridico|financeiro|operacional|conformidade|reputacional|gramatical_redacional|outro",
+      "descricao": "string detalhando o risco, a origem no texto e o impacto prático",
+      "gravidade": "baixa|media|alta|critica"
+    }
+  ],
+  "clausulas_importantes": [
+    {
+      "titulo": "string (nome curto da cláusula/tema)",
+      "descricao": "string explicando o conteúdo e por que é crítica",
+      "atencao": "string com o que revisar/negociar, incluindo pontos específicos"
+    }
+  ],
+  "sugestoes_melhoria": [
+    "string com sugestão objetiva de melhoria"
+  ],
+  "score_risco": 0,
+  "resumo_executivo": "string com resumo geral (3 a 7 linhas)"
+}
+
+Regras de preenchimento:
+- Cite, sempre que possível, o trecho/cláusula de onde o risco vem (ex: "Cláusula X – ..." ou excerto curto entre aspas).
+- Liste os riscos em ordem decrescente de gravidade e impacto.
+- Em "clausulas_importantes", inclua cláusulas que afetam: responsabilidade, preço/pagamento, prazos, rescisão, multas, garantias, propriedade intelectual, confidencialidade, LGPD/privacidade, foro/lei aplicável, SLA, limitação de responsabilidade, indenização, força maior, subcontratação, não concorrência, exclusividade e alterações/renovações.
+- Em "sugestoes_melhoria", seja acionável: diga o que mudar e por quê; quando pertinente, inclua sugestão de redação alternativa curta.
+- Score (0 a 10): justifique implicitamente no resumo executivo. Use número inteiro ou uma casa decimal.
+- Se o contrato estiver incompleto, sinalize em "resumo_executivo" e aponte o que falta.
+- Se não houver riscos relevantes, preencha as chaves com arrays vazios e score baixo, explicando no resumo.
+
+Avisos importantes:
+- Não invente fatos nem presuma leis específicas sem indicação de jurisdição; quando não estiver clara, indique a incerteza e sugira confirmar o país/estado aplicável.
+- Não forneça aconselhamento jurídico definitivo; trate como análise de riscos, recomendando validação por advogado(a) responsável quando o risco for alto/crítico.
+- Evite citar artigos de lei específicos se não tiver certeza; prefira mencionar "exigências legais aplicáveis" (LGPD, anticorrupção, trabalhista, tributária).
+- Seja objetivo e não repita conteúdo. Não inclua texto fora do JSON.
+- Atenção a termos vagos ("prazo razoável", "conforme necessário", "a critério exclusivo"), inconsistências numéricas, lacunas, conflitos entre cláusulas e definições não utilizadas/ausentes.
+- Identifique erros gramaticais e de coesão que mudem sentido, gerem ambiguidade ou permitam dupla interpretação; priorize problemas com efeito jurídico.
+```
+
+---
+
+## Resumo das Alterações
+
+| Arquivo | Alteração |
 |---------|-----------|
-| `src/components/AppSidebar.tsx` | Reestruturar menus, adicionar submenus, remover Obrigacoes |
+| `src/components/ContractDetails/ContractObligations.tsx` | Corrigir SelectItem value="" para value="none" (linhas 429, 430, 436) |
+| `supabase/functions/analisar-contrato-ia/index.ts` | Substituir prompt simplificado pelo novo prompt detalhado |
 
-## Testes a Realizar
+---
 
-1. Verificar navegacao para todas as rotas
-2. Confirmar que menus colapsam/expandem corretamente
-3. Testar comportamento quando sidebar esta colapsada (modo icone)
-4. Validar que "Novo Contrato" abre modal ou navega corretamente
-5. Confirmar filtro de roles (Usuarios apenas para administrador)
+## Benefícios do Novo Prompt
+
+1. **Mais tipos de riscos**: Inclui conformidade, reputacional e gramatical/redacional
+2. **Maior precisão**: Exige citação do trecho/cláusula específica
+3. **Ordenação por gravidade**: Riscos listados do mais grave ao menos grave
+4. **Cobertura ampliada de cláusulas**: LGPD, SLA, força maior, subcontratação, etc.
+5. **Sugestões acionáveis**: Com indicação de redação alternativa
+6. **Tratamento de contratos incompletos**: Sinalização automática
+7. **Identificação de erros gramaticais**: Com foco em ambiguidades jurídicas
+8. **Avisos de responsabilidade**: Recomendação de validação por advogado
