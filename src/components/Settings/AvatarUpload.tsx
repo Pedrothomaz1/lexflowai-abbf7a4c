@@ -79,7 +79,8 @@ export function AvatarUpload({
         .from("contratos-documentos")
         .getPublicUrl(fileName);
 
-      const publicUrl = urlData.publicUrl;
+      // Add cache-buster to force browser to reload the image
+      const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
 
       // Atualiza profile
       const { error: updateError } = await supabase
