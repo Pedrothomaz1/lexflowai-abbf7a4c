@@ -102,14 +102,33 @@ const ContratoDetalhes = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showAnalise, setShowAnalise] = useState(false);
   const [showFinanceModal, setShowFinanceModal] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [userAlreadyApproved, setUserAlreadyApproved] = useState(false);
 
   useEffect(() => {
-    if (id) {
-      fetchContrato();
-      fetchAprovacoes();
-      fetchAnalise();
-    }
+    const initData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setCurrentUserId(user.id);
+      }
+      if (id) {
+        fetchContrato();
+        fetchAprovacoes();
+        fetchAnalise();
+      }
+    };
+    initData();
   }, [id]);
+
+  // Verificar se usuário atual já aprovou
+  useEffect(() => {
+    if (currentUserId && aprovacoes.length > 0) {
+      const alreadyApproved = aprovacoes.some(a => a.aprovador_id === currentUserId);
+      setUserAlreadyApproved(alreadyApproved);
+    } else {
+      setUserAlreadyApproved(false);
+    }
+  }, [currentUserId, aprovacoes]);
 
   const fetchContrato = async () => {
     if (!id) {
@@ -279,6 +298,17 @@ const ContratoDetalhes = () => {
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+
+    // Verificar se o usuário já aprovou este contrato
+    const existingApproval = aprovacoes.find(a => a.aprovador_id === user.id);
+    if (existingApproval) {
+      toast({
+        variant: "destructive",
+        title: "Aprovação já registrada",
+        description: "Você já registrou uma aprovação para este contrato.",
+      });
+      return;
+    }
 
     const { error } = await supabase.from("contract_approvals").insert([
       {
@@ -794,7 +824,7 @@ const ContratoDetalhes = () => {
 
           {/* Approval Card */}
           <StaggerItem>
-            {canApprove ? (
+            {canApprove && !userAlreadyApproved ? (
               <AnimatedCard>
                 <AnimatedCardHeader>
                   <h3 className="text-lg font-semibold">Nova Aprovação</h3>
@@ -836,6 +866,20 @@ const ContratoDetalhes = () => {
                     <CheckCircle2 className="h-4 w-4 mr-2" />
                     Registrar Aprovação
                   </AnimatedButton>
+                </AnimatedCardContent>
+              </AnimatedCard>
+            ) : canApprove && userAlreadyApproved ? (
+              <AnimatedCard className="border-primary/30 bg-primary/5">
+                <AnimatedCardHeader>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5 text-primary" />
+                    <h3 className="text-lg font-semibold text-primary">Aprovação Registrada</h3>
+                  </div>
+                </AnimatedCardHeader>
+                <AnimatedCardContent>
+                  <p className="text-sm text-muted-foreground">
+                    Você já registrou sua aprovação para este contrato. Cada usuário pode aprovar apenas uma vez.
+                  </p>
                 </AnimatedCardContent>
               </AnimatedCard>
             ) : (

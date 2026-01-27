@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export type ModuloAtivo = "contratos" | "servicos" | "ambos";
@@ -12,8 +12,18 @@ interface ModuloContextType {
 
 const ModuloContext = createContext<ModuloContextType | undefined>(undefined);
 
+// Chave para persistir no localStorage
+const MODULO_STORAGE_KEY = "lexflow_modulo_ativo";
+
 export function ModuloProvider({ children }: { children: ReactNode }) {
-  const [moduloAtivo, setModuloAtivo] = useState<ModuloAtivo>("contratos");
+  const [moduloAtivo, setModuloAtivoState] = useState<ModuloAtivo>(() => {
+    // Tentar recuperar do localStorage
+    const stored = localStorage.getItem(MODULO_STORAGE_KEY);
+    if (stored === "contratos" || stored === "servicos") {
+      return stored;
+    }
+    return "contratos";
+  });
   const [moduloPadrao, setModuloPadrao] = useState<ModuloAtivo>("contratos");
   const [loading, setLoading] = useState(true);
 
@@ -39,9 +49,12 @@ export function ModuloProvider({ children }: { children: ReactNode }) {
       if (!error && data?.modulo_padrao) {
         const modulo = data.modulo_padrao as ModuloAtivo;
         setModuloPadrao(modulo);
-        // Se não for "ambos", definir o módulo ativo automaticamente
-        if (modulo !== "ambos") {
-          setModuloAtivo(modulo);
+        
+        // Se não houver valor no localStorage e não for "ambos", definir o módulo ativo
+        const storedModulo = localStorage.getItem(MODULO_STORAGE_KEY);
+        if (!storedModulo && modulo !== "ambos") {
+          setModuloAtivoState(modulo);
+          localStorage.setItem(MODULO_STORAGE_KEY, modulo);
         }
       }
     } catch (error) {
@@ -50,6 +63,14 @@ export function ModuloProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     }
   };
+
+  // Wrapper para setModuloAtivo que também persiste no localStorage
+  const setModuloAtivo = useCallback((modulo: ModuloAtivo) => {
+    if (modulo === "contratos" || modulo === "servicos") {
+      setModuloAtivoState(modulo);
+      localStorage.setItem(MODULO_STORAGE_KEY, modulo);
+    }
+  }, []);
 
   return (
     <ModuloContext.Provider value={{ moduloAtivo, moduloPadrao, setModuloAtivo, loading }}>
