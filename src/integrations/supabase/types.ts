@@ -410,6 +410,56 @@ export type Database = {
           },
         ]
       }
+      contract_redlines: {
+        Row: {
+          alteracoes: Json | null
+          conteudo_marcado: string
+          conteudo_original: string
+          contrato_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          versao: number
+        }
+        Insert: {
+          alteracoes?: Json | null
+          conteudo_marcado: string
+          conteudo_original: string
+          contrato_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          versao?: number
+        }
+        Update: {
+          alteracoes?: Json | null
+          conteudo_marcado?: string
+          conteudo_original?: string
+          contrato_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          versao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_redlines_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_signatures: {
         Row: {
           completed_at: string | null

@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.enviar-notificacao-financeiro]
 verify_jwt = false
+
+[functions.extrair-dados-pdf]
+verify_jwt = true
