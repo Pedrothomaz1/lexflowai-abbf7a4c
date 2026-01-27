@@ -34,6 +34,7 @@ import {
   Tag,
   Hash,
   Paperclip,
+  History,
 } from "lucide-react";
 import { exportContratoDetalhePDF } from "@/utils/pdfExport";
 import { ContractComments } from "@/components/ContractComments";
@@ -53,8 +54,10 @@ import {
   ContractSupplierCard,
   ContractAttachments,
   ContractObligations,
+  ContractVersionHistory,
 } from "@/components/ContractDetails";
 import { FinanceNotificationModal } from "@/components/FinanceNotificationModal";
+import { useAuditLog } from "@/hooks/useAuditLog";
 
 type Contrato = {
   id: string;
@@ -90,6 +93,7 @@ const ContratoDetalhes = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { canApprove } = useUserRole();
+  const { logView, logApprove, logExport, logAnalyze } = useAuditLog();
   const [contrato, setContrato] = useState<Contrato | null>(null);
   const [aprovacoes, setAprovacoes] = useState<Aprovacao[]>([]);
   const [loading, setLoading] = useState(true);
@@ -901,10 +905,11 @@ const ContratoDetalhes = () => {
       {/* Tabs Section */}
       <FadeIn delay={0.3}>
         <Tabs defaultValue="aprovacoes" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
+          <TabsList className="grid w-full grid-cols-4 lg:w-[500px]">
             <TabsTrigger value="aprovacoes">Aprovações</TabsTrigger>
             <TabsTrigger value="assinaturas">Assinaturas</TabsTrigger>
             <TabsTrigger value="comentarios">Comentários</TabsTrigger>
+            <TabsTrigger value="versoes">Versões</TabsTrigger>
           </TabsList>
 
           <TabsContent value="aprovacoes">
@@ -980,6 +985,29 @@ const ContratoDetalhes = () => {
 
           <TabsContent value="comentarios">
             <ContractComments contratoId={contrato.id} />
+          </TabsContent>
+
+          <TabsContent value="versoes">
+            <AnimatedCard>
+              <AnimatedCardHeader>
+                <div className="flex items-center gap-2">
+                  <History className="h-5 w-5 text-primary" />
+                  <div>
+                    <h3 className="text-lg font-semibold">Histórico de Versões</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Versão atual: v{contrato.versao}
+                    </p>
+                  </div>
+                </div>
+              </AnimatedCardHeader>
+              <AnimatedCardContent>
+                <ContractVersionHistory
+                  contratoId={contrato.id}
+                  currentVersion={contrato.versao}
+                  onVersionRestored={fetchContrato}
+                />
+              </AnimatedCardContent>
+            </AnimatedCard>
           </TabsContent>
         </Tabs>
       </FadeIn>

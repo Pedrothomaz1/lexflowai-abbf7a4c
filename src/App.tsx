@@ -29,6 +29,7 @@ import Unidades from "./pages/Unidades";
 import EspecificacoesServico from "./pages/EspecificacoesServico";
 import SeletorModulo from "./pages/SeletorModulo";
 import Custos from "./pages/Custos";
+import AuditLogs from "./pages/AuditLogs";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -64,6 +65,7 @@ const App = () => (
               <Route path="/signature-settings" element={<ProtectedRoute><DashboardLayout><SignatureSettings /></DashboardLayout></ProtectedRoute>} />
               <Route path="/notification-settings" element={<ProtectedRoute><DashboardLayout><NotificationSettings /></DashboardLayout></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><DashboardLayout><Settings /></DashboardLayout></ProtectedRoute>} />
+              <Route path="/audit-logs" element={<ProtectedRoute><DashboardLayout><AuditLogs /></DashboardLayout></ProtectedRoute>} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
