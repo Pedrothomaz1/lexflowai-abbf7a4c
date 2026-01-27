@@ -426,14 +426,14 @@ export function ContractObligations({ contratoId }: ContractObligationsProps) {
                     <div className="space-y-2">
                       <Label>Responsável</Label>
                       <Select
-                        value={formData.responsavel_id}
-                        onValueChange={(v) => setFormData({ ...formData, responsavel_id: v })}
+                        value={formData.responsavel_id || "none"}
+                        onValueChange={(v) => setFormData({ ...formData, responsavel_id: v === "none" ? "" : v })}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Selecionar" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Nenhum</SelectItem>
+                          <SelectItem value="none">Nenhum</SelectItem>
                           {profiles.map(profile => (
                             <SelectItem key={profile.id} value={profile.id}>
                               {profile.full_name}
