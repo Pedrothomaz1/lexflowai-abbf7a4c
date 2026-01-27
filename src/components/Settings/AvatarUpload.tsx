@@ -65,7 +65,7 @@ export function AvatarUpload({
     try {
       // Gera nome único para o arquivo
       const fileExt = file.name.split(".").pop();
-      const fileName = `avatars/${userId}/avatar-${Date.now()}.${fileExt}`;
+      const fileName = `${userId}/avatars/avatar-${Date.now()}.${fileExt}`;
 
       // Upload para o storage
       const { error: uploadError } = await supabase.storage
