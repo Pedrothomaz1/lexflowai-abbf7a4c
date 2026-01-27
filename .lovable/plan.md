@@ -1,218 +1,136 @@
 
 
-# Plano: Limpeza da Base de Dados e Checklist de Producao
+# Plano: Teste de Autenticação HIBP + Configuração de URLs de Produção
 
-## Resumo da Situacao Atual
+## Visão Geral
 
-### Dados Encontrados no Banco
-
-| Tabela | Registros | Observacoes |
-|--------|-----------|-------------|
-| contratos | 76 | Maioria parece ser dados de teste (importados em lote) |
-| fornecedores | 201 | **Muitos duplicados** (8x Rogerio Yamanishi, 8x Helder Honorio, etc.) |
-| profiles | 1 | Apenas seu perfil (Pedro Eduardo Thomaz) |
-| user_roles | 1 | Seu usuario como administrador |
-| especificacoes_servico | 12 | Dados de configuracao |
-| contract_alerts | 7 | Alertas de contratos |
-| contract_approvals | 10 | Aprovacoes |
-| contract_analysis | 7 | Analises de IA |
-| uso_sistema | 6 | Registro de uso de tokens IA |
-| notification_preferences | 1 | Suas preferencias |
-| user_2fa_settings | 1 | Configuracao 2FA |
-| integracao_config | 1 | Sistema de Compras (inativo) |
-| Storage | 12 arquivos | 7 avatars + 5 outros documentos |
-
-### Problemas de Dados Identificados
-
-1. **Fornecedores duplicados**: Existem 20+ CNPJs repetidos com ate 8 copias cada
-2. **Contratos de teste**: Varios com titulos como "teste", "Jovem Aprendiz" repetido, etc.
-3. **Dados orfaos**: Contract analysis referenciando contratos que podem nao existir mais
+Este plano cobre duas tarefas principais:
+1. **Teste do fluxo de cadastro/login** para validar que a verificação HIBP (Have I Been Pwned) está funcionando
+2. **Configuração das URLs de redirect** para o domínio de produção após publicação
 
 ---
 
-## Secao 1: Scripts de Limpeza (Opcional)
+## Parte 1: Teste do Fluxo de Autenticação com HIBP
 
-**IMPORTANTE**: Antes de executar, voce deve decidir se quer manter os dados atuais ou comecar do zero.
+### Cenários de Teste
 
-### Opcao A: Limpeza Completa (Recomendado para producao limpa)
+#### Teste 1: Cadastro com Senha Vazada
+1. Acesse a página `/auth` e selecione a aba **Cadastro**
+2. Preencha os campos:
+   - Nome: `Teste HIBP`
+   - Email: use um email de teste válido
+   - Senha: `password123` (senha comum e vazada)
+3. Clique em **Criar conta**
+4. **Resultado esperado**: Erro indicando que a senha foi comprometida
 
-```sql
--- CUIDADO: Isso remove TODOS os dados de negocio
--- Execute na ordem para respeitar foreign keys
+#### Teste 2: Cadastro com Senha Segura
+1. Acesse a página `/auth` e selecione a aba **Cadastro**
+2. Preencha os campos:
+   - Nome: `Usuário Teste`
+   - Email: email de teste válido
+   - Senha: Senha forte e única (ex: `Lex$Flow2026!Secure`)
+3. Clique em **Criar conta**
+4. **Resultado esperado**: Conta criada com sucesso
 
--- 1. Limpar tabelas dependentes primeiro
-DELETE FROM contract_analysis;
-DELETE FROM contract_alerts;
-DELETE FROM contract_approvals;
-DELETE FROM contract_comments;
-DELETE FROM contract_history;
-DELETE FROM contract_versions;
-DELETE FROM contract_redlines;
-DELETE FROM contract_attachments;
-DELETE FROM contract_signatures;
-DELETE FROM contract_obligations;
-DELETE FROM negotiation_metrics;
-
--- 2. Limpar contratos
-DELETE FROM contratos;
-
--- 3. Limpar fornecedores e relacionados
-DELETE FROM fornecedor_anexos;
-DELETE FROM fornecedor_categorias_servico;
-DELETE FROM fornecedores;
-
--- 4. Limpar servicos
-DELETE FROM servico_historico;
-DELETE FROM servicos_periodicos;
-
--- 5. Limpar outros dados de teste
-DELETE FROM solicitacoes_compras;
-DELETE FROM uso_sistema;
-DELETE FROM compliance_logs;
-DELETE FROM audit_logs;
-
--- 6. Opcional: Manter especificacoes_servico e unidades como dados mestres
--- DELETE FROM especificacoes_servico;
--- DELETE FROM unidades;
-```
-
-### Opcao B: Limpeza Seletiva (Remover apenas duplicados)
-
-```sql
--- Remove fornecedores duplicados mantendo o mais antigo de cada CNPJ
-DELETE FROM fornecedores 
-WHERE id NOT IN (
-  SELECT MIN(id) 
-  FROM fornecedores 
-  GROUP BY cnpj
-);
-
--- Remove contratos com titulo "teste"
-DELETE FROM contratos WHERE LOWER(titulo) = 'teste';
-```
+#### Teste 3: Login com Google OAuth
+1. Acesse `/auth` e clique em **Entrar com Google**
+2. Complete o fluxo de autenticação do Google
+3. **Resultado esperado**: Redirecionamento para `/auth/callback` e depois para o módulo correto
 
 ---
 
-## Secao 2: Problemas de Seguranca para Corrigir
+## Parte 2: Configuração de URLs de Redirect para Produção
 
-### 2.1 RLS Policy - contract_analysis (ERRO)
+### Situação Atual
+- **Preview URL**: `https://id-preview--9b5e925d-516b-4c9a-8bf5-96cde5168edd.lovable.app`
+- **Published URL**: Ainda não publicado
 
-A tabela `contract_analysis` expoe analises de risco para qualquer usuario autenticado.
+### Passos Após Publicação
 
-```sql
--- Corrigir politica: apenas consultores e admins podem ver analises
-DROP POLICY IF EXISTS "Authenticated users can view analysis" ON contract_analysis;
+Após publicar a aplicação, você terá uma URL de produção (exemplo: `https://lexflowai.lovable.app` ou domínio customizado). Para que a autenticação funcione corretamente em produção, será necessário:
 
-CREATE POLICY "Authorized users can view analysis"
-ON contract_analysis
-FOR SELECT
-USING (
-  has_any_role(auth.uid(), ARRAY['consultoria_juridica'::app_role, 'administrador'::app_role])
-  OR EXISTS (
-    SELECT 1 FROM contratos 
-    WHERE contratos.id = contract_analysis.contrato_id 
-    AND contratos.created_by = auth.uid()
-  )
-);
-```
+#### 1. Adicionar URLs de Redirect no Backend
 
-### 2.2 RLS Policy - profiles (AVISO)
+Abra o painel do backend (Cloud View > Users > Auth Settings) e adicione as seguintes URLs:
 
-Profiles esta visivel para todos usuarios autenticados. Isso e aceitavel para mostrar nomes em comentarios, mas pode ser restringido.
+| Tipo | URL |
+|------|-----|
+| Site URL | `https://SEU-DOMINIO-PRODUCAO` |
+| Redirect URLs | `https://SEU-DOMINIO-PRODUCAO/auth/callback` |
 
-```sql
--- Opcional: Restringir campos sensiveis
--- Nao e critico pois ja limitamos a usuarios autenticados
+#### 2. Atualizar Google OAuth (se aplicável)
+
+Se você usa login com Google, também precisa atualizar no **Google Cloud Console**:
+
+1. Acesse [Google Cloud Console](https://console.cloud.google.com)
+2. Vá em **APIs & Services > Credentials**
+3. Edite o OAuth Client ID do projeto
+4. Em **Authorized JavaScript Origins**, adicione:
+   - `https://SEU-DOMINIO-PRODUCAO`
+5. Em **Authorized Redirect URIs**, adicione:
+   - `https://dxllojjazxizuylbmezc.supabase.co/auth/v1/callback`
+
+### Fluxo de Autenticação Atual
+
+```text
++------------------+     +-------------------+     +------------------+
+|   /auth          | --> | Supabase Auth     | --> | /auth/callback   |
+|   (Login/Signup) |     | (OAuth/Email)     |     | (Roteamento)     |
++------------------+     +-------------------+     +------------------+
+                                                           |
+                    +--------------------------------------+
+                    |
+     +--------------v--------------+
+     |      Verifica Módulo        |
+     |      (user_roles table)     |
+     +-----------------------------+
+                    |
+       +------------+------------+
+       |            |            |
+       v            v            v
+  /dashboard   /servicos   /seletor-modulo
+  (contratos)  (serviços)  (ambos)
 ```
 
 ---
 
-## Secao 3: Configuracoes Obrigatorias para Producao
+## Resumo de Ações
 
-### 3.1 Leaked Password Protection
+### Imediato (Teste HIBP)
+- Testar cadastro com senha vazada (`password123`)
+- Testar cadastro com senha segura
+- Testar login com credenciais válidas
 
-Voce deve habilitar a protecao contra senhas vazadas no painel de autenticacao.
-
-### 3.2 URLs de Redirect
-
-Verificar se as URLs de redirect estao configuradas para o dominio de producao.
-
-### 3.3 Secrets Configurados
-
-| Secret | Status |
-|--------|--------|
-| CRON_SECRET | OK |
-| LOVABLE_API_KEY | OK |
-| RESEND_API_KEY | OK |
-| WEBHOOK_SECRET | OK |
-
-### 3.4 Edge Functions
-
-11 edge functions encontradas:
-- analisar-contrato / analisar-contrato-ia
-- enviar-notificacao-email / whatsapp / financeiro
-- enviar-solicitacao-compras
-- enviar-valores-contrato
-- extrair-dados-pdf
-- signature-webhook
-- totp-auth
-- verificar-alertas
+### Após Publicação
+1. Anotar a URL de produção gerada
+2. Adicionar URL de produção nas configurações de Auth do backend
+3. Atualizar Google Cloud Console com as novas URLs (se usar Google OAuth)
+4. Testar fluxo completo em produção
 
 ---
 
-## Secao 4: Checklist Pre-Producao
+## Detalhes Técnicos
 
-### Obrigatorio
+### Arquivos Relevantes de Autenticação
 
-| Item | Status | Acao |
-|------|--------|------|
-| Dados de teste removidos | Pendente | Executar scripts de limpeza |
-| RLS contract_analysis | Pendente | Aplicar nova politica |
-| URL Site configurada | Verificar | Backend Settings |
-| Redirect URLs | Verificar | Backend Settings |
-| Leaked Password Protection | Pendente | Habilitar em Auth Settings |
-| 2FA funcionando | OK | Implementado |
-| Cookie Banner LGPD | OK | Implementado |
-| Audit Logs | OK | Implementado |
+| Arquivo | Função |
+|---------|--------|
+| `src/pages/Auth.tsx` | Página de login/cadastro |
+| `src/pages/AuthCallback.tsx` | Processa redirect após autenticação |
+| `src/contexts/AuthContext.tsx` | Gerencia estado de sessão |
+| `src/components/ProtectedRoute.tsx` | Guarda rotas + verificação 2FA |
 
-### Recomendado
+### Callbacks de Autenticação Configurados
 
-| Item | Status | Acao |
-|------|--------|------|
-| Backup antes da limpeza | Pendente | Exportar dados se necessario |
-| Testes de login | Pendente | Testar Google + Email/Senha |
-| Testes de upload | OK | Avatar funcionando |
-| Remover duplicados fornecedores | Pendente | Script SQL |
+O código atual já usa `window.location.origin` para construir URLs dinâmicas:
 
----
+```typescript
+// Em Auth.tsx - Google OAuth
+redirectTo: `${window.location.origin}/auth/callback`
 
-## Secao Tecnica: Resumo das Alteracoes
+// Em Auth.tsx - Email Sign Up
+emailRedirectTo: `${window.location.origin}/auth/callback`
+```
 
-### Arquivos a Modificar
-
-Nenhum arquivo de codigo precisa ser alterado para producao.
-
-### Migrations SQL Necessarias
-
-1. **Correcao RLS contract_analysis**: Nova politica restritiva
-2. **Limpeza de dados**: Scripts DELETE (executar manualmente)
-
-### Ordem de Execucao
-
-1. Aprovar e executar limpeza de dados (se desejado)
-2. Aplicar correcao de RLS para contract_analysis
-3. Verificar configuracoes de Auth no painel
-4. Publicar aplicacao
-
----
-
-## Proximos Passos
-
-Apos sua aprovacao, posso:
-
-1. **Executar limpeza completa** - Remover todos dados de teste
-2. **Corrigir RLS** - Aplicar politica mais restritiva em contract_analysis
-3. **Manter dados** - Se preferir manter os dados atuais, apenas corrijo a seguranca
-
-Qual opcao voce prefere?
+Isso significa que o código **já é compatível** com qualquer domínio, desde que as URLs estejam configuradas no backend.
 
