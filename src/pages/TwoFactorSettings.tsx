@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { use2FA } from "@/hooks/use2FA";
@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Shield, ShieldCheck, ShieldOff, Smartphone, Copy, Check, Key, AlertTriangle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import QRCode from "qrcode";
 
 const TwoFactorSettings = () => {
   const navigate = useNavigate();
@@ -35,6 +36,8 @@ const TwoFactorSettings = () => {
   const [showDisableDialog, setShowDisableDialog] = useState(false);
   const [copiedSecret, setCopiedSecret] = useState(false);
   const [copiedBackupCodes, setCopiedBackupCodes] = useState(false);
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -45,6 +48,27 @@ const TwoFactorSettings = () => {
       fetchStatus();
     }
   }, [user, authLoading, navigate, fetchStatus]);
+
+  // Generate QR code locally when setupData changes
+  useEffect(() => {
+    if (setupData?.otpauthUrl && canvasRef.current) {
+      QRCode.toCanvas(canvasRef.current, setupData.otpauthUrl, {
+        width: 200,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#ffffff'
+        }
+      }).catch((err) => {
+        console.error('Error generating QR code:', err);
+        // Fallback to data URL
+        QRCode.toDataURL(setupData.otpauthUrl, {
+          width: 200,
+          margin: 2
+        }).then(setQrCodeDataUrl).catch(console.error);
+      });
+    }
+  }, [setupData?.otpauthUrl]);
 
   const handleCopySecret = async () => {
     if (setupData?.secret) {
@@ -175,11 +199,10 @@ const TwoFactorSettings = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex justify-center p-4 bg-white rounded-lg">
-                  <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(setupData.otpauthUrl)}`}
-                    alt="QR Code para 2FA"
-                    className="w-48 h-48"
-                  />
+                  <canvas ref={canvasRef} className="w-48 h-48" />
+                  {qrCodeDataUrl && !canvasRef.current && (
+                    <img src={qrCodeDataUrl} alt="QR Code para 2FA" className="w-48 h-48" />
+                  )}
                 </div>
                 
                 <Separator />
@@ -206,6 +229,9 @@ const TwoFactorSettings = () => {
                       )}
                     </Button>
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    Chave com {setupData.secret.length} caracteres Base32
+                  </p>
                 </div>
               </CardContent>
             </Card>
