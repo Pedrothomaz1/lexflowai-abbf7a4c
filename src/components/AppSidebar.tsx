@@ -14,6 +14,9 @@ import {
   Building2,
   Cog,
   Plus,
+  Briefcase,
+  FolderCog,
+  Monitor,
 } from "lucide-react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
@@ -21,7 +24,6 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -59,43 +61,98 @@ interface MenuItemType {
   subItems?: { title: string; url: string; icon: typeof LayoutDashboard }[];
 }
 
-// Menu items para módulo de Contratos
-const contratosMenuItems = {
-  principal: [
-    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: ["all"] },
-  ],
-  gestao: [
-    { 
-      title: "Contratos", 
-      url: "/contratos", 
-      icon: FileText, 
-      roles: ["all"],
-      subItems: [
-        { title: "Novo Contrato", url: "/contratos?novo=true", icon: Plus },
-      ]
-    },
-  ],
-  cadastro: [
-    { title: "Templates", url: "/templates", icon: FileStack, roles: ["all"] },
-    { title: "Fornecedores", url: "/fornecedores", icon: Users, roles: ["all"] },
-    { title: "Workflows", url: "/workflows", icon: GitBranch, roles: ["administrador"] },
-    { title: "Usuários", url: "/usuarios", icon: Shield, roles: ["administrador"] },
-  ],
-};
+interface MenuSectionType {
+  id: string;
+  title: string;
+  icon: typeof LayoutDashboard;
+  items: MenuItemType[];
+  defaultOpen?: boolean;
+}
 
-// Menu items para módulo de Serviços
-const servicosMenuItems = {
-  principal: [
-    { title: "Dashboard", url: "/servicos", icon: LayoutDashboard, roles: ["all"] },
-  ],
-  gestao: [] as MenuItemType[],
-  cadastro: [
-    { title: "Fornecedores", url: "/fornecedores", icon: Users, roles: ["all"] },
-    { title: "Unidades", url: "/unidades", icon: Building2, roles: ["all"] },
-    { title: "Especificações", url: "/especificacoes", icon: Cog, roles: ["all"] },
-    { title: "Usuários", url: "/usuarios", icon: Shield, roles: ["administrador"] },
-  ],
-};
+// Menu sections para módulo de Contratos
+const contratosMenuSections: MenuSectionType[] = [
+  {
+    id: "principal",
+    title: "Principal",
+    icon: LayoutDashboard,
+    defaultOpen: true,
+    items: [
+      { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: ["all"] },
+    ],
+  },
+  {
+    id: "gestao",
+    title: "Gestão",
+    icon: Briefcase,
+    defaultOpen: true,
+    items: [
+      { 
+        title: "Contratos", 
+        url: "/contratos", 
+        icon: FileText, 
+        roles: ["all"],
+        subItems: [
+          { title: "Novo Contrato", url: "/contratos?novo=true", icon: Plus },
+        ]
+      },
+    ],
+  },
+  {
+    id: "cadastro",
+    title: "Cadastro",
+    icon: FolderCog,
+    defaultOpen: false,
+    items: [
+      { title: "Templates", url: "/templates", icon: FileStack, roles: ["all"] },
+      { title: "Fornecedores", url: "/fornecedores", icon: Users, roles: ["all"] },
+      { title: "Workflows", url: "/workflows", icon: GitBranch, roles: ["administrador"] },
+      { title: "Usuários", url: "/usuarios", icon: Shield, roles: ["administrador"] },
+    ],
+  },
+  {
+    id: "sistema",
+    title: "Sistema",
+    icon: Monitor,
+    defaultOpen: false,
+    items: [
+      { title: "Configurações", url: "/settings", icon: Settings, roles: ["all"] },
+    ],
+  },
+];
+
+// Menu sections para módulo de Serviços
+const servicosMenuSections: MenuSectionType[] = [
+  {
+    id: "principal",
+    title: "Principal",
+    icon: LayoutDashboard,
+    defaultOpen: true,
+    items: [
+      { title: "Dashboard", url: "/servicos", icon: LayoutDashboard, roles: ["all"] },
+    ],
+  },
+  {
+    id: "cadastro",
+    title: "Cadastro",
+    icon: FolderCog,
+    defaultOpen: true,
+    items: [
+      { title: "Fornecedores", url: "/fornecedores", icon: Users, roles: ["all"] },
+      { title: "Unidades", url: "/unidades", icon: Building2, roles: ["all"] },
+      { title: "Especificações", url: "/especificacoes", icon: Cog, roles: ["all"] },
+      { title: "Usuários", url: "/usuarios", icon: Shield, roles: ["administrador"] },
+    ],
+  },
+  {
+    id: "sistema",
+    title: "Sistema",
+    icon: Monitor,
+    defaultOpen: false,
+    items: [
+      { title: "Configurações", url: "/settings", icon: Settings, roles: ["all"] },
+    ],
+  },
+];
 
 const roleLabels: Record<string, string> = {
   administrador: "Administrador",
@@ -113,8 +170,20 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const [userEmail, setUserEmail] = useState<string>("");
   const [userName, setUserName] = useState<string>("");
-  const [gestaoOpen, setGestaoOpen] = useState(true);
-  const [cadastroOpen, setCadastroOpen] = useState(false);
+  
+  const menuSections = moduloAtivo === "contratos" ? contratosMenuSections : servicosMenuSections;
+  
+  // Initialize section states based on current route and defaults
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    menuSections.forEach(section => {
+      const hasActiveItem = section.items.some(item => 
+        location.pathname === item.url.split("?")[0]
+      );
+      initial[section.id] = hasActiveItem || section.defaultOpen || false;
+    });
+    return initial;
+  });
 
   useEffect(() => {
     const getUser = async () => {
@@ -131,6 +200,18 @@ export function AppSidebar() {
     };
     getUser();
   }, []);
+
+  // Auto-expand section when navigating to a route within it
+  useEffect(() => {
+    menuSections.forEach(section => {
+      const hasActiveItem = section.items.some(item => 
+        location.pathname === item.url.split("?")[0]
+      );
+      if (hasActiveItem && !openSections[section.id]) {
+        setOpenSections(prev => ({ ...prev, [section.id]: true }));
+      }
+    });
+  }, [location.pathname]);
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -151,7 +232,9 @@ export function AppSidebar() {
     navigate(novoModulo === "contratos" ? "/dashboard" : "/servicos");
   };
 
-  const menuItems = moduloAtivo === "contratos" ? contratosMenuItems : servicosMenuItems;
+  const toggleSection = (sectionId: string) => {
+    setOpenSections(prev => ({ ...prev, [sectionId]: !prev[sectionId] }));
+  };
 
   const filterByRole = (items: MenuItemType[]) =>
     items.filter((item) => item.roles.includes("all") || (userRole && item.roles.includes(userRole)));
@@ -217,149 +300,96 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-2 py-4 scrollbar-thin">
-        {/* Principal Group - Simple */}
-        <SidebarGroup className="mb-2">
-          {!collapsed && (
-            <SidebarGroupLabel className="px-3 text-xs font-medium text-[hsl(var(--lexflow-verde-claro)/0.6)] uppercase tracking-wider">
-              Principal
-            </SidebarGroupLabel>
-          )}
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {filterByRole(menuItems.principal).map((item) => (
-                <MenuItem 
-                  key={item.title} 
-                  item={item} 
-                  collapsed={collapsed} 
-                  isActive={isActive(item.url)}
-                  moduloAtivo={moduloAtivo}
-                />
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+      <SidebarContent className="px-2 py-3 scrollbar-thin">
+        {menuSections.map((section) => {
+          const filteredItems = filterByRole(section.items);
+          if (filteredItems.length === 0) return null;
 
-        {/* Gestão Group - Collapsible */}
-        {filterByRole(menuItems.gestao).length > 0 && (
-          <SidebarGroup className="mb-2">
-            <Collapsible open={gestaoOpen} onOpenChange={setGestaoOpen}>
-              {!collapsed && (
-                <CollapsibleTrigger className="w-full">
-                  <SidebarGroupLabel className="px-3 text-xs font-medium text-[hsl(var(--lexflow-verde-claro)/0.6)] uppercase tracking-wider flex items-center justify-between cursor-pointer hover:text-[hsl(var(--lexflow-verde-claro))] transition-colors">
-                    <span>Gestão</span>
-                    {gestaoOpen ? (
-                      <ChevronDown className="h-3.5 w-3.5" />
-                    ) : (
-                      <ChevronRight className="h-3.5 w-3.5" />
+          const SectionIcon = section.icon;
+          const isOpen = openSections[section.id];
+          const hasActiveItem = filteredItems.some(item => isActive(item.url));
+
+          return (
+            <SidebarGroup key={section.id} className="mb-1">
+              <Collapsible open={isOpen} onOpenChange={() => toggleSection(section.id)}>
+                <CollapsibleTrigger className="w-full group">
+                  <div 
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium uppercase tracking-wider transition-all duration-200",
+                      "cursor-pointer select-none",
+                      hasActiveItem 
+                        ? "text-[hsl(var(--lexflow-off-white))]" 
+                        : "text-[hsl(var(--lexflow-verde-claro)/0.6)]",
+                      "hover:text-[hsl(var(--lexflow-off-white))] hover:bg-sidebar-accent/30",
+                      collapsed && "justify-center"
                     )}
-                  </SidebarGroupLabel>
-                </CollapsibleTrigger>
-              )}
-              <CollapsibleContent>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {filterByRole(menuItems.gestao).map((item) => (
-                      <CollapsibleMenuItem 
-                        key={item.title} 
-                        item={item} 
-                        collapsed={collapsed} 
-                        isActive={isActive(item.url)}
-                        moduloAtivo={moduloAtivo}
-                      />
-                    ))}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </CollapsibleContent>
-            </Collapsible>
-            {/* Show items when collapsed */}
-            {collapsed && (
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {filterByRole(menuItems.gestao).map((item) => (
-                    <MenuItem 
-                      key={item.title} 
-                      item={item} 
-                      collapsed={collapsed} 
-                      isActive={isActive(item.url)}
-                      moduloAtivo={moduloAtivo}
-                    />
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            )}
-          </SidebarGroup>
-        )}
-
-        {/* Cadastro Group - Collapsible */}
-        {filterByRole(menuItems.cadastro).length > 0 && (
-          <SidebarGroup className="mb-2">
-            <Collapsible open={cadastroOpen} onOpenChange={setCadastroOpen}>
-              {!collapsed && (
-                <CollapsibleTrigger className="w-full">
-                  <SidebarGroupLabel className="px-3 text-xs font-medium text-[hsl(var(--lexflow-verde-claro)/0.6)] uppercase tracking-wider flex items-center justify-between cursor-pointer hover:text-[hsl(var(--lexflow-verde-claro))] transition-colors">
-                    <span>Cadastro</span>
-                    {cadastroOpen ? (
-                      <ChevronDown className="h-3.5 w-3.5" />
-                    ) : (
-                      <ChevronRight className="h-3.5 w-3.5" />
+                  >
+                    <SectionIcon className={cn(
+                      "h-4 w-4 shrink-0 transition-colors",
+                      hasActiveItem && moduloAtivo === "contratos" && "text-[hsl(var(--lexflow-verde-principal))]",
+                      hasActiveItem && moduloAtivo === "servicos" && "text-[hsl(var(--lexflow-mostarda))]"
+                    )} />
+                    {!collapsed && (
+                      <>
+                        <span className="flex-1 text-left">{section.title}</span>
+                        <div className="transition-transform duration-200">
+                          {isOpen ? (
+                            <ChevronDown className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100" />
+                          ) : (
+                            <ChevronRight className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100" />
+                          )}
+                        </div>
+                      </>
                     )}
-                  </SidebarGroupLabel>
+                  </div>
                 </CollapsibleTrigger>
-              )}
-              <CollapsibleContent>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {filterByRole(menuItems.cadastro).map((item) => (
-                      <MenuItem 
-                        key={item.title} 
-                        item={item} 
-                        collapsed={collapsed} 
-                        isActive={isActive(item.url)}
-                        moduloAtivo={moduloAtivo}
-                      />
-                    ))}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </CollapsibleContent>
-            </Collapsible>
-            {/* Show items when collapsed */}
-            {collapsed && (
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {filterByRole(menuItems.cadastro).map((item) => (
-                    <MenuItem 
-                      key={item.title} 
-                      item={item} 
-                      collapsed={collapsed} 
-                      isActive={isActive(item.url)}
-                      moduloAtivo={moduloAtivo}
-                    />
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            )}
-          </SidebarGroup>
-        )}
+                
+                <CollapsibleContent className="overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
+                  <SidebarGroupContent className={cn(!collapsed && "mt-1")}>
+                    <SidebarMenu>
+                      {filteredItems.map((item) => (
+                        item.subItems && item.subItems.length > 0 ? (
+                          <CollapsibleMenuItem 
+                            key={item.title} 
+                            item={item} 
+                            collapsed={collapsed} 
+                            isActive={isActive(item.url)}
+                            moduloAtivo={moduloAtivo}
+                          />
+                        ) : (
+                          <MenuItem 
+                            key={item.title} 
+                            item={item} 
+                            collapsed={collapsed} 
+                            isActive={isActive(item.url)}
+                            moduloAtivo={moduloAtivo}
+                          />
+                        )
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
 
-        {/* Sistema Group */}
-        <SidebarGroup>
-          {!collapsed && (
-            <SidebarGroupLabel className="px-3 text-xs font-medium text-[hsl(var(--lexflow-verde-claro)/0.6)] uppercase tracking-wider">
-              Sistema
-            </SidebarGroupLabel>
-          )}
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <MenuItem 
-                item={{ title: "Configurações", url: "/settings", icon: Settings, roles: ["all"] }} 
-                collapsed={collapsed} 
-                isActive={isActive("/settings")}
-                moduloAtivo={moduloAtivo}
-              />
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+                {/* Show icons only when collapsed */}
+                {collapsed && (
+                  <SidebarGroupContent className="mt-1">
+                    <SidebarMenu>
+                      {filteredItems.map((item) => (
+                        <MenuItem 
+                          key={item.title} 
+                          item={item} 
+                          collapsed={collapsed} 
+                          isActive={isActive(item.url)}
+                          moduloAtivo={moduloAtivo}
+                        />
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                )}
+              </Collapsible>
+            </SidebarGroup>
+          );
+        })}
       </SidebarContent>
 
       {/* Footer with User */}
@@ -466,7 +496,8 @@ function MenuItem({ item, collapsed, isActive, moduloAtivo }: MenuItemProps) {
             isActive
               ? cn(activeStyles, "font-medium")
               : "text-[hsl(var(--lexflow-off-white)/0.8)]",
-            collapsed && "justify-center px-2"
+            collapsed && "justify-center px-2",
+            !collapsed && "ml-2"
           )}
         >
           <Icon className={cn("h-4 w-4 shrink-0", isActive && iconActiveColor)} />
@@ -504,55 +535,56 @@ function CollapsibleMenuItem({ item, collapsed, isActive, moduloAtivo }: Collaps
   return (
     <SidebarMenuItem>
       <Collapsible open={open} onOpenChange={setOpen}>
-        <CollapsibleTrigger asChild>
-          <button
-            className={cn(
-              "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-200",
-              "hover:bg-sidebar-accent/50",
-              isActive
-                ? cn(activeStyles, "font-medium")
-                : "text-[hsl(var(--lexflow-off-white)/0.8)]",
-              collapsed && "justify-center px-2"
-            )}
-            onClick={(e) => {
-              if (!collapsed) {
-                // Navigate to main URL when clicking the item
-                navigate(item.url.split("?")[0]);
-              }
-            }}
-          >
-            <Icon className={cn("h-4 w-4 shrink-0", isActive && iconActiveColor)} />
-            {!collapsed && (
-              <>
-                <span className="flex-1 text-left">{item.title}</span>
-                <span 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setOpen(!open);
-                  }}
-                  className="p-1 hover:bg-sidebar-accent rounded"
-                >
-                  {open ? (
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  ) : (
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  )}
-                </span>
-              </>
-            )}
-          </button>
-        </CollapsibleTrigger>
+        <div className={cn(!collapsed && "ml-2")}>
+          <CollapsibleTrigger asChild>
+            <button
+              className={cn(
+                "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-200",
+                "hover:bg-sidebar-accent/50",
+                isActive
+                  ? cn(activeStyles, "font-medium")
+                  : "text-[hsl(var(--lexflow-off-white)/0.8)]",
+                collapsed && "justify-center px-2"
+              )}
+              onClick={(e) => {
+                if (!collapsed) {
+                  navigate(item.url.split("?")[0]);
+                }
+              }}
+            >
+              <Icon className={cn("h-4 w-4 shrink-0", isActive && iconActiveColor)} />
+              {!collapsed && (
+                <>
+                  <span className="flex-1 text-left">{item.title}</span>
+                  <span 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpen(!open);
+                    }}
+                    className="p-1 hover:bg-sidebar-accent rounded transition-colors"
+                  >
+                    {open ? (
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    ) : (
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    )}
+                  </span>
+                </>
+              )}
+            </button>
+          </CollapsibleTrigger>
+        </div>
         {!collapsed && (
-          <CollapsibleContent>
-            <div className="ml-4 mt-1 space-y-1 border-l border-sidebar-border pl-3">
+          <CollapsibleContent className="overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
+            <div className="ml-6 mt-1 space-y-0.5 border-l-2 border-sidebar-border/50 pl-3">
               {item.subItems.map((subItem) => (
                 <NavLink
                   key={subItem.title}
                   to={subItem.url}
                   className={cn(
-                    "flex items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors",
+                    "flex items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-all duration-200",
                     "hover:bg-sidebar-accent/50 text-[hsl(var(--lexflow-off-white)/0.7)]",
-                    "hover:text-[hsl(var(--lexflow-off-white))]"
+                    "hover:text-[hsl(var(--lexflow-off-white))] hover:translate-x-0.5"
                   )}
                 >
                   <subItem.icon className="h-3.5 w-3.5" />
