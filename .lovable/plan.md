@@ -1,271 +1,295 @@
 
-# Plano: Avatar de Usuário, Documentação API de Compras e Cadastro de Fornecedores Completo
+# Plano: Correção de Vulnerabilidades de Segurança RLS
 
-## Visão Geral
+## Contexto
 
-Este plano abrange três requisitos principais:
-1. Upload de foto de avatar no perfil do usuário
-2. Documentação sobre configuração da API do Sistema de Compras
-3. Melhorias no cadastro de fornecedores (tipos de serviço e anexos)
+O scan de segurança identificou várias tabelas com políticas RLS permissivas que usam `USING (true)` para operações SELECT, expondo dados sensíveis a qualquer pessoa sem autenticação.
 
----
+## Tabelas Afetadas e Dados Expostos
 
-## 1. Upload de Foto do Avatar
+| Tabela | Dados Sensíveis | Risco |
+|--------|-----------------|-------|
+| `profiles` | Email, telefone, nome completo | Exposição de PII |
+| `fornecedores` | Dados bancários (banco, agência, conta, PIX) | Exposição financeira |
+| `contratos` | Valores, termos contratuais | Exposição comercial |
+| `contract_analysis` | Análises de risco, cláusulas importantes | Exposição estratégica |
+| `contract_alerts` | Datas de vencimento, renovações | Exposição operacional |
 
-### Situação Atual
-A tabela `profiles` já possui a coluna `avatar_url` (text, nullable), mas a funcionalidade de upload não está implementada na página de configurações.
+## Correções Propostas
 
-### Implementação
+### 1. Tabela `profiles`
 
-#### Componente de Upload
-Criar componente `AvatarUpload.tsx` com:
-- Preview da foto atual ou iniciais do usuário
-- Botão para upload de nova imagem
-- Validação de tamanho (max 2MB) e tipo (JPG, PNG, WEBP)
-- Indicador de progresso durante upload
-- Opção de remover foto
-
-#### Modificação na Página Settings
-Adicionar seção de avatar no card "Perfil do Usuário":
-- Avatar clicável para trocar foto
-- Usar bucket existente `contratos-documentos` com pasta `avatars/{user_id}/`
-- Atualizar `avatar_url` na tabela `profiles`
-
-#### Exibição do Avatar
-Atualizar `GlobalHeader.tsx` e outros componentes para exibir o avatar do usuário logado quando disponível.
-
----
-
-## 2. Documentação - Configuração API Sistema de Compras
-
-Baseado na análise da imagem e do código da Edge Function `enviar-solicitacao-compras`, aqui está o que você precisa solicitar ao responsável pelo sistema de compras:
-
-### Informações Necessárias para Configurar a Integração
-
-| Item | Descrição | Exemplo |
-|------|-----------|---------|
-| **URL da API** | Endpoint que receberá as solicitações via POST | `https://api.seuserp.com.br/solicitacao-compra` |
-| **Tipo de Autenticação** | Como o sistema valida as requisições | API Key, Bearer Token ou Basic Auth |
-| **Chave de Autenticação** | Token/credencial para acesso à API | Chave alfanumérica fornecida pelo ERP |
-
-### Payload Enviado pelo LexFlow
-
-O sistema enviará um JSON com a seguinte estrutura:
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│                      PAYLOAD DA SOLICITAÇÃO                      │
-├─────────────────────────────────────────────────────────────────┤
-│ origem: "LEXFLOW"                                                │
-│ tipo: "SERVICO_PERIODICO"                                        │
-│ data_solicitacao: "2026-01-27T10:30:00.000Z"                     │
-│ urgencia: "normal" | "media" | "alta" | "critica"                │
-│                                                                  │
-│ servico: {                                                       │
-│   id, especificacao, categoria, itens_detalhados,                │
-│   quantidade, localizacao, data_vencimento, prioridade,          │
-│   orgao_regulador                                                │
-│ }                                                                │
-│                                                                  │
-│ unidade: {                                                       │
-│   nome, endereco, cidade, estado,                                │
-│   responsavel, email_responsavel                                 │
-│ }                                                                │
-│                                                                  │
-│ estimativas: {                                                   │
-│   valor_estimado, valor_ultima_execucao,                         │
-│   fornecedor_preferencial: { nome, cnpj, telefone }              │
-│ }                                                                │
-│                                                                  │
-│ historico: [ { data, valor, fornecedor, observacoes } ]          │
-│ observacoes: "texto livre"                                       │
-└─────────────────────────────────────────────────────────────────┘
+**Política Atual:**
+```sql
+Policy: "Authenticated users can view profiles"
+USING (auth.uid() IS NOT NULL)  -- Já está correto!
 ```
 
-### Headers da Requisição
-
-Dependendo do tipo de autenticação configurado:
-
-| Tipo | Header Enviado |
-|------|----------------|
-| API Key | `X-API-Key: {chave}` |
-| Bearer Token | `Authorization: Bearer {token}` |
-| Basic Auth | `Authorization: Basic {credenciais}` |
-
-### Resposta Esperada da API
-
-O sistema espera um JSON de retorno com:
-- `numero_solicitacao` ou `id`: Código da solicitação gerada
-- Status HTTP 2xx para sucesso
-
-### Próximos Passos para Configurar
-
-1. **Obter do responsável pelo ERP:**
-   - URL do endpoint de solicitação de compras
-   - Tipo de autenticação suportado
-   - Chave/token de acesso
-
-2. **Configurar no LexFlow (Configurações > Integrações):**
-   - Ativar a integração
-   - Informar a URL da API
-   - Selecionar tipo de autenticação
-
-3. **Configurar o secret no backend:**
-   - A chave de autenticação precisa ser cadastrada como secret `COMPRAS_API_KEY`
-   - Isso será solicitado pelo sistema quando necessário
+Esta tabela já exige autenticação. Nenhuma alteração necessária.
 
 ---
 
-## 3. Cadastro Completo de Fornecedores
+### 2. Tabela `fornecedores`
 
-### Alterações no Banco de Dados
+**Política Atual:**
+```sql
+Policy: "Users can view all fornecedores"
+FOR SELECT USING (true)  -- VULNERÁVEL
+```
 
-#### Novos Campos na Tabela `fornecedores`
-| Campo | Tipo | Descrição |
-|-------|------|-----------|
-| inscricao_estadual | text | Inscrição Estadual ou "Isento" |
-| inscricao_municipal | text | Inscrição Municipal |
-| website | text | Site do fornecedor |
-| contato_nome | text | Nome do contato principal |
-| contato_cargo | text | Cargo do contato |
-| contato_email | text | Email secundário/contato |
-| contato_telefone | text | Telefone direto |
-| porte_empresa | text | MEI, ME, EPP, Médio, Grande |
-| is_active | boolean | Status ativo/inativo |
+**Correção:**
+```sql
+DROP POLICY IF EXISTS "Users can view all fornecedores" ON fornecedores;
 
-#### Nova Tabela: `fornecedor_categorias_servico`
-Relacionamento N:N entre fornecedores e tipos de serviço:
-- `id` (uuid, PK)
-- `fornecedor_id` (uuid, FK)
-- `categoria` (text - segurança, manutenção, higiene, etc.)
-- `created_at` (timestamp)
-
-#### Nova Tabela: `fornecedor_anexos`
-Documentos do fornecedor:
-- `id` (uuid, PK)
-- `fornecedor_id` (uuid, FK)
-- `nome_arquivo` (text)
-- `arquivo_url` (text)
-- `tipo_documento` (text - Contrato Social, Certidões, etc.)
-- `tamanho_bytes` (bigint)
-- `uploaded_by` (uuid)
-- `created_at` (timestamp)
-
-### Novos Componentes
-
-| Arquivo | Descrição |
-|---------|-----------|
-| `src/components/Fornecedores/FornecedorForm.tsx` | Formulário completo com abas |
-| `src/components/Fornecedores/FornecedorAnexos.tsx` | Upload/gestão de anexos |
-| `src/components/Fornecedores/FornecedorCategorias.tsx` | Seleção de tipos de serviço |
-| `src/pages/FornecedorDetalhes.tsx` | Página de detalhes do fornecedor |
-
-### Reorganização do Formulário
-
-**Aba 1: Dados Básicos**
-- Nome/Razão Social, Tipo Pessoa, CNPJ/CPF
-- Inscrição Estadual, Inscrição Municipal
-- Porte da Empresa, Website, Status Ativo
-
-**Aba 2: Contato**
-- Email principal, Telefone principal
-- Contato secundário (nome, cargo, email, telefone)
-
-**Aba 3: Endereço**
-- Endereço, Cidade, Estado, CEP
-
-**Aba 4: Dados Bancários**
-- Banco, Agência, Conta, PIX, Titular
-
-**Aba 5: Tipos de Serviço**
-- Checkboxes com categorias: Segurança, Manutenção, Higiene, Infraestrutura, Veículos, Outros
-- Campo de observações/especialidades
-
-**Aba 6: Anexos**
-- Upload de documentos (Contrato Social, Certidões, Atestados)
-- Listagem com download e exclusão
+CREATE POLICY "Authenticated users can view fornecedores"
+ON fornecedores FOR SELECT
+TO authenticated
+USING (auth.uid() IS NOT NULL);
+```
 
 ---
 
-## Arquivos a Criar
+### 3. Tabela `contratos`
 
-| Arquivo | Descrição |
-|---------|-----------|
-| `src/components/Settings/AvatarUpload.tsx` | Componente de upload de avatar |
-| `src/components/Fornecedores/FornecedorForm.tsx` | Formulário completo |
-| `src/components/Fornecedores/FornecedorAnexos.tsx` | Gestão de anexos |
-| `src/components/Fornecedores/FornecedorCategorias.tsx` | Seleção de categorias |
-| `src/components/Fornecedores/index.ts` | Exports |
-| `src/pages/FornecedorDetalhes.tsx` | Página de detalhes |
+**Política Atual:**
+```sql
+Policy: "Users can view all contratos"
+FOR SELECT USING (true)  -- VULNERÁVEL
+```
 
-## Arquivos a Modificar
+**Correção:**
+```sql
+DROP POLICY IF EXISTS "Users can view all contratos" ON contratos;
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/pages/Settings.tsx` | Adicionar upload de avatar no card de perfil |
-| `src/pages/Fornecedores.tsx` | Usar novo formulário com abas |
-| `src/components/GlobalHeader.tsx` | Exibir avatar do usuário |
-| `src/App.tsx` | Adicionar rota `/fornecedores/:id` |
+CREATE POLICY "Authenticated users can view contratos"
+ON contratos FOR SELECT
+TO authenticated
+USING (auth.uid() IS NOT NULL);
+```
 
-## Migração SQL
+---
+
+### 4. Tabela `contract_analysis`
+
+**Política Atual:**
+```sql
+Policy: "Users can view all analysis"
+FOR SELECT USING (true)  -- VULNERÁVEL
+```
+
+**Correção:**
+```sql
+DROP POLICY IF EXISTS "Users can view all analysis" ON contract_analysis;
+
+CREATE POLICY "Authenticated users can view analysis"
+ON contract_analysis FOR SELECT
+TO authenticated
+USING (auth.uid() IS NOT NULL);
+```
+
+---
+
+### 5. Tabela `contract_alerts`
+
+**Política Atual:**
+```sql
+Policy: "Users can view all alerts"
+FOR SELECT USING (true)  -- VULNERÁVEL
+```
+
+**Correção:**
+```sql
+DROP POLICY IF EXISTS "Users can view all alerts" ON contract_alerts;
+
+CREATE POLICY "Authenticated users can view alerts"
+ON contract_alerts FOR SELECT
+TO authenticated
+USING (auth.uid() IS NOT NULL);
+```
+
+---
+
+## Outras Tabelas com `USING (true)` para SELECT
+
+Para manter consistência, as seguintes tabelas também serão corrigidas:
+
+| Tabela | Correção |
+|--------|----------|
+| `contract_history` | Exigir autenticação |
+| `contract_templates` | Exigir autenticação |
+| `contract_versions` | Exigir autenticação |
+| `contract_obligations` | Exigir autenticação |
+| `contract_attachments` | Exigir autenticação |
+| `contract_signatures` | Exigir autenticação |
+| `contract_redlines` | Manter (já verifica acesso ao contrato) |
+| `negotiation_metrics` | Exigir autenticação |
+| `unidades` | Exigir autenticação |
+| `especificacoes_servico` | Exigir autenticação |
+| `servicos_periodicos` | Exigir autenticação |
+| `servico_historico` | Exigir autenticação |
+| `fornecedor_categorias_servico` | Exigir autenticação |
+| `fornecedor_anexos` | Exigir autenticação |
+| `solicitacoes_compras` | Exigir autenticação |
+| `approval_workflows` | Exigir autenticação |
+| `data_retention_policies` | Exigir autenticação |
+
+---
+
+## Migração SQL Completa
 
 ```sql
--- Novos campos em fornecedores
-ALTER TABLE fornecedores ADD COLUMN inscricao_estadual text;
-ALTER TABLE fornecedores ADD COLUMN inscricao_municipal text;
-ALTER TABLE fornecedores ADD COLUMN website text;
-ALTER TABLE fornecedores ADD COLUMN contato_nome text;
-ALTER TABLE fornecedores ADD COLUMN contato_cargo text;
-ALTER TABLE fornecedores ADD COLUMN contato_email text;
-ALTER TABLE fornecedores ADD COLUMN contato_telefone text;
-ALTER TABLE fornecedores ADD COLUMN porte_empresa text;
-ALTER TABLE fornecedores ADD COLUMN is_active boolean DEFAULT true;
+-- =====================================================
+-- CORREÇÃO DE POLÍTICAS RLS - EXIGIR AUTENTICAÇÃO
+-- =====================================================
 
--- Tabela de categorias
-CREATE TABLE fornecedor_categorias_servico (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  fornecedor_id uuid REFERENCES fornecedores(id) ON DELETE CASCADE NOT NULL,
-  categoria text NOT NULL,
-  created_at timestamptz DEFAULT now(),
-  UNIQUE(fornecedor_id, categoria)
-);
+-- 1. FORNECEDORES
+DROP POLICY IF EXISTS "Users can view all fornecedores" ON fornecedores;
+CREATE POLICY "Authenticated users can view fornecedores"
+ON fornecedores FOR SELECT TO authenticated
+USING (auth.uid() IS NOT NULL);
 
--- Tabela de anexos
-CREATE TABLE fornecedor_anexos (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  fornecedor_id uuid REFERENCES fornecedores(id) ON DELETE CASCADE NOT NULL,
-  nome_arquivo text NOT NULL,
-  arquivo_url text NOT NULL,
-  tipo_documento text,
-  tamanho_bytes bigint,
-  uploaded_by uuid,
-  created_at timestamptz DEFAULT now()
-);
+-- 2. CONTRATOS
+DROP POLICY IF EXISTS "Users can view all contratos" ON contratos;
+CREATE POLICY "Authenticated users can view contratos"
+ON contratos FOR SELECT TO authenticated
+USING (auth.uid() IS NOT NULL);
 
--- RLS
-ALTER TABLE fornecedor_categorias_servico ENABLE ROW LEVEL SECURITY;
-ALTER TABLE fornecedor_anexos ENABLE ROW LEVEL SECURITY;
+-- 3. CONTRACT_ANALYSIS
+DROP POLICY IF EXISTS "Users can view all analysis" ON contract_analysis;
+CREATE POLICY "Authenticated users can view analysis"
+ON contract_analysis FOR SELECT TO authenticated
+USING (auth.uid() IS NOT NULL);
 
--- Políticas
-CREATE POLICY "View fornecedor categories" ON fornecedor_categorias_servico
-  FOR SELECT USING (true);
-CREATE POLICY "Manage fornecedor categories" ON fornecedor_categorias_servico
-  FOR ALL USING (has_any_role(auth.uid(), ARRAY['analista_juridico','consultoria_juridica','administrador']));
+-- 4. CONTRACT_ALERTS
+DROP POLICY IF EXISTS "Users can view all alerts" ON contract_alerts;
+CREATE POLICY "Authenticated users can view alerts"
+ON contract_alerts FOR SELECT TO authenticated
+USING (auth.uid() IS NOT NULL);
 
-CREATE POLICY "View fornecedor attachments" ON fornecedor_anexos
-  FOR SELECT USING (true);
-CREATE POLICY "Manage fornecedor attachments" ON fornecedor_anexos
-  FOR ALL USING (has_any_role(auth.uid(), ARRAY['analista_juridico','consultoria_juridica','administrador']));
+-- 5. CONTRACT_HISTORY
+DROP POLICY IF EXISTS "Users can view contract history" ON contract_history;
+CREATE POLICY "Authenticated users can view contract history"
+ON contract_history FOR SELECT TO authenticated
+USING (auth.uid() IS NOT NULL);
+
+-- 6. CONTRACT_TEMPLATES
+DROP POLICY IF EXISTS "Users can view all templates" ON contract_templates;
+CREATE POLICY "Authenticated users can view templates"
+ON contract_templates FOR SELECT TO authenticated
+USING (auth.uid() IS NOT NULL);
+
+-- 7. CONTRACT_VERSIONS
+DROP POLICY IF EXISTS "Users can view contract versions" ON contract_versions;
+CREATE POLICY "Authenticated users can view contract versions"
+ON contract_versions FOR SELECT TO authenticated
+USING (auth.uid() IS NOT NULL);
+
+-- 8. CONTRACT_OBLIGATIONS
+DROP POLICY IF EXISTS "Users can view all obligations" ON contract_obligations;
+CREATE POLICY "Authenticated users can view obligations"
+ON contract_obligations FOR SELECT TO authenticated
+USING (auth.uid() IS NOT NULL);
+
+-- 9. CONTRACT_ATTACHMENTS
+DROP POLICY IF EXISTS "Users can view all attachments" ON contract_attachments;
+CREATE POLICY "Authenticated users can view attachments"
+ON contract_attachments FOR SELECT TO authenticated
+USING (auth.uid() IS NOT NULL);
+
+-- 10. CONTRACT_SIGNATURES
+DROP POLICY IF EXISTS "Usuários podem visualizar assinaturas" ON contract_signatures;
+CREATE POLICY "Authenticated users can view signatures"
+ON contract_signatures FOR SELECT TO authenticated
+USING (auth.uid() IS NOT NULL);
+
+-- 11. NEGOTIATION_METRICS
+DROP POLICY IF EXISTS "Users can view all negotiation metrics" ON negotiation_metrics;
+CREATE POLICY "Authenticated users can view negotiation metrics"
+ON negotiation_metrics FOR SELECT TO authenticated
+USING (auth.uid() IS NOT NULL);
+
+-- 12. UNIDADES
+DROP POLICY IF EXISTS "Users can view all unidades" ON unidades;
+CREATE POLICY "Authenticated users can view unidades"
+ON unidades FOR SELECT TO authenticated
+USING (auth.uid() IS NOT NULL);
+
+-- 13. ESPECIFICACOES_SERVICO
+DROP POLICY IF EXISTS "Users can view all especificacoes" ON especificacoes_servico;
+CREATE POLICY "Authenticated users can view especificacoes"
+ON especificacoes_servico FOR SELECT TO authenticated
+USING (auth.uid() IS NOT NULL);
+
+-- 14. SERVICOS_PERIODICOS
+DROP POLICY IF EXISTS "Users can view all servicos" ON servicos_periodicos;
+CREATE POLICY "Authenticated users can view servicos"
+ON servicos_periodicos FOR SELECT TO authenticated
+USING (auth.uid() IS NOT NULL);
+
+-- 15. SERVICO_HISTORICO
+DROP POLICY IF EXISTS "Users can view all historico" ON servico_historico;
+CREATE POLICY "Authenticated users can view historico"
+ON servico_historico FOR SELECT TO authenticated
+USING (auth.uid() IS NOT NULL);
+
+-- 16. FORNECEDOR_CATEGORIAS_SERVICO
+DROP POLICY IF EXISTS "View fornecedor categories" ON fornecedor_categorias_servico;
+CREATE POLICY "Authenticated users can view fornecedor categories"
+ON fornecedor_categorias_servico FOR SELECT TO authenticated
+USING (auth.uid() IS NOT NULL);
+
+-- 17. FORNECEDOR_ANEXOS
+DROP POLICY IF EXISTS "View fornecedor attachments" ON fornecedor_anexos;
+CREATE POLICY "Authenticated users can view fornecedor attachments"
+ON fornecedor_anexos FOR SELECT TO authenticated
+USING (auth.uid() IS NOT NULL);
+
+-- 18. SOLICITACOES_COMPRAS
+DROP POLICY IF EXISTS "Users can view all solicitacoes" ON solicitacoes_compras;
+CREATE POLICY "Authenticated users can view solicitacoes"
+ON solicitacoes_compras FOR SELECT TO authenticated
+USING (auth.uid() IS NOT NULL);
+
+-- 19. APPROVAL_WORKFLOWS
+DROP POLICY IF EXISTS "Users can view workflows" ON approval_workflows;
+CREATE POLICY "Authenticated users can view workflows"
+ON approval_workflows FOR SELECT TO authenticated
+USING (auth.uid() IS NOT NULL);
+
+-- 20. DATA_RETENTION_POLICIES
+DROP POLICY IF EXISTS "Users can view retention policies" ON data_retention_policies;
+CREATE POLICY "Authenticated users can view retention policies"
+ON data_retention_policies FOR SELECT TO authenticated
+USING (auth.uid() IS NOT NULL);
 ```
 
 ---
 
-## Ordem de Implementação
+## Impacto da Mudança
 
-1. **Migração do banco** - Adicionar campos e tabelas
-2. **Avatar Upload** - Componente e integração em Settings
-3. **Componentes Fornecedor** - Form, Anexos, Categorias
-4. **Página Fornecedores** - Integrar novos componentes
-5. **Página Detalhes** - Criar visualização completa
-6. **Testes** - Validar upload de avatar e anexos, salvar categorias
+### Antes
+- Qualquer pessoa (mesmo sem login) podia acessar todos os dados
 
+### Depois
+- Apenas usuários autenticados podem visualizar os dados
+- O sistema já exige login para acessar as páginas, então o impacto para usuários legítimos é zero
+
+---
+
+## Verificação Pós-Migração
+
+Após aplicar a migração, será executado:
+1. Novo scan de segurança para confirmar correções
+2. Teste de acesso às páginas com usuário logado
+3. Verificação de que usuários não autenticados não conseguem acessar dados
+
+---
+
+## Resumo
+
+| Ação | Quantidade |
+|------|------------|
+| Políticas DROP | 20 |
+| Políticas CREATE | 20 |
+| Tabelas afetadas | 20 |
+| Tempo estimado | ~2 minutos |
