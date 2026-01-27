@@ -9,6 +9,7 @@ import { DataTable, DataTableColumn } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AIModelComparison } from "@/components/custos/AIModelComparison";
+import { ChartStylePreview } from "@/components/custos/ChartStylePreview";
 import { 
   DollarSign, 
   Cpu, 
@@ -235,6 +236,9 @@ const Custos = () => {
           </Select>
         </div>
       </FadeIn>
+
+      {/* Preview do Novo Estilo de Gráficos */}
+      <ChartStylePreview />
 
       {/* Stats Cards */}
       <StaggerContainer className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
