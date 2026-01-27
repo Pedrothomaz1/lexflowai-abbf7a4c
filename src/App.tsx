@@ -40,52 +40,54 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AuthProvider>
-        <ModuloProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/auth/callback" element={<AuthCallback />} />
-              <Route path="/privacidade" element={<Privacidade />} />
-              <Route path="/seletor-modulo" element={<ProtectedRoute><SeletorModulo /></ProtectedRoute>} />
-              <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout><Dashboard /></DashboardLayout></ProtectedRoute>} />
-              <Route path="/contratos" element={<ProtectedRoute><DashboardLayout><Contratos /></DashboardLayout></ProtectedRoute>} />
-              <Route path="/contratos/:id" element={<ProtectedRoute><DashboardLayout><ContratoDetalhes /></DashboardLayout></ProtectedRoute>} />
-              <Route path="/kanban" element={<ProtectedRoute><DashboardLayout><Kanban /></DashboardLayout></ProtectedRoute>} />
-              <Route path="/fornecedores" element={<ProtectedRoute><DashboardLayout><Fornecedores /></DashboardLayout></ProtectedRoute>} />
-              <Route path="/fornecedores/:id" element={<ProtectedRoute><DashboardLayout><FornecedorDetalhes /></DashboardLayout></ProtectedRoute>} />
-              <Route path="/usuarios" element={<ProtectedRoute><DashboardLayout><Usuarios /></DashboardLayout></ProtectedRoute>} />
-              <Route path="/templates" element={<ProtectedRoute><DashboardLayout><Templates /></DashboardLayout></ProtectedRoute>} />
-              <Route path="/alertas" element={<ProtectedRoute><DashboardLayout><Alertas /></DashboardLayout></ProtectedRoute>} />
-              <Route path="/calendario" element={<ProtectedRoute><DashboardLayout><Calendario /></DashboardLayout></ProtectedRoute>} />
-              <Route path="/obrigacoes" element={<ProtectedRoute><DashboardLayout><Obrigacoes /></DashboardLayout></ProtectedRoute>} />
-              <Route path="/workflows" element={<ProtectedRoute><DashboardLayout><WorkflowAprovacoes /></DashboardLayout></ProtectedRoute>} />
-              <Route path="/servicos" element={<ProtectedRoute><DashboardLayout><Servicos /></DashboardLayout></ProtectedRoute>} />
-              <Route path="/unidades" element={<ProtectedRoute><DashboardLayout><Unidades /></DashboardLayout></ProtectedRoute>} />
-              <Route path="/especificacoes" element={<ProtectedRoute><DashboardLayout><EspecificacoesServico /></DashboardLayout></ProtectedRoute>} />
-              <Route path="/custos" element={<ProtectedRoute><DashboardLayout><Custos /></DashboardLayout></ProtectedRoute>} />
-              <Route path="/signature-settings" element={<ProtectedRoute><DashboardLayout><SignatureSettings /></DashboardLayout></ProtectedRoute>} />
-              <Route path="/notification-settings" element={<ProtectedRoute><DashboardLayout><NotificationSettings /></DashboardLayout></ProtectedRoute>} />
-              <Route path="/settings" element={<ProtectedRoute><DashboardLayout><Settings /></DashboardLayout></ProtectedRoute>} />
-              <Route path="/settings/2fa" element={<ProtectedRoute><TwoFactorSettings /></ProtectedRoute>} />
-              <Route path="/audit-logs" element={<ProtectedRoute><DashboardLayout><AuditLogs /></DashboardLayout></ProtectedRoute>} />
-              <Route path="/relatorios" element={<ProtectedRoute><DashboardLayout><Relatorios /></DashboardLayout></ProtectedRoute>} />
-              <Route path="/compliance" element={<ProtectedRoute><DashboardLayout><ComplianceLGPD /></DashboardLayout></ProtectedRoute>} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-            <CookieBanner />
-          </BrowserRouter>
-        </ModuloProvider>
-      </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <AuthProvider>
+          <ModuloProvider>
+            <BrowserRouter>
+              <Toaster />
+              <Sonner />
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/auth/callback" element={<AuthCallback />} />
+                <Route path="/privacidade" element={<Privacidade />} />
+                <Route path="/seletor-modulo" element={<ProtectedRoute><SeletorModulo /></ProtectedRoute>} />
+                <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout><Dashboard /></DashboardLayout></ProtectedRoute>} />
+                <Route path="/contratos" element={<ProtectedRoute><DashboardLayout><Contratos /></DashboardLayout></ProtectedRoute>} />
+                <Route path="/contratos/:id" element={<ProtectedRoute><DashboardLayout><ContratoDetalhes /></DashboardLayout></ProtectedRoute>} />
+                <Route path="/kanban" element={<ProtectedRoute><DashboardLayout><Kanban /></DashboardLayout></ProtectedRoute>} />
+                <Route path="/fornecedores" element={<ProtectedRoute><DashboardLayout><Fornecedores /></DashboardLayout></ProtectedRoute>} />
+                <Route path="/fornecedores/:id" element={<ProtectedRoute><DashboardLayout><FornecedorDetalhes /></DashboardLayout></ProtectedRoute>} />
+                <Route path="/usuarios" element={<ProtectedRoute><DashboardLayout><Usuarios /></DashboardLayout></ProtectedRoute>} />
+                <Route path="/templates" element={<ProtectedRoute><DashboardLayout><Templates /></DashboardLayout></ProtectedRoute>} />
+                <Route path="/alertas" element={<ProtectedRoute><DashboardLayout><Alertas /></DashboardLayout></ProtectedRoute>} />
+                <Route path="/calendario" element={<ProtectedRoute><DashboardLayout><Calendario /></DashboardLayout></ProtectedRoute>} />
+                <Route path="/obrigacoes" element={<ProtectedRoute><DashboardLayout><Obrigacoes /></DashboardLayout></ProtectedRoute>} />
+                <Route path="/workflows" element={<ProtectedRoute><DashboardLayout><WorkflowAprovacoes /></DashboardLayout></ProtectedRoute>} />
+                <Route path="/servicos" element={<ProtectedRoute><DashboardLayout><Servicos /></DashboardLayout></ProtectedRoute>} />
+                <Route path="/unidades" element={<ProtectedRoute><DashboardLayout><Unidades /></DashboardLayout></ProtectedRoute>} />
+                <Route path="/especificacoes" element={<ProtectedRoute><DashboardLayout><EspecificacoesServico /></DashboardLayout></ProtectedRoute>} />
+                <Route path="/custos" element={<ProtectedRoute><DashboardLayout><Custos /></DashboardLayout></ProtectedRoute>} />
+                <Route path="/signature-settings" element={<ProtectedRoute><DashboardLayout><SignatureSettings /></DashboardLayout></ProtectedRoute>} />
+                <Route path="/notification-settings" element={<ProtectedRoute><DashboardLayout><NotificationSettings /></DashboardLayout></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute><DashboardLayout><Settings /></DashboardLayout></ProtectedRoute>} />
+                <Route path="/settings/2fa" element={<ProtectedRoute><TwoFactorSettings /></ProtectedRoute>} />
+                <Route path="/audit-logs" element={<ProtectedRoute><DashboardLayout><AuditLogs /></DashboardLayout></ProtectedRoute>} />
+                <Route path="/relatorios" element={<ProtectedRoute><DashboardLayout><Relatorios /></DashboardLayout></ProtectedRoute>} />
+                <Route path="/compliance" element={<ProtectedRoute><DashboardLayout><ComplianceLGPD /></DashboardLayout></ProtectedRoute>} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              <CookieBanner />
+            </BrowserRouter>
+          </ModuloProvider>
+        </AuthProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+}
 
 export default App;
