@@ -1,135 +1,155 @@
 
-# Comparação de Custos por Modelo IA
+# Melhoria Visual da Comparacao de Modelos IA
 
-## Objetivo
-Adicionar uma nova seção na página `/custos` que mostre uma comparação entre os modelos de IA disponíveis no Lovable AI Gateway, calculando automaticamente quanto seria economizado se modelos mais baratos fossem utilizados.
+## Problemas Identificados
 
-## Contexto Atual
-- A página já possui cards de estatísticas, gráficos de evolução e distribuição
-- Dados de uso já registram o modelo utilizado em `metadata.modelo`
-- Atualmente o sistema usa `google/gemini-2.5-flash`
-- Já existe 1 registro real: 1.479 tokens com custo de R$ 0,01
+Analisando a captura de tela, identifiquei os seguintes problemas visuais:
 
-## Solução Proposta
+1. **Tabela incompleta visualmente** - Faltam colunas importantes (Qualidade, Custo Simulado, Economia) na visualizacao
+2. **Nomes de modelos truncados** - Aparecem quebrados como "gemini-2.5-flash-lite" em linhas separadas
+3. **Layout pouco atrativo** - Falta hierarquia visual, gradientes e destaque para informacoes importantes
+4. **Cards muito simples** - Sem elementos visuais que chamem atencao para as economias potenciais
 
-### 1. Tabela de Preços dos Modelos
-Definir uma estrutura com custos estimados por 1.000 tokens para cada modelo:
+## Solucao Proposta
+
+### 1. Redesign do Layout Geral
+Substituir a tabela tradicional por um design de "cards de modelo" mais visual e moderno
+
+### 2. Nova Estrutura Visual
 
 ```text
-Modelo                        Custo/1K tokens    Velocidade    Qualidade
-google/gemini-2.5-flash-lite      R$ 0,003         Rápido        Básica
-openai/gpt-5-nano                 R$ 0,004         Rápido        Básica
-google/gemini-2.5-flash           R$ 0,010         Médio         Boa
-openai/gpt-5-mini                 R$ 0,012         Médio         Boa
-google/gemini-2.5-pro             R$ 0,025         Lento         Excelente
-openai/gpt-5                      R$ 0,030         Lento         Excelente
++---------------------------------------------------------------+
+|  [icon] Comparacao de Custos por Modelo IA                    |
+|  Baseado em 1.479 tokens consumidos                           |
++---------------------------------------------------------------+
+|                                                               |
+|  +---------------------------+  +---------------------------+ |
+|  | gemini-2.5-flash-lite     |  | gpt-5-nano                | |
+|  | R$ 0,0030/1K              |  | R$ 0,0040/1K              | |
+|  | [*] Rapido  [*] Basica    |  | [*] Rapido  [*] Basica    | |
+|  | Custo: R$ 0,0044          |  | Custo: R$ 0,0059          | |
+|  | [BADGE: -70% economia]    |  | [BADGE: -60% economia]    | |
+|  +---------------------------+  +---------------------------+ |
+|                                                               |
+|  +---------------------------+  +---------------------------+ |
+|  | gemini-2.5-flash [ATUAL]  |  | gpt-5-mini                | |
+|  | R$ 0,0100/1K              |  | R$ 0,0120/1K              | |
+|  | ...                       |  | ...                       | |
+|  +---------------------------+  +---------------------------+ |
+|                                                               |
++---------------------------------------------------------------+
+
++-----------------------------------------------+
+|  [target] Recomendacao de Economia            |
+|                                               |
+|  [icone grande de economia]                   |
+|                                               |
+|  Economia Potencial                           |
+|  R$ 0,0056                                    |
+|  [=======------------] 56% menor              |
+|                                               |
+|  Modelo recomendado: gemini-2.5-flash-lite    |
+|                                               |
+|  [box] Trade-off:                             |
+|  Qualidade basica, ideal para metadados       |
+|                                               |
+|  [dica] Para analises complexas...            |
++-----------------------------------------------+
 ```
 
-### 2. Nova Seção Visual
-Um card com tabela comparativa mostrando:
-- Modelo atual utilizado
-- Tokens consumidos no período
-- Custo real (com modelo atual)
-- Custo simulado (se usasse cada modelo)
-- Economia potencial (diferença entre custo real e modelo mais barato)
-- Indicador visual de economia (percentual em badge verde)
+### 3. Melhorias Especificas
 
-### 3. Card de Recomendação
-Um destaque mostrando:
-- Modelo mais econômico recomendado
-- Economia total potencial no período
-- Trade-off em qualidade/velocidade
+| Elemento | Antes | Depois |
+|----------|-------|--------|
+| Layout | Tabela horizontal simples | Grid de cards 2x3 ou 3x2 |
+| Nomes | Truncados e confusos | Nome limpo com provider como badge |
+| Indicadores | Badges simples | Badges coloridos com icones + barra de progresso |
+| Destaque modelo atual | Apenas check | Card com borda primaria e gradiente |
+| Card economia | Texto simples | Gauge visual com percentual + barra de progresso |
+| Cores | Verde generico | Cores semanticas (verde=economia, vermelho=mais caro) |
+
+### 4. Componentes Visuais Novos
+
+- **Progress bar** para mostrar economia potencial (ex: barra 56% preenchida)
+- **Gradient backgrounds** nos cards de modelo mais baratos
+- **Provider badges** separados (Google, OpenAI)
+- **Icones de qualidade** mais proeminentes (estrelas maiores)
+- **Tooltip aprimorados** com mais contexto
 
 ## Arquivos a Modificar
 
-| Arquivo | Alteração |
+| Arquivo | Alteracao |
 |---------|-----------|
-| `src/pages/Custos.tsx` | Adicionar nova seção de comparação de modelos IA com tabela e card de economia potencial |
+| `src/components/custos/AIModelComparison.tsx` | Redesign completo substituindo tabela por grid de cards, adicionar progress bar de economia, melhorar hierarquia visual |
 
-## Detalhes Técnicos
+## Detalhes Tecnicos
 
-### Estrutura de Dados para Comparação
+### Nova Estrutura de Dados para Exibicao
 ```typescript
-const modelPricing = {
-  'google/gemini-2.5-flash-lite': { 
-    custoMil: 0.003, 
-    velocidade: 'Rápido', 
-    qualidade: 'Básica' 
-  },
-  'openai/gpt-5-nano': { 
-    custoMil: 0.004, 
-    velocidade: 'Rápido', 
-    qualidade: 'Básica' 
-  },
-  'google/gemini-2.5-flash': { 
-    custoMil: 0.010, 
-    velocidade: 'Médio', 
-    qualidade: 'Boa' 
-  },
-  'openai/gpt-5-mini': { 
-    custoMil: 0.012, 
-    velocidade: 'Médio', 
-    qualidade: 'Boa' 
-  },
-  'google/gemini-2.5-pro': { 
-    custoMil: 0.025, 
-    velocidade: 'Lento', 
-    qualidade: 'Excelente' 
-  },
-  'openai/gpt-5': { 
-    custoMil: 0.030, 
-    velocidade: 'Lento', 
-    qualidade: 'Excelente' 
-  },
+// Adicionar provider para badge separado
+const getProviderInfo = (modelo: string) => {
+  if (modelo.startsWith("google/")) {
+    return { nome: "Google", cor: "bg-blue-500/10 text-blue-600" };
+  }
+  return { nome: "OpenAI", cor: "bg-emerald-500/10 text-emerald-600" };
+};
+
+// Formatar nome limpo
+const getNomeLimpo = (modelo: string) => {
+  return modelo.split("/")[1]
+    .replace("gemini-", "Gemini ")
+    .replace("gpt-", "GPT-")
+    .replace("-flash-lite", " Flash Lite")
+    .replace("-flash", " Flash")
+    .replace("-pro", " Pro")
+    .replace("-nano", " Nano")
+    .replace("-mini", " Mini");
 };
 ```
 
-### Cálculo de Economia
+### Layout Grid Responsivo
 ```typescript
-// Para cada modelo, calcular custo simulado
-const custoSimulado = (totalTokens / 1000) * modelPricing[modelo].custoMil;
-
-// Economia = custo atual - custo do modelo mais barato
-const economiaPotencial = custoAtual - custoModeloMaisBarato;
-const percentualEconomia = (economiaPotencial / custoAtual) * 100;
+// Grid de 3 colunas em desktop, 2 em tablet, 1 em mobile
+<div className="grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+  {comparacoes.map((item) => (
+    <ModelCard key={item.modelo} {...item} />
+  ))}
+</div>
 ```
 
-### Layout da Nova Seção
-```text
-+------------------------------------------------------------------+
-|  💡 Comparação de Custos por Modelo IA                           |
-+------------------------------------------------------------------+
-| Modelo                  | Custo/1K  | Custo Simulado | Economia  |
-|-------------------------|-----------|----------------|-----------|
-| gemini-2.5-flash-lite   | R$ 0,003  | R$ 0,0044      | 70% ↓     |
-| gpt-5-nano              | R$ 0,004  | R$ 0,0059      | 60% ↓     |
-| gemini-2.5-flash ✓      | R$ 0,010  | R$ 0,0148      | Atual     |
-| gpt-5-mini              | R$ 0,012  | R$ 0,0177      | +20% ↑    |
-| gemini-2.5-pro          | R$ 0,025  | R$ 0,0370      | +150% ↑   |
-| gpt-5                   | R$ 0,030  | R$ 0,0444      | +200% ↑   |
-+------------------------------------------------------------------+
-
-+------------------------------------------+
-|  🎯 Recomendação de Economia             |
-+------------------------------------------+
-|  Usando gemini-2.5-flash-lite você       |
-|  economizaria R$ 0,0104 (70%) no período |
-|                                          |
-|  ⚠️ Trade-off: Qualidade básica,         |
-|  ideal para tarefas simples              |
-+------------------------------------------+
+### Card de Modelo Individual
+```typescript
+// Cada modelo sera um card independente com:
+// - Header com nome e provider badge
+// - Custo por 1K tokens em destaque
+// - Indicadores visuais de velocidade/qualidade
+// - Custo simulado calculado
+// - Badge de economia ou aumento
+// - Destaque especial se for modelo atual
 ```
 
-### Componentes Visuais
-- Usar `Table` existente do projeto para tabela de comparação
-- Badges coloridos para indicar economia (verde) ou aumento (vermelho)
-- Ícone de check para marcar o modelo atualmente em uso
-- Card com destaque para recomendação de economia
-- Tooltip explicando o trade-off de cada modelo
+### Card de Recomendacao Aprimorado
+```typescript
+// Adicionar barra de progresso visual
+<div className="relative h-3 bg-muted rounded-full overflow-hidden">
+  <div 
+    className="absolute inset-y-0 left-0 bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full"
+    style={{ width: `${percentualEconomia}%` }}
+  />
+</div>
+```
+
+### Cores e Gradientes
+- Cards mais baratos: `bg-gradient-to-br from-emerald-500/5 to-emerald-500/10`
+- Cards mais caros: `bg-gradient-to-br from-red-500/5 to-red-500/10`
+- Card atual: `border-primary bg-gradient-to-br from-primary/5 to-primary/10`
 
 ## Resultado Esperado
-O administrador poderá visualizar claramente:
-1. Quanto está gastando com o modelo atual
-2. Quanto gastaria com cada modelo alternativo
-3. Economia potencial em reais e percentual
-4. Recomendação clara do modelo mais econômico com seus trade-offs
+
+O novo design sera:
+1. Visualmente mais atrativo com cards coloridos e gradientes
+2. Mais facil de comparar modelos lado a lado
+3. Destaque claro para economia potencial com barra de progresso
+4. Nomes de modelos legiveis e bem formatados
+5. Hierarquia visual clara do mais barato ao mais caro
+6. Responsivo para diferentes tamanhos de tela
