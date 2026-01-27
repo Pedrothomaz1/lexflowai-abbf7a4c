@@ -18,7 +18,6 @@ import {
   RefreshCcw,
   Building2,
   ArrowUpRight,
-  ArrowDownRight
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -28,21 +27,7 @@ import { StatCard, StatCardGrid } from "@/components/ui/stat-card";
 import { PageHeader } from "@/components/ui/page-header";
 import { PageSkeleton } from "@/components/ui/skeleton-loaders";
 import { EmptyState } from "@/components/ui/empty-state";
-import { 
-  AreaChart,
-  Area,
-  BarChart, 
-  Bar, 
-  PieChart, 
-  Pie, 
-  Cell,
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
-  ResponsiveContainer 
-} from "recharts";
+import { PremiumAreaChart, PremiumBarChart, PremiumDonutChart } from "@/components/charts";
 import { cn } from "@/lib/utils";
 
 const Dashboard = () => {
@@ -65,7 +50,6 @@ const Dashboard = () => {
   const [contratosVencendo, setContratosVencendo] = useState<any[]>([]);
   const [chartData, setChartData] = useState<any[]>([]);
   const [tipoContratoData, setTipoContratoData] = useState<any[]>([]);
-  const [statusData, setStatusData] = useState<any[]>([]);
   const [riskData, setRiskData] = useState<any[]>([]);
   const [valorMensalData, setValorMensalData] = useState<any[]>([]);
   const [timelineVencimentos, setTimelineVencimentos] = useState<any[]>([]);
@@ -261,29 +245,6 @@ const Dashboard = () => {
           value,
         }))
       );
-
-      const statusCount: Record<string, number> = {};
-      todosContratos.forEach((contrato: any) => {
-        const status = contrato.status || "rascunho";
-        statusCount[status] = (statusCount[status] || 0) + 1;
-      });
-
-      const statusLabels: Record<string, string> = {
-        rascunho: "Rascunho",
-        em_aprovacao: "Em Aprovação",
-        aprovado: "Aprovado",
-        assinado: "Assinado",
-        vigente: "Vigente",
-        encerrado: "Encerrado",
-        cancelado: "Cancelado",
-      };
-
-      setStatusData(
-        Object.entries(statusCount).map(([name, value]) => ({
-          name: statusLabels[name] || name,
-          value,
-        }))
-      );
     }
 
     if (analises && analises.length > 0) {
@@ -339,32 +300,16 @@ const Dashboard = () => {
     "hsl(var(--chart-6))",
   ];
 
-  const RISK_COLORS = {
-    "Baixo": "hsl(var(--success))",
-    "Médio": "hsl(var(--warning))",
-    "Alto": "hsl(var(--destructive))",
-    "Crítico": "hsl(0 72% 35%)",
+  const RISK_COLORS: Record<string, string> = {
+    "Baixo": "hsl(142, 76%, 36%)",
+    "Médio": "hsl(38, 92%, 50%)",
+    "Alto": "hsl(0, 84%, 60%)",
+    "Crítico": "hsl(0, 72%, 35%)",
   };
 
   const getDaysUntil = (date: string) => {
     const diff = new Date(date).getTime() - new Date().getTime();
     return Math.ceil(diff / (1000 * 60 * 60 * 24));
-  };
-
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-popover border border-border rounded-lg shadow-lg p-3">
-          <p className="text-sm font-medium mb-1">{label}</p>
-          {payload.map((entry: any, index: number) => (
-            <p key={index} className="text-sm text-muted-foreground">
-              {entry.name}: <span className="font-medium text-foreground">{entry.value}</span>
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
   };
 
   return (
@@ -481,7 +426,7 @@ const Dashboard = () => {
                 <span className="text-muted-foreground">Aprovações no prazo</span>
                 <span className={cn(
                   "font-medium",
-                  stats.taxaAprovacaoNoPrazo >= 80 ? "text-success" : "text-warning"
+                  stats.taxaAprovacaoNoPrazo >= 80 ? "text-emerald-600" : "text-amber-600"
                 )}>
                   {stats.taxaAprovacaoNoPrazo.toFixed(0)}%
                 </span>
@@ -498,7 +443,7 @@ const Dashboard = () => {
                 <span className="text-muted-foreground">Taxa de Renovação</span>
                 <span className={cn(
                   "font-medium",
-                  stats.taxaRenovacao >= 70 ? "text-success" : "text-warning"
+                  stats.taxaRenovacao >= 70 ? "text-emerald-600" : "text-amber-600"
                 )}>
                   {stats.taxaRenovacao.toFixed(0)}%
                 </span>
@@ -544,7 +489,7 @@ const Dashboard = () => {
                         <div className="flex items-center gap-2.5 min-w-0">
                           <div className={cn(
                             "h-7 w-7 rounded-full flex items-center justify-center text-xs font-semibold shrink-0",
-                            index === 0 ? "bg-warning/20 text-warning" :
+                            index === 0 ? "bg-amber-500/20 text-amber-600" :
                             index === 1 ? "bg-muted text-muted-foreground" :
                             "bg-muted/50 text-muted-foreground"
                           )}>
@@ -576,94 +521,84 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      {/* Charts Row */}
+      {/* Charts Row - Premium Style */}
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="card-elevated">
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <TrendingUp className="h-4 w-4 text-primary" />
-              Evolução de Contratos
-            </CardTitle>
-            <CardDescription className="text-xs">Últimos 6 meses</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                  Evolução de Contratos
+                </CardTitle>
+                <CardDescription className="text-xs">Últimos 6 meses</CardDescription>
+              </div>
+              {chartData.length > 1 && (
+                <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+                  <TrendingUp className="h-3 w-3 mr-1" />
+                  Ativo
+                </Badge>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={260}>
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="colorContratos" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                <XAxis dataKey="mes" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
-                <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
-                <Tooltip content={<CustomTooltip />} />
-                <Area 
-                  type="monotone" 
-                  dataKey="contratos" 
-                  stroke="hsl(var(--primary))" 
-                  strokeWidth={2}
-                  fill="url(#colorContratos)"
-                  name="Contratos"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            {chartData.length > 0 ? (
+              <PremiumAreaChart
+                data={chartData}
+                dataKey="contratos"
+                xAxisKey="mes"
+                height={260}
+                formatter={(v) => `${v} contratos`}
+              />
+            ) : (
+              <EmptyState title="Sem dados" description="Nenhum contrato registrado" />
+            )}
           </CardContent>
         </Card>
 
         <Card className="card-elevated">
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <DollarSign className="h-4 w-4 text-primary" />
-              Valor por Mês
-            </CardTitle>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <CardTitle className="text-base">Valor por Mês</CardTitle>
+            </div>
             <CardDescription className="text-xs">Em milhares (R$)</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={valorMensalData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                <XAxis dataKey="mes" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
-                <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar 
-                  dataKey="valor" 
-                  fill="hsl(var(--success))" 
-                  name="Valor (mil)" 
-                  radius={[4, 4, 0, 0]} 
-                />
-              </BarChart>
-            </ResponsiveContainer>
+            {valorMensalData.length > 0 ? (
+              <PremiumBarChart
+                data={valorMensalData}
+                dataKey="valor"
+                xAxisKey="mes"
+                height={260}
+                formatter={(v) => `R$ ${v.toFixed(0)}K`}
+              />
+            ) : (
+              <EmptyState title="Sem dados" description="Nenhum valor registrado" />
+            )}
           </CardContent>
         </Card>
 
         <Card className="card-elevated">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Contratos por Tipo</CardTitle>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
+              <CardTitle className="text-base">Contratos por Tipo</CardTitle>
+            </div>
             <CardDescription className="text-xs">Distribuição atual</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={260}>
-              <PieChart>
-                <Pie
-                  data={tipoContratoData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={50}
-                  outerRadius={90}
-                  paddingAngle={2}
-                  dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  labelLine={false}
-                >
-                  {tipoContratoData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip content={<CustomTooltip />} />
-              </PieChart>
-            </ResponsiveContainer>
+            {tipoContratoData.length > 0 ? (
+              <PremiumDonutChart
+                data={tipoContratoData}
+                height={260}
+                colors={CHART_COLORS}
+                formatter={(v) => `${v} contratos`}
+                showLabels={false}
+              />
+            ) : (
+              <EmptyState title="Sem dados" description="Nenhum contrato registrado" />
+            )}
           </CardContent>
         </Card>
 
@@ -677,19 +612,16 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             {riskData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={riskData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
-                  <YAxis dataKey="name" type="category" width={60} tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="value" name="Contratos" radius={[0, 4, 4, 0]}>
-                    {riskData.map((entry) => (
-                      <Cell key={entry.name} fill={RISK_COLORS[entry.name as keyof typeof RISK_COLORS]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              <PremiumBarChart
+                data={riskData}
+                dataKey="value"
+                yAxisKey="name"
+                layout="vertical"
+                height={260}
+                gradient={false}
+                colors={riskData.map(r => RISK_COLORS[r.name] || "hsl(var(--primary))")}
+                formatter={(v) => `${v} contratos`}
+              />
             ) : (
               <EmptyState
                 title="Sem análises"
