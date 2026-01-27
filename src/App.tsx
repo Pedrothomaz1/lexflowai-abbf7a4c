@@ -5,8 +5,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { DashboardLayout } from "./components/DashboardLayout";
 import { ModuloProvider } from "./contexts/ModuloContext";
+import { AuthProvider } from "./contexts/AuthContext";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import AuthCallback from "./pages/AuthCallback";
 import Dashboard from "./pages/Dashboard";
 import Contratos from "./pages/Contratos";
 import ContratoDetalhes from "./pages/ContratoDetalhes";
@@ -33,37 +36,40 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <ModuloProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/seletor-modulo" element={<SeletorModulo />} />
-            <Route path="/dashboard" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
-            <Route path="/contratos" element={<DashboardLayout><Contratos /></DashboardLayout>} />
-            <Route path="/contratos/:id" element={<DashboardLayout><ContratoDetalhes /></DashboardLayout>} />
-            <Route path="/kanban" element={<DashboardLayout><Kanban /></DashboardLayout>} />
-            <Route path="/fornecedores" element={<DashboardLayout><Fornecedores /></DashboardLayout>} />
-            <Route path="/usuarios" element={<DashboardLayout><Usuarios /></DashboardLayout>} />
-            <Route path="/templates" element={<DashboardLayout><Templates /></DashboardLayout>} />
-            <Route path="/alertas" element={<DashboardLayout><Alertas /></DashboardLayout>} />
-            <Route path="/calendario" element={<DashboardLayout><Calendario /></DashboardLayout>} />
-            <Route path="/obrigacoes" element={<DashboardLayout><Obrigacoes /></DashboardLayout>} />
-            <Route path="/workflows" element={<DashboardLayout><WorkflowAprovacoes /></DashboardLayout>} />
-            <Route path="/servicos" element={<DashboardLayout><Servicos /></DashboardLayout>} />
-            <Route path="/unidades" element={<DashboardLayout><Unidades /></DashboardLayout>} />
-            <Route path="/especificacoes" element={<DashboardLayout><EspecificacoesServico /></DashboardLayout>} />
-            <Route path="/custos" element={<DashboardLayout><Custos /></DashboardLayout>} />
-            <Route path="/signature-settings" element={<DashboardLayout><SignatureSettings /></DashboardLayout>} />
-            <Route path="/notification-settings" element={<DashboardLayout><NotificationSettings /></DashboardLayout>} />
-            <Route path="/settings" element={<DashboardLayout><Settings /></DashboardLayout>} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </ModuloProvider>
+      <AuthProvider>
+        <ModuloProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/seletor-modulo" element={<ProtectedRoute><SeletorModulo /></ProtectedRoute>} />
+              <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout><Dashboard /></DashboardLayout></ProtectedRoute>} />
+              <Route path="/contratos" element={<ProtectedRoute><DashboardLayout><Contratos /></DashboardLayout></ProtectedRoute>} />
+              <Route path="/contratos/:id" element={<ProtectedRoute><DashboardLayout><ContratoDetalhes /></DashboardLayout></ProtectedRoute>} />
+              <Route path="/kanban" element={<ProtectedRoute><DashboardLayout><Kanban /></DashboardLayout></ProtectedRoute>} />
+              <Route path="/fornecedores" element={<ProtectedRoute><DashboardLayout><Fornecedores /></DashboardLayout></ProtectedRoute>} />
+              <Route path="/usuarios" element={<ProtectedRoute><DashboardLayout><Usuarios /></DashboardLayout></ProtectedRoute>} />
+              <Route path="/templates" element={<ProtectedRoute><DashboardLayout><Templates /></DashboardLayout></ProtectedRoute>} />
+              <Route path="/alertas" element={<ProtectedRoute><DashboardLayout><Alertas /></DashboardLayout></ProtectedRoute>} />
+              <Route path="/calendario" element={<ProtectedRoute><DashboardLayout><Calendario /></DashboardLayout></ProtectedRoute>} />
+              <Route path="/obrigacoes" element={<ProtectedRoute><DashboardLayout><Obrigacoes /></DashboardLayout></ProtectedRoute>} />
+              <Route path="/workflows" element={<ProtectedRoute><DashboardLayout><WorkflowAprovacoes /></DashboardLayout></ProtectedRoute>} />
+              <Route path="/servicos" element={<ProtectedRoute><DashboardLayout><Servicos /></DashboardLayout></ProtectedRoute>} />
+              <Route path="/unidades" element={<ProtectedRoute><DashboardLayout><Unidades /></DashboardLayout></ProtectedRoute>} />
+              <Route path="/especificacoes" element={<ProtectedRoute><DashboardLayout><EspecificacoesServico /></DashboardLayout></ProtectedRoute>} />
+              <Route path="/custos" element={<ProtectedRoute><DashboardLayout><Custos /></DashboardLayout></ProtectedRoute>} />
+              <Route path="/signature-settings" element={<ProtectedRoute><DashboardLayout><SignatureSettings /></DashboardLayout></ProtectedRoute>} />
+              <Route path="/notification-settings" element={<ProtectedRoute><DashboardLayout><NotificationSettings /></DashboardLayout></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute><DashboardLayout><Settings /></DashboardLayout></ProtectedRoute>} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </ModuloProvider>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

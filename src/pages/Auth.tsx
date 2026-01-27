@@ -17,61 +17,29 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
+    // Check if user is already logged in and redirect
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        redirectByModule(session.user.id);
+        navigate("/auth/callback");
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        redirectByModule(session.user.id);
+      if (event === "SIGNED_IN" && session) {
+        // Redirect to callback to handle proper module routing
+        navigate("/auth/callback");
       }
     });
 
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const redirectByModule = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("modulo_padrao")
-        .eq("user_id", userId)
-        .single();
-
-      if (error) {
-        console.error("Erro ao buscar módulo:", error);
-        navigate("/dashboard");
-        return;
-      }
-
-      const modulo = data?.modulo_padrao || "contratos";
-      
-      switch (modulo) {
-        case "servicos":
-          navigate("/servicos");
-          break;
-        case "ambos":
-          navigate("/seletor-modulo");
-          break;
-        case "contratos":
-        default:
-          navigate("/dashboard");
-          break;
-      }
-    } catch (error) {
-      console.error("Erro ao redirecionar:", error);
-      navigate("/dashboard");
-    }
-  };
-
   const handleGoogleLogin = async () => {
     setLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/`,
+        redirectTo: `${window.location.origin}/auth/callback`,
       },
     });
 
@@ -119,7 +87,7 @@ const Auth = () => {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/`,
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
         data: {
           full_name: fullName,
         },
