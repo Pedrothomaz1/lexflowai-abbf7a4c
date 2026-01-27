@@ -8,6 +8,7 @@ import { PageSkeleton } from "@/components/ui/skeleton-loaders";
 import { DataTable, DataTableColumn } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AIModelComparison } from "@/components/custos/AIModelComparison";
 import { 
   DollarSign, 
   Cpu, 
@@ -15,7 +16,6 @@ import {
   ShoppingCart, 
   Database,
   TrendingUp,
-  TrendingDown,
   Calendar
 } from "lucide-react";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
@@ -104,13 +104,20 @@ const Custos = () => {
   };
 
   // Cálculos de estatísticas
+  const aiUsage = usage.filter(u => u.tipo === "ai_tokens");
   const stats = {
     custoTotal: usage.reduce((sum, u) => sum + Number(u.custo_total), 0),
-    totalTokens: usage.filter(u => u.tipo === "ai_tokens").reduce((sum, u) => sum + u.quantidade, 0),
+    totalTokens: aiUsage.reduce((sum, u) => sum + u.quantidade, 0),
+    custoTokens: aiUsage.reduce((sum, u) => sum + Number(u.custo_total), 0),
     totalEmails: usage.filter(u => u.tipo === "email").reduce((sum, u) => sum + u.quantidade, 0),
     totalApiCompras: usage.filter(u => u.tipo === "api_compras").reduce((sum, u) => sum + u.quantidade, 0),
     totalEdgeFunctions: usage.filter(u => u.tipo === "edge_function").reduce((sum, u) => sum + u.quantidade, 0),
   };
+
+  // Detectar modelo atual baseado nos registros
+  const modeloAtual = aiUsage.length > 0 
+    ? (aiUsage[0].metadata as { modelo?: string })?.modelo || "google/gemini-2.5-flash"
+    : "google/gemini-2.5-flash";
 
   // Dados para gráfico de evolução por dia
   const evolucaoPorDia = usage.reduce((acc, u) => {
@@ -399,6 +406,15 @@ const Custos = () => {
           </AnimatedCard>
         </FadeIn>
       </div>
+
+      {/* Comparação de Modelos IA */}
+      {stats.totalTokens > 0 && (
+        <AIModelComparison
+          totalTokens={stats.totalTokens}
+          custoAtual={stats.custoTokens}
+          modeloAtual={modeloAtual}
+        />
+      )}
 
       {/* Histórico Detalhado */}
       <FadeIn delay={0.4}>
