@@ -24,7 +24,7 @@ export function ModuloProvider({ children }: { children: ReactNode }) {
     }
     return "contratos";
   });
-  const [moduloPadrao, setModuloPadrao] = useState<ModuloAtivo>("contratos");
+  const [moduloPadrao, setModuloPadrao] = useState<ModuloAtivo>("ambos");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -50,11 +50,13 @@ export function ModuloProvider({ children }: { children: ReactNode }) {
         const modulo = data.modulo_padrao as ModuloAtivo;
         setModuloPadrao(modulo);
         
-        // Se não houver valor no localStorage e não for "ambos", definir o módulo ativo
+        // Se não houver valor no localStorage, definir o módulo ativo baseado no padrão
         const storedModulo = localStorage.getItem(MODULO_STORAGE_KEY);
-        if (!storedModulo && modulo !== "ambos") {
-          setModuloAtivoState(modulo);
-          localStorage.setItem(MODULO_STORAGE_KEY, modulo);
+        if (!storedModulo) {
+          // Se módulo padrão for "ambos", começar com "contratos"
+          const moduloInicial = modulo === "ambos" ? "contratos" : modulo;
+          setModuloAtivoState(moduloInicial);
+          localStorage.setItem(MODULO_STORAGE_KEY, moduloInicial);
         }
       }
     } catch (error) {
