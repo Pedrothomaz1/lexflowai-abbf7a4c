@@ -1,295 +1,157 @@
 
-# Plano: Correção de Vulnerabilidades de Segurança RLS
+# Plano: Pagina de Politica de Privacidade
 
-## Contexto
+## Visao Geral
 
-O scan de segurança identificou várias tabelas com políticas RLS permissivas que usam `USING (true)` para operações SELECT, expondo dados sensíveis a qualquer pessoa sem autenticação.
+Criar uma pagina publica de Politica de Privacidade acessivel em `/privacidade`, com conteudo completo sobre tratamento de dados conforme LGPD, e adicionar links para ela no footer da landing page e na pagina de autenticacao.
 
-## Tabelas Afetadas e Dados Expostos
+## Arquivos a Serem Criados/Modificados
 
-| Tabela | Dados Sensíveis | Risco |
-|--------|-----------------|-------|
-| `profiles` | Email, telefone, nome completo | Exposição de PII |
-| `fornecedores` | Dados bancários (banco, agência, conta, PIX) | Exposição financeira |
-| `contratos` | Valores, termos contratuais | Exposição comercial |
-| `contract_analysis` | Análises de risco, cláusulas importantes | Exposição estratégica |
-| `contract_alerts` | Datas de vencimento, renovações | Exposição operacional |
-
-## Correções Propostas
-
-### 1. Tabela `profiles`
-
-**Política Atual:**
-```sql
-Policy: "Authenticated users can view profiles"
-USING (auth.uid() IS NOT NULL)  -- Já está correto!
-```
-
-Esta tabela já exige autenticação. Nenhuma alteração necessária.
+| Arquivo | Acao | Descricao |
+|---------|------|-----------|
+| `src/pages/Privacidade.tsx` | Criar | Nova pagina com a politica de privacidade completa |
+| `src/App.tsx` | Modificar | Adicionar rota publica `/privacidade` |
+| `src/pages/Index.tsx` | Modificar | Adicionar footer com link para privacidade |
+| `src/pages/Auth.tsx` | Modificar | Atualizar link existente para apontar para `/privacidade` |
 
 ---
 
-### 2. Tabela `fornecedores`
+## Estrutura da Pagina de Privacidade
 
-**Política Atual:**
-```sql
-Policy: "Users can view all fornecedores"
-FOR SELECT USING (true)  -- VULNERÁVEL
-```
+### Layout
+- Header consistente com a landing page (logo LexFlow)
+- Container centralizado com largura maxima de leitura confortavel
+- Secoes organizadas com ancora para navegacao
+- Footer simples com link para voltar
 
-**Correção:**
-```sql
-DROP POLICY IF EXISTS "Users can view all fornecedores" ON fornecedores;
+### Secoes do Conteudo
 
-CREATE POLICY "Authenticated users can view fornecedores"
-ON fornecedores FOR SELECT
-TO authenticated
-USING (auth.uid() IS NOT NULL);
-```
+1. **Introducao**
+   - Nome do controlador: Veridiana Quirino / LexFlow
+   - Data da ultima atualizacao
+   - Visao geral do compromisso com privacidade
 
----
+2. **Dados Coletados**
+   - Dados de cadastro: nome completo, email, telefone, departamento
+   - Dados de perfil: foto de avatar
+   - Dados de uso: IP, navegador (user agent), logs de acesso
+   - Dados de fornecedores: CNPJ/CPF, dados bancarios, endereco
 
-### 3. Tabela `contratos`
+3. **Finalidade do Tratamento**
+   - Identificacao e autenticacao de usuarios
+   - Gestao de contratos e fornecedores
+   - Comunicacao via email e WhatsApp
+   - Auditoria e compliance
+   - Melhoria do servico
 
-**Política Atual:**
-```sql
-Policy: "Users can view all contratos"
-FOR SELECT USING (true)  -- VULNERÁVEL
-```
+4. **Base Legal (Art. 7 LGPD)**
+   - Execucao de contrato (gestao contratual)
+   - Consentimento (comunicacoes de marketing)
+   - Obrigacao legal (auditoria, retencao fiscal)
+   - Interesse legitimo (seguranca, prevencao a fraude)
 
-**Correção:**
-```sql
-DROP POLICY IF EXISTS "Users can view all contratos" ON contratos;
+5. **Compartilhamento de Dados**
+   - Provedores de infraestrutura (Lovable Cloud)
+   - Servicos de email (quando configurados)
+   - Integracao com assinatura eletronica (quando habilitada)
+   - Nao vendemos dados a terceiros
 
-CREATE POLICY "Authenticated users can view contratos"
-ON contratos FOR SELECT
-TO authenticated
-USING (auth.uid() IS NOT NULL);
-```
+6. **Armazenamento e Retencao**
+   - Dados armazenados em servidores seguros
+   - Periodo de retencao conforme politicas configuradas
+   - Contratos: minimo 5 anos apos encerramento
+   - Logs de auditoria: conforme exigencia legal
 
----
+7. **Medidas de Seguranca**
+   - Criptografia em transito (HTTPS/TLS)
+   - Controle de acesso baseado em funcao (RLS)
+   - Autenticacao segura com suporte a OAuth
+   - Logs de auditoria para rastreabilidade
 
-### 4. Tabela `contract_analysis`
+8. **Direitos do Titular (Art. 18 LGPD)**
+   - Acesso aos dados
+   - Correcao de dados incompletos
+   - Anonimizacao ou exclusao
+   - Portabilidade
+   - Revogacao de consentimento
+   - Como exercer: via pagina de Compliance LGPD
 
-**Política Atual:**
-```sql
-Policy: "Users can view all analysis"
-FOR SELECT USING (true)  -- VULNERÁVEL
-```
-
-**Correção:**
-```sql
-DROP POLICY IF EXISTS "Users can view all analysis" ON contract_analysis;
-
-CREATE POLICY "Authenticated users can view analysis"
-ON contract_analysis FOR SELECT
-TO authenticated
-USING (auth.uid() IS NOT NULL);
-```
-
----
-
-### 5. Tabela `contract_alerts`
-
-**Política Atual:**
-```sql
-Policy: "Users can view all alerts"
-FOR SELECT USING (true)  -- VULNERÁVEL
-```
-
-**Correção:**
-```sql
-DROP POLICY IF EXISTS "Users can view all alerts" ON contract_alerts;
-
-CREATE POLICY "Authenticated users can view alerts"
-ON contract_alerts FOR SELECT
-TO authenticated
-USING (auth.uid() IS NOT NULL);
-```
+9. **Contato do Encarregado (DPO)**
+   - Email de contato: privacidade@lexflow.com.br (placeholder)
+   - Formulario via sistema
 
 ---
 
-## Outras Tabelas com `USING (true)` para SELECT
+## Detalhes Tecnicos
 
-Para manter consistência, as seguintes tabelas também serão corrigidas:
+### Pagina Privacidade.tsx
 
-| Tabela | Correção |
-|--------|----------|
-| `contract_history` | Exigir autenticação |
-| `contract_templates` | Exigir autenticação |
-| `contract_versions` | Exigir autenticação |
-| `contract_obligations` | Exigir autenticação |
-| `contract_attachments` | Exigir autenticação |
-| `contract_signatures` | Exigir autenticação |
-| `contract_redlines` | Manter (já verifica acesso ao contrato) |
-| `negotiation_metrics` | Exigir autenticação |
-| `unidades` | Exigir autenticação |
-| `especificacoes_servico` | Exigir autenticação |
-| `servicos_periodicos` | Exigir autenticação |
-| `servico_historico` | Exigir autenticação |
-| `fornecedor_categorias_servico` | Exigir autenticação |
-| `fornecedor_anexos` | Exigir autenticação |
-| `solicitacoes_compras` | Exigir autenticação |
-| `approval_workflows` | Exigir autenticação |
-| `data_retention_policies` | Exigir autenticação |
+```text
+Componentes utilizados:
+- Card, CardContent, CardHeader (para secoes)
+- ScrollArea (para indice lateral em desktop)
+- Button (para navegacao)
+- Badge (para datas)
+- Separator (entre secoes)
+- Lucide icons: Shield, Database, Lock, Users, Clock, Mail, FileText
+```
 
----
+### Rota no App.tsx
 
-## Migração SQL Completa
+```typescript
+// Adicionar import
+import Privacidade from "./pages/Privacidade";
 
-```sql
--- =====================================================
--- CORREÇÃO DE POLÍTICAS RLS - EXIGIR AUTENTICAÇÃO
--- =====================================================
+// Adicionar rota (publica, sem ProtectedRoute)
+<Route path="/privacidade" element={<Privacidade />} />
+```
 
--- 1. FORNECEDORES
-DROP POLICY IF EXISTS "Users can view all fornecedores" ON fornecedores;
-CREATE POLICY "Authenticated users can view fornecedores"
-ON fornecedores FOR SELECT TO authenticated
-USING (auth.uid() IS NOT NULL);
+### Footer na Index.tsx
 
--- 2. CONTRATOS
-DROP POLICY IF EXISTS "Users can view all contratos" ON contratos;
-CREATE POLICY "Authenticated users can view contratos"
-ON contratos FOR SELECT TO authenticated
-USING (auth.uid() IS NOT NULL);
+```text
+Adicionar apos a secao de features:
 
--- 3. CONTRACT_ANALYSIS
-DROP POLICY IF EXISTS "Users can view all analysis" ON contract_analysis;
-CREATE POLICY "Authenticated users can view analysis"
-ON contract_analysis FOR SELECT TO authenticated
-USING (auth.uid() IS NOT NULL);
+<footer className="border-t border-border py-8">
+  <div className="container mx-auto px-6 flex justify-between items-center">
+    <p className="text-sm text-muted-foreground">
+      2024 LexFlow. Todos os direitos reservados.
+    </p>
+    <div className="flex gap-4">
+      <Link to="/privacidade" className="text-sm text-muted-foreground hover:text-foreground">
+        Politica de Privacidade
+      </Link>
+    </div>
+  </div>
+</footer>
+```
 
--- 4. CONTRACT_ALERTS
-DROP POLICY IF EXISTS "Users can view all alerts" ON contract_alerts;
-CREATE POLICY "Authenticated users can view alerts"
-ON contract_alerts FOR SELECT TO authenticated
-USING (auth.uid() IS NOT NULL);
+### Correcao na Auth.tsx
 
--- 5. CONTRACT_HISTORY
-DROP POLICY IF EXISTS "Users can view contract history" ON contract_history;
-CREATE POLICY "Authenticated users can view contract history"
-ON contract_history FOR SELECT TO authenticated
-USING (auth.uid() IS NOT NULL);
-
--- 6. CONTRACT_TEMPLATES
-DROP POLICY IF EXISTS "Users can view all templates" ON contract_templates;
-CREATE POLICY "Authenticated users can view templates"
-ON contract_templates FOR SELECT TO authenticated
-USING (auth.uid() IS NOT NULL);
-
--- 7. CONTRACT_VERSIONS
-DROP POLICY IF EXISTS "Users can view contract versions" ON contract_versions;
-CREATE POLICY "Authenticated users can view contract versions"
-ON contract_versions FOR SELECT TO authenticated
-USING (auth.uid() IS NOT NULL);
-
--- 8. CONTRACT_OBLIGATIONS
-DROP POLICY IF EXISTS "Users can view all obligations" ON contract_obligations;
-CREATE POLICY "Authenticated users can view obligations"
-ON contract_obligations FOR SELECT TO authenticated
-USING (auth.uid() IS NOT NULL);
-
--- 9. CONTRACT_ATTACHMENTS
-DROP POLICY IF EXISTS "Users can view all attachments" ON contract_attachments;
-CREATE POLICY "Authenticated users can view attachments"
-ON contract_attachments FOR SELECT TO authenticated
-USING (auth.uid() IS NOT NULL);
-
--- 10. CONTRACT_SIGNATURES
-DROP POLICY IF EXISTS "Usuários podem visualizar assinaturas" ON contract_signatures;
-CREATE POLICY "Authenticated users can view signatures"
-ON contract_signatures FOR SELECT TO authenticated
-USING (auth.uid() IS NOT NULL);
-
--- 11. NEGOTIATION_METRICS
-DROP POLICY IF EXISTS "Users can view all negotiation metrics" ON negotiation_metrics;
-CREATE POLICY "Authenticated users can view negotiation metrics"
-ON negotiation_metrics FOR SELECT TO authenticated
-USING (auth.uid() IS NOT NULL);
-
--- 12. UNIDADES
-DROP POLICY IF EXISTS "Users can view all unidades" ON unidades;
-CREATE POLICY "Authenticated users can view unidades"
-ON unidades FOR SELECT TO authenticated
-USING (auth.uid() IS NOT NULL);
-
--- 13. ESPECIFICACOES_SERVICO
-DROP POLICY IF EXISTS "Users can view all especificacoes" ON especificacoes_servico;
-CREATE POLICY "Authenticated users can view especificacoes"
-ON especificacoes_servico FOR SELECT TO authenticated
-USING (auth.uid() IS NOT NULL);
-
--- 14. SERVICOS_PERIODICOS
-DROP POLICY IF EXISTS "Users can view all servicos" ON servicos_periodicos;
-CREATE POLICY "Authenticated users can view servicos"
-ON servicos_periodicos FOR SELECT TO authenticated
-USING (auth.uid() IS NOT NULL);
-
--- 15. SERVICO_HISTORICO
-DROP POLICY IF EXISTS "Users can view all historico" ON servico_historico;
-CREATE POLICY "Authenticated users can view historico"
-ON servico_historico FOR SELECT TO authenticated
-USING (auth.uid() IS NOT NULL);
-
--- 16. FORNECEDOR_CATEGORIAS_SERVICO
-DROP POLICY IF EXISTS "View fornecedor categories" ON fornecedor_categorias_servico;
-CREATE POLICY "Authenticated users can view fornecedor categories"
-ON fornecedor_categorias_servico FOR SELECT TO authenticated
-USING (auth.uid() IS NOT NULL);
-
--- 17. FORNECEDOR_ANEXOS
-DROP POLICY IF EXISTS "View fornecedor attachments" ON fornecedor_anexos;
-CREATE POLICY "Authenticated users can view fornecedor attachments"
-ON fornecedor_anexos FOR SELECT TO authenticated
-USING (auth.uid() IS NOT NULL);
-
--- 18. SOLICITACOES_COMPRAS
-DROP POLICY IF EXISTS "Users can view all solicitacoes" ON solicitacoes_compras;
-CREATE POLICY "Authenticated users can view solicitacoes"
-ON solicitacoes_compras FOR SELECT TO authenticated
-USING (auth.uid() IS NOT NULL);
-
--- 19. APPROVAL_WORKFLOWS
-DROP POLICY IF EXISTS "Users can view workflows" ON approval_workflows;
-CREATE POLICY "Authenticated users can view workflows"
-ON approval_workflows FOR SELECT TO authenticated
-USING (auth.uid() IS NOT NULL);
-
--- 20. DATA_RETENTION_POLICIES
-DROP POLICY IF EXISTS "Users can view retention policies" ON data_retention_policies;
-CREATE POLICY "Authenticated users can view retention policies"
-ON data_retention_policies FOR SELECT TO authenticated
-USING (auth.uid() IS NOT NULL);
+```typescript
+// Linha 403-404: Mudar href="#" para Link
+<Link to="/privacidade" className="underline hover:text-foreground">
+  Politica de Privacidade
+</Link>
 ```
 
 ---
 
-## Impacto da Mudança
+## Padrao Visual
 
-### Antes
-- Qualquer pessoa (mesmo sem login) podia acessar todos os dados
-
-### Depois
-- Apenas usuários autenticados podem visualizar os dados
-- O sistema já exige login para acessar as páginas, então o impacto para usuários legítimos é zero
-
----
-
-## Verificação Pós-Migração
-
-Após aplicar a migração, será executado:
-1. Novo scan de segurança para confirmar correções
-2. Teste de acesso às páginas com usuário logado
-3. Verificação de que usuários não autenticados não conseguem acessar dados
+A pagina seguira o design system existente:
+- Fundo: `bg-background`
+- Cards: `card-elevated` com `rounded-xl`
+- Tipografia: `Inter`, hierarquia com `text-2xl`, `text-lg`, `text-sm`
+- Cores semanticas: `text-foreground`, `text-muted-foreground`, `bg-primary/10`
+- Espacamento: `space-y-6`, `p-6`
 
 ---
 
-## Resumo
+## Resumo de Alteracoes
 
-| Ação | Quantidade |
+| Acao | Quantidade |
 |------|------------|
-| Políticas DROP | 20 |
-| Políticas CREATE | 20 |
-| Tabelas afetadas | 20 |
-| Tempo estimado | ~2 minutos |
+| Arquivos criados | 1 |
+| Arquivos modificados | 3 |
+| Rotas adicionadas | 1 |
+| Links adicionados | 2 (footer + auth) |
