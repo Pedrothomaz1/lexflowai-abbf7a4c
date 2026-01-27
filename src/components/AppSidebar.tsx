@@ -18,6 +18,8 @@ import {
   FolderCog,
   Monitor,
   Activity,
+  BarChart3,
+  ShieldCheck,
 } from "lucide-react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
@@ -116,6 +118,8 @@ const contratosMenuSections: MenuSectionType[] = [
     icon: Monitor,
     defaultOpen: false,
     items: [
+      { title: "Relatórios", url: "/relatorios", icon: BarChart3, roles: ["all"] },
+      { title: "Compliance LGPD", url: "/compliance", icon: ShieldCheck, roles: ["administrador"] },
       { title: "Trilha de Auditoria", url: "/audit-logs", icon: Activity, roles: ["administrador"] },
       { title: "Configurações", url: "/settings", icon: Settings, roles: ["all"] },
     ],
