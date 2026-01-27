@@ -12,9 +12,8 @@ import {
   ChevronRight,
   HelpCircle,
   Building2,
-  ClipboardList,
-  Wrench,
   Cog,
+  Plus,
 } from "lucide-react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
@@ -30,7 +29,6 @@ import {
   SidebarHeader,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -52,35 +50,50 @@ import { cn } from "@/lib/utils";
 import logoVeridiana from "@/assets/logo-veridiana.png";
 import { Badge } from "@/components/ui/badge";
 
+// Interface para itens com submenus
+interface MenuItemType {
+  title: string;
+  url: string;
+  icon: typeof LayoutDashboard;
+  roles: string[];
+  subItems?: { title: string; url: string; icon: typeof LayoutDashboard }[];
+}
+
 // Menu items para módulo de Contratos
 const contratosMenuItems = {
   principal: [
-    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: ["all"], hasBadge: false },
-    { title: "Contratos", url: "/contratos", icon: FileText, roles: ["all"], hasBadge: false },
+    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: ["all"] },
   ],
   gestao: [
-    { title: "Obrigações", url: "/obrigacoes", icon: ClipboardList, roles: ["all"], hasBadge: true },
-    { title: "Workflows", url: "/workflows", icon: GitBranch, roles: ["administrador"], hasBadge: false },
+    { 
+      title: "Contratos", 
+      url: "/contratos", 
+      icon: FileText, 
+      roles: ["all"],
+      subItems: [
+        { title: "Novo Contrato", url: "/contratos?novo=true", icon: Plus },
+      ]
+    },
   ],
-  configuracoes: [
-    { title: "Templates", url: "/templates", icon: FileStack, roles: ["all"], hasBadge: false },
-    { title: "Fornecedores", url: "/fornecedores", icon: Users, roles: ["all"], hasBadge: false },
-    { title: "Usuários", url: "/usuarios", icon: Shield, roles: ["administrador"], hasBadge: false },
+  cadastro: [
+    { title: "Templates", url: "/templates", icon: FileStack, roles: ["all"] },
+    { title: "Fornecedores", url: "/fornecedores", icon: Users, roles: ["all"] },
+    { title: "Workflows", url: "/workflows", icon: GitBranch, roles: ["administrador"] },
+    { title: "Usuários", url: "/usuarios", icon: Shield, roles: ["administrador"] },
   ],
 };
 
 // Menu items para módulo de Serviços
 const servicosMenuItems = {
   principal: [
-    { title: "Dashboard", url: "/servicos", icon: LayoutDashboard, roles: ["all"], hasBadge: false },
-    { title: "Serviços", url: "/servicos", icon: Wrench, roles: ["all"], hasBadge: false },
+    { title: "Dashboard", url: "/servicos", icon: LayoutDashboard, roles: ["all"] },
   ],
-  gestao: [] as { title: string; url: string; icon: typeof LayoutDashboard; roles: string[]; hasBadge: boolean }[],
-  configuracoes: [
-    { title: "Fornecedores", url: "/fornecedores", icon: Users, roles: ["all"], hasBadge: false },
-    { title: "Unidades", url: "/unidades", icon: Building2, roles: ["all"], hasBadge: false },
-    { title: "Especificações", url: "/especificacoes", icon: Cog, roles: ["all"], hasBadge: false },
-    { title: "Usuários", url: "/usuarios", icon: Shield, roles: ["administrador"], hasBadge: false },
+  gestao: [] as MenuItemType[],
+  cadastro: [
+    { title: "Fornecedores", url: "/fornecedores", icon: Users, roles: ["all"] },
+    { title: "Unidades", url: "/unidades", icon: Building2, roles: ["all"] },
+    { title: "Especificações", url: "/especificacoes", icon: Cog, roles: ["all"] },
+    { title: "Usuários", url: "/usuarios", icon: Shield, roles: ["administrador"] },
   ],
 };
 
@@ -100,8 +113,8 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const [userEmail, setUserEmail] = useState<string>("");
   const [userName, setUserName] = useState<string>("");
-  const [pendingObligations, setPendingObligations] = useState<number>(0);
-  const [configOpen, setConfigOpen] = useState(false);
+  const [gestaoOpen, setGestaoOpen] = useState(true);
+  const [cadastroOpen, setCadastroOpen] = useState(false);
 
   useEffect(() => {
     const getUser = async () => {
@@ -117,16 +130,7 @@ export function AppSidebar() {
       }
     };
     getUser();
-    fetchPendingObligations();
   }, []);
-
-  const fetchPendingObligations = async () => {
-    const { count } = await supabase
-      .from("contract_obligations")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "pendente");
-    setPendingObligations(count || 0);
-  };
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -149,7 +153,7 @@ export function AppSidebar() {
 
   const menuItems = moduloAtivo === "contratos" ? contratosMenuItems : servicosMenuItems;
 
-  const filterByRole = (items: typeof contratosMenuItems.principal) =>
+  const filterByRole = (items: MenuItemType[]) =>
     items.filter((item) => item.roles.includes("all") || (userRole && item.roles.includes(userRole)));
 
   const getInitials = (name: string) => {
@@ -161,7 +165,10 @@ export function AppSidebar() {
       .slice(0, 2);
   };
 
-  const isActive = (url: string) => location.pathname === url;
+  const isActive = (url: string) => {
+    const baseUrl = url.split("?")[0];
+    return location.pathname === baseUrl;
+  };
 
   const accentColor = moduloAtivo === "contratos" 
     ? "hsl(var(--lexflow-verde-principal))" 
@@ -211,7 +218,7 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="px-2 py-4 scrollbar-thin">
-        {/* Principal Group */}
+        {/* Principal Group - Simple */}
         <SidebarGroup className="mb-2">
           {!collapsed && (
             <SidebarGroupLabel className="px-3 text-xs font-medium text-[hsl(var(--lexflow-verde-claro)/0.6)] uppercase tracking-wider">
@@ -233,40 +240,15 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Gestão Group - Only for Contratos module */}
+        {/* Gestão Group - Collapsible */}
         {filterByRole(menuItems.gestao).length > 0 && (
           <SidebarGroup className="mb-2">
-            {!collapsed && (
-              <SidebarGroupLabel className="px-3 text-xs font-medium text-[hsl(var(--lexflow-verde-claro)/0.6)] uppercase tracking-wider">
-                Gestão
-              </SidebarGroupLabel>
-            )}
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {filterByRole(menuItems.gestao).map((item) => (
-                  <MenuItem 
-                    key={item.title} 
-                    item={item} 
-                    collapsed={collapsed} 
-                    isActive={isActive(item.url)}
-                    moduloAtivo={moduloAtivo}
-                    badge={item.hasBadge && pendingObligations > 0 ? pendingObligations : undefined}
-                  />
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
-
-        {/* Configurações Group - Collapsible */}
-        {filterByRole(menuItems.configuracoes).length > 0 && (
-          <SidebarGroup className="mb-2">
-            <Collapsible open={configOpen} onOpenChange={setConfigOpen}>
+            <Collapsible open={gestaoOpen} onOpenChange={setGestaoOpen}>
               {!collapsed && (
                 <CollapsibleTrigger className="w-full">
                   <SidebarGroupLabel className="px-3 text-xs font-medium text-[hsl(var(--lexflow-verde-claro)/0.6)] uppercase tracking-wider flex items-center justify-between cursor-pointer hover:text-[hsl(var(--lexflow-verde-claro))] transition-colors">
-                    <span>Cadastro</span>
-                    {configOpen ? (
+                    <span>Gestão</span>
+                    {gestaoOpen ? (
                       <ChevronDown className="h-3.5 w-3.5" />
                     ) : (
                       <ChevronRight className="h-3.5 w-3.5" />
@@ -277,7 +259,58 @@ export function AppSidebar() {
               <CollapsibleContent>
                 <SidebarGroupContent>
                   <SidebarMenu>
-                    {filterByRole(menuItems.configuracoes).map((item) => (
+                    {filterByRole(menuItems.gestao).map((item) => (
+                      <CollapsibleMenuItem 
+                        key={item.title} 
+                        item={item} 
+                        collapsed={collapsed} 
+                        isActive={isActive(item.url)}
+                        moduloAtivo={moduloAtivo}
+                      />
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </CollapsibleContent>
+            </Collapsible>
+            {/* Show items when collapsed */}
+            {collapsed && (
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {filterByRole(menuItems.gestao).map((item) => (
+                    <MenuItem 
+                      key={item.title} 
+                      item={item} 
+                      collapsed={collapsed} 
+                      isActive={isActive(item.url)}
+                      moduloAtivo={moduloAtivo}
+                    />
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            )}
+          </SidebarGroup>
+        )}
+
+        {/* Cadastro Group - Collapsible */}
+        {filterByRole(menuItems.cadastro).length > 0 && (
+          <SidebarGroup className="mb-2">
+            <Collapsible open={cadastroOpen} onOpenChange={setCadastroOpen}>
+              {!collapsed && (
+                <CollapsibleTrigger className="w-full">
+                  <SidebarGroupLabel className="px-3 text-xs font-medium text-[hsl(var(--lexflow-verde-claro)/0.6)] uppercase tracking-wider flex items-center justify-between cursor-pointer hover:text-[hsl(var(--lexflow-verde-claro))] transition-colors">
+                    <span>Cadastro</span>
+                    {cadastroOpen ? (
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    ) : (
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    )}
+                  </SidebarGroupLabel>
+                </CollapsibleTrigger>
+              )}
+              <CollapsibleContent>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {filterByRole(menuItems.cadastro).map((item) => (
                       <MenuItem 
                         key={item.title} 
                         item={item} 
@@ -294,7 +327,7 @@ export function AppSidebar() {
             {collapsed && (
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {filterByRole(menuItems.configuracoes).map((item) => (
+                  {filterByRole(menuItems.cadastro).map((item) => (
                     <MenuItem 
                       key={item.title} 
                       item={item} 
@@ -405,14 +438,13 @@ export function AppSidebar() {
 }
 
 interface MenuItemProps {
-  item: { title: string; url: string; icon: typeof LayoutDashboard; roles: string[] };
+  item: MenuItemType;
   collapsed: boolean;
   isActive: boolean;
   moduloAtivo: ModuloAtivo;
-  badge?: number;
 }
 
-function MenuItem({ item, collapsed, isActive, moduloAtivo, badge }: MenuItemProps) {
+function MenuItem({ item, collapsed, isActive, moduloAtivo }: MenuItemProps) {
   const Icon = item.icon;
 
   const activeStyles = moduloAtivo === "contratos"
@@ -438,20 +470,99 @@ function MenuItem({ item, collapsed, isActive, moduloAtivo, badge }: MenuItemPro
           )}
         >
           <Icon className={cn("h-4 w-4 shrink-0", isActive && iconActiveColor)} />
-          {!collapsed && (
-            <>
-              <span className="flex-1">{item.title}</span>
-              {badge !== undefined && badge > 0 && (
-                <Badge 
-                  className="bg-[hsl(var(--lexflow-vinho))] text-white text-xs px-1.5 py-0 h-5 min-w-[20px] flex items-center justify-center"
-                >
-                  {badge}
-                </Badge>
-              )}
-            </>
-          )}
+          {!collapsed && <span className="flex-1">{item.title}</span>}
         </NavLink>
       </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}
+
+interface CollapsibleMenuItemProps {
+  item: MenuItemType;
+  collapsed: boolean;
+  isActive: boolean;
+  moduloAtivo: ModuloAtivo;
+}
+
+function CollapsibleMenuItem({ item, collapsed, isActive, moduloAtivo }: CollapsibleMenuItemProps) {
+  const [open, setOpen] = useState(isActive);
+  const Icon = item.icon;
+  const navigate = useNavigate();
+
+  const activeStyles = moduloAtivo === "contratos"
+    ? "bg-[hsl(var(--lexflow-verde-principal)/0.15)] text-[hsl(var(--lexflow-verde-principal))]"
+    : "bg-[hsl(var(--lexflow-mostarda)/0.15)] text-[hsl(var(--lexflow-mostarda))]";
+
+  const iconActiveColor = moduloAtivo === "contratos"
+    ? "text-[hsl(var(--lexflow-verde-principal))]"
+    : "text-[hsl(var(--lexflow-mostarda))]";
+
+  if (!item.subItems || item.subItems.length === 0) {
+    return <MenuItem item={item} collapsed={collapsed} isActive={isActive} moduloAtivo={moduloAtivo} />;
+  }
+
+  return (
+    <SidebarMenuItem>
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <CollapsibleTrigger asChild>
+          <button
+            className={cn(
+              "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-200",
+              "hover:bg-sidebar-accent/50",
+              isActive
+                ? cn(activeStyles, "font-medium")
+                : "text-[hsl(var(--lexflow-off-white)/0.8)]",
+              collapsed && "justify-center px-2"
+            )}
+            onClick={(e) => {
+              if (!collapsed) {
+                // Navigate to main URL when clicking the item
+                navigate(item.url.split("?")[0]);
+              }
+            }}
+          >
+            <Icon className={cn("h-4 w-4 shrink-0", isActive && iconActiveColor)} />
+            {!collapsed && (
+              <>
+                <span className="flex-1 text-left">{item.title}</span>
+                <span 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpen(!open);
+                  }}
+                  className="p-1 hover:bg-sidebar-accent rounded"
+                >
+                  {open ? (
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  ) : (
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  )}
+                </span>
+              </>
+            )}
+          </button>
+        </CollapsibleTrigger>
+        {!collapsed && (
+          <CollapsibleContent>
+            <div className="ml-4 mt-1 space-y-1 border-l border-sidebar-border pl-3">
+              {item.subItems.map((subItem) => (
+                <NavLink
+                  key={subItem.title}
+                  to={subItem.url}
+                  className={cn(
+                    "flex items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors",
+                    "hover:bg-sidebar-accent/50 text-[hsl(var(--lexflow-off-white)/0.7)]",
+                    "hover:text-[hsl(var(--lexflow-off-white))]"
+                  )}
+                >
+                  <subItem.icon className="h-3.5 w-3.5" />
+                  <span>{subItem.title}</span>
+                </NavLink>
+              ))}
+            </div>
+          </CollapsibleContent>
+        )}
+      </Collapsible>
     </SidebarMenuItem>
   );
 }
