@@ -4,7 +4,15 @@ import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Camera, Loader2, Trash2, Upload } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Camera, Loader2, Trash2, Upload, X, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AvatarUploadProps {
@@ -24,6 +32,9 @@ export function AvatarUpload({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [removing, setRemoving] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
 
   const getInitials = (name: string) => {
     return name
@@ -34,7 +45,7 @@ export function AvatarUpload({
       .slice(0, 2);
   };
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -60,17 +71,42 @@ export function AvatarUpload({
       return;
     }
 
+    // Create preview and show dialog
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewUrl(objectUrl);
+    setSelectedFile(file);
+    setShowPreviewDialog(true);
+
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleCancelPreview = () => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setPreviewUrl(null);
+    setSelectedFile(null);
+    setShowPreviewDialog(false);
+  };
+
+  const handleConfirmUpload = async () => {
+    if (!selectedFile) return;
+
+    setShowPreviewDialog(false);
     setUploading(true);
 
     try {
       // Gera nome único para o arquivo
-      const fileExt = file.name.split(".").pop();
+      const fileExt = selectedFile.name.split(".").pop();
       const fileName = `${userId}/avatars/avatar-${Date.now()}.${fileExt}`;
 
       // Upload para o storage
       const { error: uploadError } = await supabase.storage
         .from("contratos-documentos")
-        .upload(fileName, file, { upsert: true });
+        .upload(fileName, selectedFile, { upsert: true });
 
       if (uploadError) throw uploadError;
 
@@ -100,10 +136,13 @@ export function AvatarUpload({
         description: error.message,
       });
     } finally {
-      setUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
+      // Cleanup preview
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
       }
+      setPreviewUrl(null);
+      setSelectedFile(null);
+      setUploading(false);
     }
   };
 
@@ -215,6 +254,53 @@ export function AvatarUpload({
       <p className="text-xs text-muted-foreground text-center">
         JPG, PNG ou WEBP. Máximo 2MB.
       </p>
+
+      {/* Preview Dialog */}
+      <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirmar foto de perfil</DialogTitle>
+            <DialogDescription>
+              Verifique se esta é a foto que deseja usar como avatar.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex justify-center py-6">
+            {previewUrl && (
+              <Avatar className="h-32 w-32 border-2 border-border">
+                <AvatarImage src={previewUrl} alt="Preview" />
+                <AvatarFallback className="text-3xl bg-primary text-primary-foreground">
+                  {getInitials(userName)}
+                </AvatarFallback>
+              </Avatar>
+            )}
+          </div>
+
+          <DialogFooter className="flex gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCancelPreview}
+              disabled={uploading}
+            >
+              <X className="h-4 w-4 mr-2" />
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleConfirmUpload}
+              disabled={uploading}
+            >
+              {uploading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Check className="h-4 w-4 mr-2" />
+              )}
+              {uploading ? "Enviando..." : "Confirmar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
