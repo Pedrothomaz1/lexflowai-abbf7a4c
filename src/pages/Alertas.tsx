@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +37,38 @@ const Alertas = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "pending" | "sent">("all");
   const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const handleAlertClick = async (alert: Alert) => {
+    // Mark as sent/read if pending
+    if (!alert.enviado) {
+      try {
+        await supabase
+          .from("contract_alerts")
+          .update({ 
+            enviado: true, 
+            data_envio: new Date().toISOString() 
+          })
+          .eq("id", alert.id);
+        
+        // Update local state
+        setAlerts(prev => 
+          prev.map(a => 
+            a.id === alert.id 
+              ? { ...a, enviado: true, data_envio: new Date().toISOString() } 
+              : a
+          )
+        );
+      } catch (error) {
+        console.error("Error marking alert as read:", error);
+      }
+    }
+    
+    // Navigate to contract
+    if (alert.contrato_id) {
+      navigate(`/contrato/${alert.contrato_id}`);
+    }
+  };
 
   useEffect(() => {
     fetchAlerts();
@@ -249,10 +282,13 @@ const Alertas = () => {
                   searchable
                   searchPlaceholder="Buscar alertas..."
                   searchKey="titulo"
+                  onRowClick={handleAlertClick}
                   rowClassName={(row) =>
-                    isAlertUrgent(row.data_alerta) && !row.enviado
-                      ? "bg-destructive/5 border-l-2 border-l-destructive"
-                      : ""
+                    `cursor-pointer hover:bg-muted/50 ${
+                      isAlertUrgent(row.data_alerta) && !row.enviado
+                        ? "bg-destructive/5 border-l-2 border-l-destructive"
+                        : ""
+                    }`
                   }
                 />
               )}
