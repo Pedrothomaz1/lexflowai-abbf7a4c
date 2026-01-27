@@ -206,9 +206,8 @@ const handler = async (req: Request): Promise<Response> => {
     // Send email via Resend
     const resend = new Resend(resendKey);
 
-    // Using onboarding@resend.dev temporarily while domain porveri.com.br is pending verification
     const { error: sendError } = await resend.emails.send({
-      from: "LexFlow <onboarding@resend.dev>",
+      from: "LexFlow <pedro@porveri.com.br>",
       to: recipients,
       subject: emailSubject,
       html: emailHtml,
