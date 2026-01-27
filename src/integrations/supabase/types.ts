@@ -44,6 +44,48 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs: {
+        Row: {
+          acao: string
+          created_at: string
+          dados_anteriores: Json | null
+          dados_novos: Json | null
+          entidade: string
+          entidade_id: string | null
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          acao: string
+          created_at?: string
+          dados_anteriores?: Json | null
+          dados_novos?: Json | null
+          entidade: string
+          entidade_id?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          acao?: string
+          created_at?: string
+          dados_anteriores?: Json | null
+          dados_novos?: Json | null
+          entidade?: string
+          entidade_id?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       contract_alerts: {
         Row: {
           contrato_id: string | null
@@ -465,6 +507,47 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      contract_versions: {
+        Row: {
+          alteracoes: Json | null
+          contrato_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          motivo: string | null
+          snapshot: Json
+          versao: number
+        }
+        Insert: {
+          alteracoes?: Json | null
+          contrato_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          motivo?: string | null
+          snapshot: Json
+          versao: number
+        }
+        Update: {
+          alteracoes?: Json | null
+          contrato_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          motivo?: string | null
+          snapshot?: Json
+          versao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_versions_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       contratos: {
         Row: {

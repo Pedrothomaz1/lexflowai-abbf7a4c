@@ -17,6 +17,7 @@ import {
   Briefcase,
   FolderCog,
   Monitor,
+  Activity,
 } from "lucide-react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
@@ -115,6 +116,7 @@ const contratosMenuSections: MenuSectionType[] = [
     icon: Monitor,
     defaultOpen: false,
     items: [
+      { title: "Trilha de Auditoria", url: "/audit-logs", icon: Activity, roles: ["administrador"] },
       { title: "Configurações", url: "/settings", icon: Settings, roles: ["all"] },
     ],
   },
