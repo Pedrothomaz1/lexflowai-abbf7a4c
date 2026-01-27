@@ -9,7 +9,7 @@ import { DataTable, DataTableColumn } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AIModelComparison } from "@/components/custos/AIModelComparison";
-import { ChartStylePreview } from "@/components/custos/ChartStylePreview";
+import { PremiumAreaChart, PremiumBarChart, PremiumDonutChart } from "@/components/charts";
 import { 
   DollarSign, 
   Cpu, 
@@ -21,21 +21,6 @@ import {
 } from "lucide-react";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  Legend,
-} from "recharts";
 
 type UsageRecord = {
   id: string;
@@ -50,11 +35,11 @@ type UsageRecord = {
 };
 
 const tipoConfig: Record<string, { label: string; icon: typeof Cpu; color: string }> = {
-  ai_tokens: { label: "Tokens IA", icon: Cpu, color: "#8b5cf6" },
-  email: { label: "Emails", icon: Mail, color: "#3b82f6" },
-  api_compras: { label: "API Compras", icon: ShoppingCart, color: "#10b981" },
-  storage: { label: "Armazenamento", icon: Database, color: "#f59e0b" },
-  edge_function: { label: "Edge Functions", icon: Cpu, color: "#ec4899" },
+  ai_tokens: { label: "Tokens IA", icon: Cpu, color: "hsl(var(--chart-1))" },
+  email: { label: "Emails", icon: Mail, color: "hsl(var(--chart-2))" },
+  api_compras: { label: "API Compras", icon: ShoppingCart, color: "hsl(var(--chart-3))" },
+  storage: { label: "Armazenamento", icon: Database, color: "hsl(var(--chart-4))" },
+  edge_function: { label: "Edge Functions", icon: Cpu, color: "hsl(var(--chart-5))" },
 };
 
 const Custos = () => {
@@ -141,9 +126,9 @@ const Custos = () => {
       return acc;
     }, {} as Record<string, number>)
   ).map(([tipo, valor]) => ({
-    tipo: tipoConfig[tipo]?.label || tipo,
-    valor,
-    color: tipoConfig[tipo]?.color || "#6b7280",
+    name: tipoConfig[tipo]?.label || tipo,
+    value: valor,
+    color: tipoConfig[tipo]?.color || "hsl(var(--muted-foreground))",
   }));
 
   // Dados para gráfico de barras por recurso
@@ -174,7 +159,7 @@ const Custos = () => {
       key: "tipo",
       header: "Tipo",
       render: (value) => {
-        const config = tipoConfig[value] || { label: value, icon: Cpu, color: "#6b7280" };
+        const config = tipoConfig[value] || { label: value, icon: Cpu, color: "hsl(var(--muted-foreground))" };
         const Icon = config.icon;
         return (
           <div className="flex items-center gap-2">
@@ -211,6 +196,9 @@ const Custos = () => {
     },
   ];
 
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+
   if (isLoading) {
     return <PageSkeleton />;
   }
@@ -236,9 +224,6 @@ const Custos = () => {
           </Select>
         </div>
       </FadeIn>
-
-      {/* Preview do Novo Estilo de Gráficos */}
-      <ChartStylePreview />
 
       {/* Stats Cards */}
       <StaggerContainer className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
@@ -289,40 +274,35 @@ const Custos = () => {
         </StaggerItem>
       </StaggerContainer>
 
-      {/* Charts Grid */}
+      {/* Charts Grid - Premium Style */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Evolução de Custos */}
         <FadeIn delay={0.1}>
           <AnimatedCard hoverScale={1}>
             <AnimatedCardHeader>
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-primary" />
-                <h3 className="text-lg font-semibold">Evolução de Custos</h3>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                  <h3 className="text-lg font-semibold">Evolução de Custos</h3>
+                </div>
+                {chartEvolucao.length > 0 && (
+                  <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+                    <TrendingUp className="h-3 w-3 mr-1" />
+                    Ativo
+                  </Badge>
+                )}
               </div>
             </AnimatedCardHeader>
             <AnimatedCardContent className="pt-4">
               <div className="h-[300px]">
                 {chartEvolucao.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartEvolucao}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis dataKey="dia" className="text-xs" />
-                      <YAxis className="text-xs" />
-                      <Tooltip
-                        formatter={(value: number) =>
-                          new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value)
-                        }
-                        labelFormatter={(label) => `Dia: ${label}`}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="custo"
-                        stroke="hsl(var(--primary))"
-                        strokeWidth={2}
-                        dot={{ fill: "hsl(var(--primary))" }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  <PremiumAreaChart
+                    data={chartEvolucao}
+                    dataKey="custo"
+                    xAxisKey="dia"
+                    height={300}
+                    formatter={formatCurrency}
+                  />
                 ) : (
                   <div className="flex items-center justify-center h-full text-muted-foreground">
                     Nenhum dado disponível
@@ -338,37 +318,23 @@ const Custos = () => {
           <AnimatedCard hoverScale={1}>
             <AnimatedCardHeader>
               <div className="flex items-center gap-2">
-                <Database className="h-5 w-5 text-primary" />
+                <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
                 <h3 className="text-lg font-semibold">Distribuição por Tipo</h3>
               </div>
             </AnimatedCardHeader>
             <AnimatedCardContent className="pt-4">
               <div className="h-[300px]">
                 {distribuicaoPorTipo.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={distribuicaoPorTipo}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={100}
-                        paddingAngle={5}
-                        dataKey="valor"
-                        nameKey="tipo"
-                        label={({ tipo, percent }) => `${tipo} (${(percent * 100).toFixed(0)}%)`}
-                      >
-                        {distribuicaoPorTipo.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        formatter={(value: number) =>
-                          new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value)
-                        }
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <PremiumDonutChart
+                    data={distribuicaoPorTipo}
+                    height={300}
+                    formatter={formatCurrency}
+                    centerLabel={{
+                      value: formatCurrency(stats.custoTotal),
+                      label: "Total"
+                    }}
+                    showLabels={false}
+                  />
                 ) : (
                   <div className="flex items-center justify-center h-full text-muted-foreground">
                     Nenhum dado disponível
@@ -384,22 +350,21 @@ const Custos = () => {
           <AnimatedCard hoverScale={1} className="lg:col-span-2">
             <AnimatedCardHeader>
               <div className="flex items-center gap-2">
-                <Cpu className="h-5 w-5 text-primary" />
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 <h3 className="text-lg font-semibold">Top 10 Recursos Mais Usados</h3>
               </div>
             </AnimatedCardHeader>
             <AnimatedCardContent className="pt-4">
               <div className="h-[300px]">
                 {usoPorRecurso.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={usoPorRecurso} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis type="number" className="text-xs" />
-                      <YAxis dataKey="recurso" type="category" width={150} className="text-xs" />
-                      <Tooltip />
-                      <Bar dataKey="quantidade" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <PremiumBarChart
+                    data={usoPorRecurso}
+                    dataKey="quantidade"
+                    yAxisKey="recurso"
+                    layout="vertical"
+                    height={300}
+                    formatter={(v) => v.toLocaleString("pt-BR")}
+                  />
                 ) : (
                   <div className="flex items-center justify-center h-full text-muted-foreground">
                     Nenhum dado disponível
