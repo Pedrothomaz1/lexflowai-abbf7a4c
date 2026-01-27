@@ -42,6 +42,7 @@ import {
   Check,
   DollarSign
 } from "lucide-react";
+import { AvatarUpload } from "@/components/Settings/AvatarUpload";
 
 interface IntegracaoConfig {
   id: string;
@@ -66,6 +67,7 @@ const Settings = () => {
     email: "",
     phone: "",
     department: "",
+    avatar_url: null as string | null,
   });
 
   // Integration state
@@ -106,6 +108,7 @@ const Settings = () => {
         email: profile.email || user.email || "",
         phone: profile.phone || "",
         department: profile.department || "",
+        avatar_url: profile.avatar_url || null,
       });
     }
   };
@@ -283,7 +286,17 @@ const Settings = () => {
             Atualize suas informações pessoais
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
+          {/* Avatar Upload */}
+          {user && (
+            <AvatarUpload
+              userId={user.id}
+              currentAvatarUrl={formData.avatar_url}
+              userName={formData.full_name || "Usuário"}
+              onAvatarChange={(newUrl) => setFormData({ ...formData, avatar_url: newUrl })}
+            />
+          )}
+          
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="full_name">Nome Completo</Label>

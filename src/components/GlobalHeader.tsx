@@ -7,9 +7,11 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Bell, Search, Moon, Sun, X, Calendar } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Bell, Search, Moon, Sun, X, Calendar, Settings, LogOut, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -34,6 +36,10 @@ export function GlobalHeader() {
   const [searchQuery, setSearchQuery] = useState("");
   const [pendingAlerts, setPendingAlerts] = useState(0);
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [userProfile, setUserProfile] = useState<{
+    full_name: string;
+    avatar_url: string | null;
+  } | null>(null);
 
   const currentRoute = routeTitles[location.pathname] || { title: "LexFlow" };
 
@@ -44,15 +50,31 @@ export function GlobalHeader() {
   }, []);
 
   useEffect(() => {
-    // Fetch pending alerts count
-    const fetchAlerts = async () => {
+    // Fetch pending alerts count and user profile
+    const fetchData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        // Fetch profile
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name, avatar_url")
+          .eq("id", user.id)
+          .maybeSingle();
+        
+        if (profile) {
+          setUserProfile(profile);
+        }
+      }
+      
+      // Fetch alerts count
       const { count } = await supabase
         .from("contract_alerts")
         .select("*", { count: "exact", head: true })
         .eq("enviado", false);
       setPendingAlerts(count || 0);
     };
-    fetchAlerts();
+    fetchData();
   }, []);
 
   const toggleTheme = () => {
@@ -68,6 +90,20 @@ export function GlobalHeader() {
       setSearchOpen(false);
       setSearchQuery("");
     }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/auth");
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   // Keyboard shortcut for search
@@ -219,6 +255,62 @@ export function GlobalHeader() {
               </DropdownMenuItem>
             </div>
           )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* User Avatar Menu */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="relative h-9 w-9 rounded-full"
+          >
+            <Avatar className="h-8 w-8">
+              <AvatarImage 
+                src={userProfile?.avatar_url || undefined} 
+                alt={userProfile?.full_name || "Usuário"} 
+              />
+              <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+                {getInitials(userProfile?.full_name || "U")}
+              </AvatarFallback>
+            </Avatar>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <div className="flex items-center gap-2 p-2">
+            <Avatar className="h-10 w-10">
+              <AvatarImage 
+                src={userProfile?.avatar_url || undefined} 
+                alt={userProfile?.full_name || "Usuário"} 
+              />
+              <AvatarFallback className="bg-primary text-primary-foreground">
+                {getInitials(userProfile?.full_name || "U")}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col">
+              <span className="text-sm font-medium">
+                {userProfile?.full_name || "Usuário"}
+              </span>
+              <span className="text-xs text-muted-foreground">Perfil</span>
+            </div>
+          </div>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={() => navigate("/settings")}
+            className="cursor-pointer"
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            Configurações
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={handleLogout}
+            className="cursor-pointer text-destructive focus:text-destructive"
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Sair
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </header>

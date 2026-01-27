@@ -15,6 +15,7 @@ import Contratos from "./pages/Contratos";
 import ContratoDetalhes from "./pages/ContratoDetalhes";
 import Kanban from "./pages/Kanban";
 import Fornecedores from "./pages/Fornecedores";
+import FornecedorDetalhes from "./pages/FornecedorDetalhes";
 import Usuarios from "./pages/Usuarios";
 import Settings from "./pages/Settings";
 import Templates from "./pages/Templates";
@@ -54,6 +55,7 @@ const App = () => (
               <Route path="/contratos/:id" element={<ProtectedRoute><DashboardLayout><ContratoDetalhes /></DashboardLayout></ProtectedRoute>} />
               <Route path="/kanban" element={<ProtectedRoute><DashboardLayout><Kanban /></DashboardLayout></ProtectedRoute>} />
               <Route path="/fornecedores" element={<ProtectedRoute><DashboardLayout><Fornecedores /></DashboardLayout></ProtectedRoute>} />
+              <Route path="/fornecedores/:id" element={<ProtectedRoute><DashboardLayout><FornecedorDetalhes /></DashboardLayout></ProtectedRoute>} />
               <Route path="/usuarios" element={<ProtectedRoute><DashboardLayout><Usuarios /></DashboardLayout></ProtectedRoute>} />
               <Route path="/templates" element={<ProtectedRoute><DashboardLayout><Templates /></DashboardLayout></ProtectedRoute>} />
               <Route path="/alertas" element={<ProtectedRoute><DashboardLayout><Alertas /></DashboardLayout></ProtectedRoute>} />
