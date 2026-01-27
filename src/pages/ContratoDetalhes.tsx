@@ -35,6 +35,7 @@ import {
   Hash,
   Paperclip,
   History,
+  Edit3,
 } from "lucide-react";
 import { exportContratoDetalhePDF } from "@/utils/pdfExport";
 import { ContractComments } from "@/components/ContractComments";
@@ -55,6 +56,7 @@ import {
   ContractAttachments,
   ContractObligations,
   ContractVersionHistory,
+  ContractRedlineEditor,
 } from "@/components/ContractDetails";
 import { FinanceNotificationModal } from "@/components/FinanceNotificationModal";
 import { useAuditLog } from "@/hooks/useAuditLog";
@@ -905,10 +907,11 @@ const ContratoDetalhes = () => {
       {/* Tabs Section */}
       <FadeIn delay={0.3}>
         <Tabs defaultValue="aprovacoes" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4 lg:w-[500px]">
+          <TabsList className="grid w-full grid-cols-5 lg:w-[600px]">
             <TabsTrigger value="aprovacoes">Aprovações</TabsTrigger>
             <TabsTrigger value="assinaturas">Assinaturas</TabsTrigger>
             <TabsTrigger value="comentarios">Comentários</TabsTrigger>
+            <TabsTrigger value="redlining">Redlining</TabsTrigger>
             <TabsTrigger value="versoes">Versões</TabsTrigger>
           </TabsList>
 
@@ -985,6 +988,28 @@ const ContratoDetalhes = () => {
 
           <TabsContent value="comentarios">
             <ContractComments contratoId={contrato.id} />
+          </TabsContent>
+
+          <TabsContent value="redlining">
+            <AnimatedCard>
+              <AnimatedCardHeader>
+                <div className="flex items-center gap-2">
+                  <Edit3 className="h-5 w-5 text-primary" />
+                  <div>
+                    <h3 className="text-lg font-semibold">Redlining / Markup</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Edição colaborativa com marcações visuais
+                    </p>
+                  </div>
+                </div>
+              </AnimatedCardHeader>
+              <AnimatedCardContent>
+                <ContractRedlineEditor
+                  contratoId={contrato.id}
+                  conteudoOriginal={contrato.descricao || ""}
+                />
+              </AnimatedCardContent>
+            </AnimatedCard>
           </TabsContent>
 
           <TabsContent value="versoes">
