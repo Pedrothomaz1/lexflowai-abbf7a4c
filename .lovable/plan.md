@@ -1,172 +1,134 @@
 
-# Plano: Configurar Testes Automatizados com Vitest
+
+# Plano: Configurar GitHub Actions para Testes Automatizados
 
 ## Resumo
 
-Configurar um ambiente completo de testes automatizados usando **Vitest** + **React Testing Library** para testar os componentes do projeto, incluindo os gráficos premium, utilitários de validação e componentes UI, sem consumir créditos do Lovable.
+Criar um workflow do GitHub Actions que executa automaticamente os testes do Vitest sempre que houver um **push** ou **Pull Request** no repositório.
 
 ---
 
 ## O Que Vamos Fazer
 
-### 1. Configurar Infraestrutura de Testes
-- Adicionar dependências de teste ao projeto
-- Criar arquivo de configuração do Vitest
-- Configurar arquivo de setup para React Testing Library
-- Atualizar TypeScript para reconhecer tipos de teste
+### 1. Criar Estrutura de Pastas
+- Criar pasta `.github/workflows/`
+- Criar arquivo de configuração `tests.yml`
 
-### 2. Criar Testes para Componentes Principais
-
-| Componente/Utilitário | Tipo de Teste | Prioridade |
-|----------------------|---------------|------------|
-| `documentValidation.ts` | Unitário (CPF/CNPJ) | Alta |
-| `PremiumCharts.tsx` | Renderização | Alta |
-| `utils.ts` (cn function) | Unitário | Média |
-| Componentes UI (Button, Card) | Renderização | Média |
-
-### 3. Adicionar Script de Teste
-- Comando `npm run test` para rodar testes
-- Comando `npm run test:ui` para interface visual (opcional)
+### 2. Adicionar Script de Teste ao package.json
+- Adicionar comando `"test": "vitest run"` nos scripts
 
 ---
 
-## Arquivos a Serem Criados/Modificados
+## Arquivo a Ser Criado
 
 ```text
-projeto/
-├── vitest.config.ts              (NOVO)
-├── src/
-│   └── test/
-│       ├── setup.ts              (NOVO)
-│       └── example.test.ts       (NOVO - verificação)
-├── src/utils/
-│   └── documentValidation.test.ts (NOVO)
-├── src/components/charts/
-│   └── PremiumCharts.test.tsx    (NOVO)
-├── src/lib/
-│   └── utils.test.ts             (NOVO)
-├── package.json                  (ATUALIZAR)
-└── tsconfig.app.json             (ATUALIZAR)
+.github/
+└── workflows/
+    └── tests.yml    (NOVO)
+```
+
+---
+
+## Como Vai Funcionar
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  Você faz PUSH ou abre um PR no GitHub                      │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│  GitHub Actions detecta automaticamente                     │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Executa os passos:                                         │
+│  1. Configura Node.js 20                                    │
+│  2. Instala dependências (npm ci)                           │
+│  3. Roda os testes (npm run test)                           │
+└─────────────────────────────────────────────────────────────┘
+                            │
+              ┌─────────────┴─────────────┐
+              ▼                           ▼
+     ┌────────────────┐          ┌────────────────┐
+     │   PASSOU       │          │   FALHOU       │
+     │   (verde)      │          │   (vermelho)   │
+     └────────────────┘          └────────────────┘
 ```
 
 ---
 
 ## Benefícios
 
-- **Zero custo de créditos** - Testes rodam localmente
-- **Controle total** - Você define o que testar
-- **Rápido feedback** - Resultados em segundos
-- **Integração CI/CD** - Compatível com GitHub Actions
-- **Documentação viva** - Testes servem como especificação
+- **Automático** - Não precisa lembrar de rodar testes
+- **Visível** - Status aparece diretamente no PR do GitHub
+- **Seguro** - Bloqueia merge se testes falharem
+- **Gratuito** - GitHub Actions é gratuito para repositórios públicos (e tem limite generoso para privados)
 
 ---
 
 ## Detalhes Técnicos
 
-### Dependências a Adicionar (devDependencies)
+### Configuração do Workflow (.github/workflows/tests.yml)
 
-```json
-{
-  "@testing-library/jest-dom": "^6.6.0",
-  "@testing-library/react": "^16.0.0",
-  "jsdom": "^20.0.3",
-  "vitest": "^3.2.4"
-}
+```yaml
+name: Tests
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm run test
 ```
 
-### Configuracao vitest.config.ts
-
-```typescript
-import { defineConfig } from "vitest/config";
-import react from "@vitejs/plugin-react-swc";
-import path from "path";
-
-export default defineConfig({
-  plugins: [react()],
-  test: {
-    environment: "jsdom",
-    globals: true,
-    setupFiles: ["./src/test/setup.ts"],
-    include: ["src/**/*.{test,spec}.{ts,tsx}"],
-  },
-  resolve: {
-    alias: { "@": path.resolve(__dirname, "./src") },
-  },
-});
-```
-
-### Exemplo de Teste: Validacao CPF/CNPJ
-
-```typescript
-import { describe, it, expect } from "vitest";
-import { validateCPF, validateCNPJ, formatCPF } from "./documentValidation";
-
-describe("validateCPF", () => {
-  it("valida CPF correto", () => {
-    expect(validateCPF("529.982.247-25")).toBe(true);
-  });
-
-  it("rejeita CPF com digitos repetidos", () => {
-    expect(validateCPF("111.111.111-11")).toBe(false);
-  });
-
-  it("rejeita CPF com digitos verificadores incorretos", () => {
-    expect(validateCPF("529.982.247-00")).toBe(false);
-  });
-});
-```
-
-### Exemplo de Teste: Componente React
-
-```typescript
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
-import { Sparkline } from "./PremiumCharts";
-
-describe("Sparkline", () => {
-  it("renderiza sem erros", () => {
-    render(<Sparkline data={[10, 20, 30, 40]} />);
-    // Sparkline usa SVG internamente
-    expect(document.querySelector("svg")).toBeInTheDocument();
-  });
-});
-```
-
-### Scripts package.json
+### Script a Adicionar no package.json
 
 ```json
 {
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:ui": "vitest --ui"
+    "test:coverage": "vitest run --coverage"
   }
 }
 ```
 
 ---
 
-## Como Executar os Testes
+## Onde Ver os Resultados
 
-Apos a implementacao, voce podera rodar:
+Após configurar, você verá:
 
-```bash
-# Rodar todos os testes uma vez
-npm run test
-
-# Rodar em modo watch (re-executa ao salvar)
-npm run test:watch
-```
+1. **Na aba "Actions" do GitHub** - Histórico de todas as execuções
+2. **Nos Pull Requests** - Ícone verde (passou) ou vermelho (falhou)
+3. **Nos commits** - Check mark indicando status
 
 ---
 
-## Cobertura de Testes Inicial
+## Requisitos
 
-| Arquivo | Testes Planejados |
-|---------|-------------------|
-| `documentValidation.ts` | 12 testes (CPF valido/invalido, CNPJ valido/invalido, formatacao, deteccao tipo) |
-| `PremiumCharts.tsx` | 5 testes (renderizacao de cada componente) |
-| `utils.ts` | 3 testes (funcao cn com diferentes inputs) |
-
-**Total inicial: ~20 testes**
+- Projeto conectado ao GitHub (você já tem isso)
+- Arquivo `vitest.config.ts` configurado (já feito)
+- Testes criados na pasta `src/` (já feito)
 
