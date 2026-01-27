@@ -8,6 +8,13 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+interface ParcelaAdicional {
+  titulo: string;
+  data_vencimento: string | null;
+  valor: number | null;
+  status: string | null;
+}
+
 interface NotificacaoRequest {
   tipo: "contrato" | "servico";
   contratoId?: string;
@@ -15,6 +22,7 @@ interface NotificacaoRequest {
   emailFinanceiro: string;
   emailsAdicionais?: string;
   observacoes?: string;
+  parcelasAdicionais?: ParcelaAdicional[];
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -63,7 +71,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Validate request body
     const body: NotificacaoRequest = await req.json();
-    const { tipo, contratoId, servicoId, emailFinanceiro, emailsAdicionais, observacoes } = body;
+    const { tipo, contratoId, servicoId, emailFinanceiro, emailsAdicionais, observacoes, parcelasAdicionais } = body;
 
     if (!emailFinanceiro || !emailFinanceiro.includes("@")) {
       return new Response(
@@ -116,12 +124,20 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       // Fetch obrigacoes com valor (parcelas de pagamento)
-      const { data: obrigacoes } = await supabase
+      const { data: obrigacoesDb } = await supabase
         .from("contract_obligations")
         .select("*")
         .eq("contrato_id", contratoId)
         .not("valor", "is", null)
         .order("data_vencimento", { ascending: true });
+
+      // Combine database obrigacoes with additional parcelas from request
+      const obrigacoes = [
+        ...(obrigacoesDb || []),
+        ...(parcelasAdicionais || []).filter(p => !obrigacoesDb?.some(o => 
+          o.titulo === p.titulo && o.data_vencimento === p.data_vencimento
+        )),
+      ];
 
       emailSubject = `[LexFlow] Aprovação de Contrato - ${contrato.numero_contrato}`;
       emailHtml = buildContratoEmail(contrato, fornecedor, obrigacoes || [], observacoes, supabaseUrl.replace(".supabase.co", ".lovable.app"));

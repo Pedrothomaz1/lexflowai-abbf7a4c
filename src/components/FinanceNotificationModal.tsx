@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Loader2, Send, Mail, DollarSign, Building, FileText, CreditCard, X } from "lucide-react";
+import { Loader2, Send, Mail, DollarSign, Building, FileText, CreditCard, X, Plus, Trash2, CalendarIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -37,6 +37,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 
 const financeNotificationSchema = z.object({
   emailFinanceiro: z.string()
@@ -101,6 +104,13 @@ interface Obrigacao {
   status: string | null;
 }
 
+interface ParcelaManual {
+  id: string;
+  titulo: string;
+  data_vencimento: Date | null;
+  valor: string;
+}
+
 interface FinanceNotificationModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -122,6 +132,7 @@ export function FinanceNotificationModal({
   const [contratoData, setContratoData] = useState<ContratoData | null>(null);
   const [servicoData, setServicoData] = useState<ServicoData | null>(null);
   const [obrigacoes, setObrigacoes] = useState<Obrigacao[]>([]);
+  const [parcelasManuais, setParcelasManuais] = useState<ParcelaManual[]>([]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(financeNotificationSchema),
@@ -139,6 +150,8 @@ export function FinanceNotificationModal({
       } else if (tipo === "servico" && servicoId) {
         fetchServicoData();
       }
+      // Reset parcelas manuais when modal opens
+      setParcelasManuais([]);
     }
   }, [isOpen, contratoId, servicoId, tipo]);
 
@@ -179,12 +192,12 @@ export function FinanceNotificationModal({
         setContratoData({ ...contrato, fornecedor: null });
       }
 
-      // Fetch obrigacoes de pagamento
+      // Fetch obrigacoes com valor
       const { data: obrigacoesData } = await supabase
         .from("contract_obligations")
         .select("id, titulo, data_vencimento, valor, status")
         .eq("contrato_id", contratoId)
-        .eq("tipo", "pagamento")
+        .not("valor", "is", null)
         .order("data_vencimento", { ascending: true });
 
       setObrigacoes(obrigacoesData || []);
@@ -280,10 +293,54 @@ export function FinanceNotificationModal({
     return format(new Date(dateStr), "dd/MM/yyyy", { locale: ptBR });
   };
 
+  const addParcela = () => {
+    const novaParcela: ParcelaManual = {
+      id: crypto.randomUUID(),
+      titulo: `Parcela ${parcelasManuais.length + 1}`,
+      data_vencimento: null,
+      valor: "",
+    };
+    setParcelasManuais([...parcelasManuais, novaParcela]);
+  };
+
+  const updateParcela = (id: string, field: keyof ParcelaManual, value: any) => {
+    setParcelasManuais(prev => 
+      prev.map(p => p.id === id ? { ...p, [field]: value } : p)
+    );
+  };
+
+  const removeParcela = (id: string) => {
+    setParcelasManuais(prev => prev.filter(p => p.id !== id));
+  };
+
+  const parseCurrencyInput = (value: string): number => {
+    // Remove R$, dots (thousands separator), and replace comma with dot for decimal
+    const cleaned = value.replace(/[R$\s.]/g, "").replace(",", ".");
+    return parseFloat(cleaned) || 0;
+  };
+
   const onSubmit = async (data: FormData) => {
     setIsSending(true);
 
     try {
+      // Combine existing obrigacoes with manual parcelas
+      const todasParcelas = [
+        ...obrigacoes.map(o => ({
+          titulo: o.titulo,
+          data_vencimento: o.data_vencimento,
+          valor: o.valor,
+          status: o.status,
+        })),
+        ...parcelasManuais
+          .filter(p => p.data_vencimento && p.valor)
+          .map(p => ({
+            titulo: p.titulo,
+            data_vencimento: p.data_vencimento ? format(p.data_vencimento, "yyyy-MM-dd") : null,
+            valor: parseCurrencyInput(p.valor),
+            status: "pendente",
+          })),
+      ];
+
       const { data: response, error } = await supabase.functions.invoke(
         "enviar-notificacao-financeiro",
         {
@@ -294,6 +351,7 @@ export function FinanceNotificationModal({
             emailFinanceiro: data.emailFinanceiro,
             emailsAdicionais: data.emailsAdicionais || "",
             observacoes: data.observacoes || "",
+            parcelasAdicionais: todasParcelas,
           },
         }
       );
@@ -306,6 +364,7 @@ export function FinanceNotificationModal({
           description: "O financeiro foi notificado com sucesso.",
         });
         form.reset();
+        setParcelasManuais([]);
         onClose();
       } else {
         throw new Error(response.error || "Erro ao enviar notificação");
@@ -324,11 +383,19 @@ export function FinanceNotificationModal({
 
   const handleClose = () => {
     form.reset();
+    setParcelasManuais([]);
     onClose();
   };
 
   const fornecedor = tipo === "contrato" ? contratoData?.fornecedor : servicoData?.fornecedor;
   const hasBankData = fornecedor?.banco || fornecedor?.agencia || fornecedor?.conta || fornecedor?.pix;
+  const todasParcelasExibir = [...obrigacoes, ...parcelasManuais.filter(p => p.data_vencimento && p.valor).map(p => ({
+    id: p.id,
+    titulo: p.titulo,
+    data_vencimento: p.data_vencimento ? format(p.data_vencimento, "yyyy-MM-dd") : "",
+    valor: parseCurrencyInput(p.valor),
+    status: "pendente",
+  }))];
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -455,43 +522,121 @@ export function FinanceNotificationModal({
                 )}
               </div>
 
-              {/* Payment Obligations */}
-              {tipo === "contrato" && obrigacoes.length > 0 && (
+              {/* Parcelas Section */}
+              {tipo === "contrato" && (
                 <>
                   <Separator />
                   <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-sm font-medium">
-                      <DollarSign className="h-4 w-4" />
-                      Parcelas/Obrigações de Pagamento
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        <DollarSign className="h-4 w-4" />
+                        Parcelas / Cronograma de Pagamentos
+                      </div>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm"
+                        onClick={addParcela}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Adicionar Parcela
+                      </Button>
                     </div>
-                    <div className="rounded-md border">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Parcela</TableHead>
-                            <TableHead>Vencimento</TableHead>
-                            <TableHead>Valor</TableHead>
-                            <TableHead>Status</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {obrigacoes.map((obrigacao, index) => (
-                            <TableRow key={obrigacao.id}>
-                              <TableCell className="font-medium">
-                                {index + 1}/{obrigacoes.length} - {obrigacao.titulo}
-                              </TableCell>
-                              <TableCell>{formatDate(obrigacao.data_vencimento)}</TableCell>
-                              <TableCell>{formatCurrency(obrigacao.valor)}</TableCell>
-                              <TableCell>
-                                <Badge variant={obrigacao.status === "pendente" ? "outline" : "secondary"}>
-                                  {obrigacao.status || "pendente"}
-                                </Badge>
-                              </TableCell>
+
+                    {/* Manual Parcelas Input */}
+                    {parcelasManuais.length > 0 && (
+                      <div className="space-y-3 p-4 bg-muted/30 rounded-lg border border-dashed">
+                        <p className="text-xs text-muted-foreground">Parcelas a adicionar no email:</p>
+                        {parcelasManuais.map((parcela, index) => (
+                          <div key={parcela.id} className="flex items-center gap-3">
+                            <Input
+                              placeholder="Descrição"
+                              value={parcela.titulo}
+                              onChange={(e) => updateParcela(parcela.id, "titulo", e.target.value)}
+                              className="flex-1"
+                            />
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    "w-[140px] justify-start text-left font-normal",
+                                    !parcela.data_vencimento && "text-muted-foreground"
+                                  )}
+                                >
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                  {parcela.data_vencimento 
+                                    ? format(parcela.data_vencimento, "dd/MM/yyyy")
+                                    : "Vencimento"
+                                  }
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={parcela.data_vencimento || undefined}
+                                  onSelect={(date) => updateParcela(parcela.id, "data_vencimento", date)}
+                                  initialFocus
+                                  locale={ptBR}
+                                />
+                              </PopoverContent>
+                            </Popover>
+                            <Input
+                              placeholder="R$ 0,00"
+                              value={parcela.valor}
+                              onChange={(e) => updateParcela(parcela.id, "valor", e.target.value)}
+                              className="w-[120px]"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeParcela(parcela.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Existing Obrigacoes */}
+                    {obrigacoes.length > 0 && (
+                      <div className="rounded-md border">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Parcela</TableHead>
+                              <TableHead>Vencimento</TableHead>
+                              <TableHead>Valor</TableHead>
+                              <TableHead>Status</TableHead>
                             </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
+                          </TableHeader>
+                          <TableBody>
+                            {obrigacoes.map((obrigacao, index) => (
+                              <TableRow key={obrigacao.id}>
+                                <TableCell className="font-medium">
+                                  {index + 1}/{obrigacoes.length} - {obrigacao.titulo}
+                                </TableCell>
+                                <TableCell>{formatDate(obrigacao.data_vencimento)}</TableCell>
+                                <TableCell>{formatCurrency(obrigacao.valor)}</TableCell>
+                                <TableCell>
+                                  <Badge variant={obrigacao.status === "pendente" ? "outline" : "secondary"}>
+                                    {obrigacao.status || "pendente"}
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+
+                    {obrigacoes.length === 0 && parcelasManuais.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        Nenhuma parcela cadastrada. Clique em "Adicionar Parcela" para informar os valores.
+                      </p>
+                    )}
                   </div>
                 </>
               )}
