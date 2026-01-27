@@ -66,7 +66,7 @@ const Alertas = () => {
     
     // Navigate to contract
     if (alert.contrato_id) {
-      navigate(`/contrato/${alert.contrato_id}`);
+      navigate(`/contratos/${alert.contrato_id}`);
     }
   };
 
