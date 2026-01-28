@@ -1274,6 +1274,36 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limits: {
+        Row: {
+          count: number | null
+          created_at: string | null
+          endpoint_key: string
+          id: string
+          ip_address: unknown
+          user_id: string | null
+          window_start: string | null
+        }
+        Insert: {
+          count?: number | null
+          created_at?: string | null
+          endpoint_key: string
+          id?: string
+          ip_address?: unknown
+          user_id?: string | null
+          window_start?: string | null
+        }
+        Update: {
+          count?: number | null
+          created_at?: string | null
+          endpoint_key?: string
+          id?: string
+          ip_address?: unknown
+          user_id?: string | null
+          window_start?: string | null
+        }
+        Relationships: []
+      }
       report_configurations: {
         Row: {
           agendamento: string | null
@@ -1823,6 +1853,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_old_rate_limits: { Args: never; Returns: undefined }
       has_any_role: {
         Args: {
           _roles: Database["public"]["Enums"]["app_role"][]
