@@ -47,40 +47,58 @@ export type Database = {
       audit_logs: {
         Row: {
           acao: string
+          approved_by: string | null
           created_at: string
           dados_anteriores: Json | null
           dados_novos: Json | null
           entidade: string
           entidade_id: string | null
+          event_category: string | null
           id: string
           ip_address: string | null
           metadata: Json | null
+          requires_review: boolean | null
+          risk_level: string | null
+          session_id: string | null
+          success: boolean | null
           user_agent: string | null
           user_id: string | null
         }
         Insert: {
           acao: string
+          approved_by?: string | null
           created_at?: string
           dados_anteriores?: Json | null
           dados_novos?: Json | null
           entidade: string
           entidade_id?: string | null
+          event_category?: string | null
           id?: string
           ip_address?: string | null
           metadata?: Json | null
+          requires_review?: boolean | null
+          risk_level?: string | null
+          session_id?: string | null
+          success?: boolean | null
           user_agent?: string | null
           user_id?: string | null
         }
         Update: {
           acao?: string
+          approved_by?: string | null
           created_at?: string
           dados_anteriores?: Json | null
           dados_novos?: Json | null
           entidade?: string
           entidade_id?: string | null
+          event_category?: string | null
           id?: string
           ip_address?: string | null
           metadata?: Json | null
+          requires_review?: boolean | null
+          risk_level?: string | null
+          session_id?: string | null
+          success?: boolean | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -1027,6 +1045,66 @@ export type Database = {
         }
         Relationships: []
       }
+      login_attempts: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          failure_reason: string | null
+          id: string
+          ip_address: unknown
+          success: boolean | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          failure_reason?: string | null
+          id?: string
+          ip_address?: unknown
+          success?: boolean | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          failure_reason?: string | null
+          id?: string
+          ip_address?: unknown
+          success?: boolean | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      mfa_requirements: {
+        Row: {
+          created_at: string | null
+          grace_period_days: number | null
+          id: string
+          is_required: boolean | null
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          grace_period_days?: number | null
+          id?: string
+          is_required?: boolean | null
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          grace_period_days?: number | null
+          id?: string
+          is_required?: boolean | null
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       negotiation_metrics: {
         Row: {
           contrato_id: string | null
@@ -1139,6 +1217,30 @@ export type Database = {
           },
         ]
       }
+      permissions: {
+        Row: {
+          category: string
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1222,6 +1324,91 @@ export type Database = {
           visualizacao?: string | null
         }
         Relationships: []
+      }
+      role_permissions: {
+        Row: {
+          created_at: string | null
+          id: string
+          permission_id: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          permission_id: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          permission_id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_permission_id_fkey"
+            columns: ["permission_id"]
+            isOneToOne: false
+            referencedRelation: "permissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      security_alerts: {
+        Row: {
+          assigned_to: string | null
+          created_at: string | null
+          details: Json | null
+          event_id: string | null
+          id: string
+          resolution_notes: string | null
+          resolved_at: string | null
+          rule_id: string
+          rule_name: string
+          severity: string
+          status: string | null
+          timestamp: string | null
+          user_id: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string | null
+          details?: Json | null
+          event_id?: string | null
+          id?: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          rule_id: string
+          rule_name: string
+          severity: string
+          status?: string | null
+          timestamp?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string | null
+          details?: Json | null
+          event_id?: string | null
+          id?: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          rule_id?: string
+          rule_name?: string
+          severity?: string
+          status?: string | null
+          timestamp?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_alerts_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "audit_logs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       servico_historico: {
         Row: {
@@ -1643,6 +1830,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      has_permission: {
+        Args: { _permission: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1651,6 +1842,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      is_mfa_required_for_user: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "analista_juridico" | "consultoria_juridica" | "administrador"
@@ -1669,6 +1861,21 @@ export type Database = {
         | "confidencialidade"
         | "parceria"
         | "outro"
+      extended_role:
+        | "system_admin"
+        | "financeiro_senior"
+        | "financeiro_junior"
+        | "compras_manager"
+        | "compras_analyst"
+        | "cobranca"
+        | "rh_manager"
+        | "rh_analyst"
+        | "auditor"
+        | "executive"
+        | "readonly"
+        | "analista_juridico"
+        | "consultoria_juridica"
+        | "administrador"
       notification_frequency: "immediate" | "daily" | "weekly"
     }
     CompositeTypes: {
@@ -1814,6 +2021,22 @@ export const Constants = {
         "confidencialidade",
         "parceria",
         "outro",
+      ],
+      extended_role: [
+        "system_admin",
+        "financeiro_senior",
+        "financeiro_junior",
+        "compras_manager",
+        "compras_analyst",
+        "cobranca",
+        "rh_manager",
+        "rh_analyst",
+        "auditor",
+        "executive",
+        "readonly",
+        "analista_juridico",
+        "consultoria_juridica",
+        "administrador",
       ],
       notification_frequency: ["immediate", "daily", "weekly"],
     },
