@@ -1842,7 +1842,26 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      is_login_blocked: {
+        Args: {
+          _email: string
+          _max_attempts?: number
+          _window_minutes?: number
+        }
+        Returns: boolean
+      }
       is_mfa_required_for_user: { Args: { _user_id: string }; Returns: boolean }
+      record_login_attempt: {
+        Args: {
+          _email: string
+          _failure_reason?: string
+          _ip_address?: unknown
+          _success: boolean
+          _user_agent?: string
+          _user_id?: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       app_role: "analista_juridico" | "consultoria_juridica" | "administrador"
