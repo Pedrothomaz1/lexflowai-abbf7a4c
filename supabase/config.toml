@@ -38,3 +38,9 @@ verify_jwt = false
 
 [functions.rate-limiter]
 verify_jwt = false
+
+[functions.anomaly-detector]
+verify_jwt = false
+
+[functions.security-alert-handler]
+verify_jwt = true
