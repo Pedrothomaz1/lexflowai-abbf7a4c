@@ -1618,6 +1618,48 @@ export type Database = {
           },
         ]
       }
+      sod_approvals: {
+        Row: {
+          amount: number | null
+          approver_id: string | null
+          created_at: string | null
+          creator_id: string
+          decided_at: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          notes: string | null
+          status: string | null
+          threshold_rule: string | null
+        }
+        Insert: {
+          amount?: number | null
+          approver_id?: string | null
+          created_at?: string | null
+          creator_id: string
+          decided_at?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          notes?: string | null
+          status?: string | null
+          threshold_rule?: string | null
+        }
+        Update: {
+          amount?: number | null
+          approver_id?: string | null
+          created_at?: string | null
+          creator_id?: string
+          decided_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          notes?: string | null
+          status?: string | null
+          threshold_rule?: string | null
+        }
+        Relationships: []
+      }
       solicitacoes_compras: {
         Row: {
           codigo_solicitacao: string | null
@@ -1854,6 +1896,7 @@ export type Database = {
     }
     Functions: {
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
+      gdpr_delete_user: { Args: { user_uuid: string }; Returns: Json }
       has_any_role: {
         Args: {
           _roles: Database["public"]["Enums"]["app_role"][]
@@ -1882,6 +1925,10 @@ export type Database = {
         Returns: boolean
       }
       is_mfa_required_for_user: { Args: { _user_id: string }; Returns: boolean }
+      mask_pii: {
+        Args: { field_type?: string; value: string }
+        Returns: string
+      }
       record_login_attempt: {
         Args: {
           _email: string
