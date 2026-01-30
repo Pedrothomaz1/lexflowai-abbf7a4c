@@ -1,129 +1,68 @@
 
-## Plano: Implementar Melhorias do Resend conforme Documentação Oficial
+## Plano: Corrigir Acesso Público aos Avatares
 
-### Resumo
-Atualizar as Edge Functions de envio de email para seguir as melhores práticas da API do Resend, incluindo proteção contra rate limiting, envio em lote, idempotência e atualização do SDK.
+### Diagnóstico
 
----
+A foto foi enviada corretamente, mas não aparece porque:
 
-### 1. Atualizar SDK do Resend
+1. O bucket `contratos-documentos` está configurado como **privado** (`public: false`)
+2. A URL salva usa o caminho `/object/public/...` que requer bucket público
+3. Resultado: Erro 404 "Bucket not found" ao tentar exibir a imagem
 
-**Situação atual**: Usando `resend@2.0.0`  
-**Ação**: Atualizar para `resend@4.0.0` em ambas as funções
+### Solução
 
----
+Alterar o bucket para **público** (`public: true`). Isso é seguro porque:
+- Já existem políticas RLS que controlam quem pode fazer upload/deletar
+- A política "Avatar images are publicly accessible" já permite leitura pública dos avatares
+- Apenas a **leitura** de arquivos públicos será liberada (outras operações continuam protegidas)
 
-### 2. Implementar Batch Sending na função `enviar-notificacao-email`
+### Alteração Necessária
 
-**Problema atual**: Loop sequencial enviando email por email pode atingir o limite de 2 requisições/segundo do Resend.
+```sql
+UPDATE storage.buckets 
+SET public = true 
+WHERE id = 'contratos-documentos';
+```
 
-**Solução**: Usar a API de Batch do Resend (`resend.batch.send()`) que permite enviar até 100 emails em uma única requisição.
+### Comportamento Após a Correção
 
 ```text
-Antes:                          Depois:
-┌─────────────────────┐         ┌─────────────────────┐
-│ for (user of users) │         │ resend.batch.send() │
-│   → send email      │   →     │   → [email1,        │
-│   → wait response   │         │       email2,       │
-│   → next user       │         │       email3...]    │
-└─────────────────────┘         └─────────────────────┘
-    (N requisições)                 (1 requisição)
+Antes:
+┌─────────────────────────────────────────────────────────┐
+│ GET /object/public/contratos-documentos/.../avatar.jpg  │
+│                     ↓                                    │
+│              404 - Bucket not found                      │
+└─────────────────────────────────────────────────────────┘
+
+Depois:
+┌─────────────────────────────────────────────────────────┐
+│ GET /object/public/contratos-documentos/.../avatar.jpg  │
+│                     ↓                                    │
+│              ✅ Imagem carregada                         │
+└─────────────────────────────────────────────────────────┘
 ```
 
----
+### Segurança
 
-### 3. Adicionar Idempotency-Key
-
-**Problema**: Reenvios acidentais podem duplicar emails.
-
-**Solução**: Adicionar cabeçalho `Idempotency-Key` baseado no `alertaId` para garantir que o mesmo alerta não gere emails duplicados.
-
-```typescript
-headers: {
-  "Idempotency-Key": `alert-${alertaId}-${Date.now()}`
-}
-```
-
----
-
-### 4. Adicionar versão texto plano
-
-**Problema**: Alguns clientes de email bloqueiam HTML ou preferem texto.
-
-**Solução**: Adicionar campo `text` com versão simplificada do conteúdo.
-
-```typescript
-{
-  html: emailHtml,
-  text: `Alerta: ${titulo}\nContrato: ${numeroContrato}\nVencimento: ${dataVencimento}`
-}
-```
-
----
-
-### 5. Adicionar campo Reply-To
-
-**Solução**: Configurar um email para respostas (mesmo que seja o genérico):
-
-```typescript
-replyTo: "suporte@veridianaquirino.com.br"
-```
-
----
-
-### 6. Melhorar tratamento de erros
-
-**Problema**: Erros genéricos dificultam debugging.
-
-**Solução**: Tratar códigos de erro específicos do Resend:
-- `rate_limit_exceeded`: Aguardar e tentar novamente
-- `validation_error`: Logar detalhes e pular email
-- `missing_required_field`: Logar campo faltante
-
----
-
-### Arquivos a Modificar
-
-| Arquivo | Alterações |
-|---------|------------|
-| `supabase/functions/enviar-notificacao-email/index.ts` | SDK v4, batch.send(), idempotency, text, reply-to, error handling |
-| `supabase/functions/enviar-notificacao-financeiro/index.ts` | SDK v4, idempotency, text, reply-to |
-
----
+A mudança não compromete a segurança porque:
+- **Upload**: Continua exigindo autenticação + pasta do próprio usuário
+- **Delete**: Continua restrito ao dono do arquivo ou admin
+- **Leitura**: Já era permitida pela política RLS existente
 
 ### Seção Técnica
 
-**Estrutura do Batch Send**:
-```typescript
-const { data, error } = await resend.batch.send(
-  uniqueEmails.map(user => ({
-    from: "LexFlow <alertas@veridianaquirino.com.br>",
-    to: [user.email],
-    subject: subject,
-    html: html,
-    text: textVersion,
-    reply_to: "suporte@veridianaquirino.com.br",
-    headers: {
-      "X-Alert-Id": alertaId,
-    }
-  }))
-);
-```
+**Arquivos afetados**: Nenhum arquivo de código precisa ser alterado
 
-**Rate Limit Handling**:
-```typescript
-if (error?.name === 'rate_limit_exceeded') {
-  await new Promise(r => setTimeout(r, 1000));
-  // Retry logic
-}
+**Migração SQL**:
+```sql
+-- Tornar o bucket público para permitir acesso via URL pública
+UPDATE storage.buckets 
+SET public = true 
+WHERE id = 'contratos-documentos';
 ```
-
----
 
 ### Resultado Esperado
 
-- Emails enviados de forma mais eficiente (1 request vs N requests)
-- Proteção contra duplicatas via idempotency
-- Melhor compatibilidade com clientes de email (versão texto)
-- Logs mais detalhados para debugging
-- Compliance total com as melhores práticas do Resend
+- Sua foto de perfil aparecerá imediatamente no header
+- Avatares de outros usuários também funcionarão
+- Demais documentos do bucket continuam protegidos por RLS
