@@ -38,7 +38,8 @@ export function HelpTooltip({
       <TooltipContent
         side={side}
         align={align}
-        className="max-w-[280px] text-sm"
+        sideOffset={8}
+        className="max-w-[280px] text-sm z-[100]"
       >
         <p>{text}</p>
       </TooltipContent>
