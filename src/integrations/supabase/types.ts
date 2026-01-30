@@ -1000,6 +1000,42 @@ export type Database = {
         }
         Relationships: []
       }
+      go_nogo_checklist: {
+        Row: {
+          created_at: string | null
+          criteria_description: string | null
+          criteria_name: string
+          details: Json | null
+          id: string
+          is_automated: boolean | null
+          last_check_at: string | null
+          sort_order: number | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          criteria_description?: string | null
+          criteria_name: string
+          details?: Json | null
+          id?: string
+          is_automated?: boolean | null
+          last_check_at?: string | null
+          sort_order?: number | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          criteria_description?: string | null
+          criteria_name?: string
+          details?: Json | null
+          id?: string
+          is_automated?: boolean | null
+          last_check_at?: string | null
+          sort_order?: number | null
+          status?: string | null
+        }
+        Relationships: []
+      }
       incident_playbooks: {
         Row: {
           created_at: string | null
@@ -1481,6 +1517,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      security_metrics: {
+        Row: {
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          metric_type: string
+          period_end: string
+          period_start: string
+          value: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          metric_type: string
+          period_end: string
+          period_start: string
+          value: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          metric_type?: string
+          period_end?: string
+          period_start?: string
+          value?: number
+        }
+        Relationships: []
       }
       servico_historico: {
         Row: {

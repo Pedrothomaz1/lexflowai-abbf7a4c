@@ -47,3 +47,6 @@ verify_jwt = true
 
 [functions.gdpr-handler]
 verify_jwt = false
+
+[functions.security-metrics]
+verify_jwt = true

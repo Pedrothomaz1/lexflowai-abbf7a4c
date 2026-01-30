@@ -12,6 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SecurityAlertsList } from "@/components/security/SecurityAlertsList";
 import { PIIMaskingDemo } from "@/components/security/PIIMaskingDemo";
 import { IncidentPlaybooks } from "@/components/security/IncidentPlaybooks";
+import { SecurityMetrics } from "@/components/security/SecurityMetrics";
+import { GoNoGoChecklist } from "@/components/security/GoNoGoChecklist";
 import {
   Shield,
   AlertTriangle,
@@ -22,6 +24,8 @@ import {
   RefreshCw,
   BookOpen,
   Monitor,
+  BarChart3,
+  Rocket,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -215,7 +219,15 @@ export default function SecurityDashboard() {
         <TabsList>
           <TabsTrigger value="alerts">
             <ShieldAlert className="h-4 w-4 mr-2" />
-            Alertas de Segurança
+            Alertas
+          </TabsTrigger>
+          <TabsTrigger value="metrics">
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Métricas
+          </TabsTrigger>
+          <TabsTrigger value="gonogo">
+            <Rocket className="h-4 w-4 mr-2" />
+            Go/No-Go
           </TabsTrigger>
           <TabsTrigger value="playbooks">
             <BookOpen className="h-4 w-4 mr-2" />
@@ -229,6 +241,14 @@ export default function SecurityDashboard() {
 
         <TabsContent value="alerts">
           <SecurityAlertsList onUpdate={fetchStats} />
+        </TabsContent>
+
+        <TabsContent value="metrics">
+          <SecurityMetrics />
+        </TabsContent>
+
+        <TabsContent value="gonogo">
+          <GoNoGoChecklist />
         </TabsContent>
 
         <TabsContent value="playbooks">
