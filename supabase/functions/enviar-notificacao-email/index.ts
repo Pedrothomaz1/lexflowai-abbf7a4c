@@ -1,6 +1,6 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Resend } from "https://esm.sh/resend@2.0.0";
+import { Resend } from "https://esm.sh/resend@4.0.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -95,6 +95,24 @@ const getEmailTemplate = (data: EmailRequest, appUrl: string) => {
 </body>
 </html>
   `;
+};
+
+const getPlainTextVersion = (data: EmailRequest): string => {
+  const urgencyText = data.diasAntecedencia <= 7 ? 'URGENTE - ' : '';
+  return `${urgencyText}Alerta de ${data.tipo.toUpperCase()}
+
+${data.titulo}
+
+${data.mensagem}
+
+---
+Contrato: ${data.numeroContrato}
+Data de Vencimento: ${data.dataVencimento}
+Dias Restantes: ${data.diasAntecedencia} dias
+---
+
+LexFlow - Sistema de Gestão de Contratos
+Este é um email automático. Por favor, não responda.`;
 };
 
 serve(async (req) => {
@@ -228,33 +246,66 @@ serve(async (req) => {
     // Determinar URL do app
     const appUrl = supabaseUrl.replace(".supabase.co", ".lovable.app").replace("https://", "https://");
 
-    let emailsEnviados = 0;
-    const erros: string[] = [];
+    // Preparar conteúdo do email
+    const subject = `${body.diasAntecedencia <= 7 ? '⚠️ URGENTE: ' : ''}${body.titulo}`;
+    const html = getEmailTemplate(body, appUrl);
+    const text = getPlainTextVersion(body);
 
-    for (const user of uniqueEmails) {
-      try {
-        const html = getEmailTemplate(body, appUrl);
+    // Usar batch.send() para enviar todos os emails de uma vez (até 100 por requisição)
+    // Isso evita rate limiting e é mais eficiente
+    console.log(`Enviando emails em batch para ${uniqueEmails.length} destinatários`);
 
-        const { error: sendError } = await resend.emails.send({
-          // TODO: Alterar para "LexFlow <alertas@veridianaquirino.com.br>" quando o domínio estiver verificado no Resend
-          from: "LexFlow <onboarding@resend.dev>",
-          to: [user.email],
-          subject: `${body.diasAntecedencia <= 7 ? '⚠️ URGENTE: ' : ''}${body.titulo}`,
-          html,
-        });
+  const emailPayloads = uniqueEmails.map(user => ({
+    from: "LexFlow <onboarding@resend.dev>", // TODO: Alterar para "LexFlow <alertas@veridianaquirino.com.br>" quando o domínio estiver verificado
+    to: [user.email],
+    subject,
+    html,
+    text,
+    replyTo: "suporte@veridianaquirino.com.br",
+    headers: {
+      "X-Alert-Id": body.alertaId,
+      "X-Contract-Id": body.contratoId,
+      "X-Idempotency-Key": `alert-${body.alertaId}`,
+    },
+  }));
 
-        if (sendError) {
-          console.error(`Erro ao enviar para ${user.email}:`, sendError);
-          erros.push(`${user.email}: ${sendError.message}`);
-        } else {
-          emailsEnviados++;
-          console.log(`Email enviado com sucesso para ${user.email}`);
+  let emailsEnviados = 0;
+  const erros: string[] = [];
+
+  try {
+    // Batch send - envia até 100 emails em uma única requisição
+    const { data: batchResult, error: batchError } = await resend.batch.send(emailPayloads);
+
+    if (batchError) {
+      console.error("Erro no batch send:", batchError);
+      
+      // Tratamento específico de erros do Resend
+      if (batchError.name === 'rate_limit_exceeded') {
+        console.log("Rate limit atingido, aguardando 1s para retry...");
+        await new Promise(r => setTimeout(r, 1000));
+        
+        // Retry uma vez
+        const { data: retryResult, error: retryError } = await resend.batch.send(emailPayloads);
+        
+        if (retryError) {
+          erros.push(`Retry falhou: ${retryError.message}`);
+        } else if (retryResult) {
+          emailsEnviados = retryResult.data?.length || 0;
         }
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : String(err);
-        console.error(`Erro ao enviar para ${user.email}:`, err);
-        erros.push(`${user.email}: ${errorMessage}`);
+      } else if (batchError.name === 'validation_error') {
+          console.error("Erro de validação:", batchError.message);
+          erros.push(`Validação: ${batchError.message}`);
+        } else {
+          erros.push(batchError.message);
+        }
+      } else if (batchResult) {
+        emailsEnviados = batchResult.data?.length || uniqueEmails.length;
+        console.log(`Batch send concluído: ${emailsEnviados} emails enviados`);
       }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      console.error("Erro ao enviar batch:", err);
+      erros.push(errorMessage);
     }
 
     // Atualizar status do alerta
