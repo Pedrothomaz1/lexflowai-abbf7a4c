@@ -27,7 +27,7 @@ const AuthCallback = () => {
             async (event, newSession) => {
               if (event === "SIGNED_IN" && newSession) {
                 subscription.unsubscribe();
-                await redirectByModule(newSession.user.id);
+                await handlePostAuth(newSession.user.id);
               } else if (event === "SIGNED_OUT") {
                 subscription.unsubscribe();
                 navigate("/auth");
@@ -43,12 +43,40 @@ const AuthCallback = () => {
           return;
         }
 
-        // Session exists, redirect based on user module
-        await redirectByModule(session.user.id);
+        // Session exists, handle post-authentication
+        await handlePostAuth(session.user.id);
       } catch (err) {
         console.error("Erro no callback de autenticação:", err);
         setError("Erro ao processar autenticação");
         setTimeout(() => navigate("/auth"), 3000);
+      }
+    };
+
+    const handlePostAuth = async (userId: string) => {
+      try {
+        // Check if user has an organization membership
+        const { data: membership, error: membershipError } = await supabase
+          .from("organization_members")
+          .select("organization_id")
+          .eq("user_id", userId)
+          .eq("is_active", true)
+          .maybeSingle();
+
+        if (membershipError) {
+          console.error("Erro ao verificar organização:", membershipError);
+        }
+
+        // If user has no organization, redirect to waiting page
+        if (!membership) {
+          navigate("/waiting-for-invite", { replace: true });
+          return;
+        }
+
+        // User has organization, redirect based on module preference
+        await redirectByModule(userId);
+      } catch (err) {
+        console.error("Erro no pós-autenticação:", err);
+        navigate("/dashboard", { replace: true });
       }
     };
 
