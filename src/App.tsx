@@ -39,6 +39,8 @@ import ComplianceLGPD from "./pages/ComplianceLGPD";
 import TwoFactorSettings from "./pages/TwoFactorSettings";
 import SecurityDashboard from "./pages/SecurityDashboard";
 import NotFound from "./pages/NotFound";
+import RequisicaoPublica from "./pages/RequisicaoPublica";
+import Requisicoes from "./pages/Requisicoes";
 
 const queryClient = new QueryClient();
 
@@ -56,7 +58,9 @@ function App() {
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/auth/callback" element={<AuthCallback />} />
                 <Route path="/privacidade" element={<Privacidade />} />
+                <Route path="/requisicao" element={<RequisicaoPublica />} />
                 <Route path="/seletor-modulo" element={<ProtectedRoute><SeletorModulo /></ProtectedRoute>} />
+                <Route path="/requisicoes" element={<ProtectedRoute><DashboardLayout><Requisicoes /></DashboardLayout></ProtectedRoute>} />
                 <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout><Dashboard /></DashboardLayout></ProtectedRoute>} />
                 <Route path="/contratos" element={<ProtectedRoute><DashboardLayout><Contratos /></DashboardLayout></ProtectedRoute>} />
                 <Route path="/contratos/:id" element={<ProtectedRoute><DashboardLayout><ContratoDetalhes /></DashboardLayout></ProtectedRoute>} />
@@ -82,7 +86,6 @@ function App() {
                 <Route path="/compliance" element={<ProtectedRoute><DashboardLayout><ComplianceLGPD /></DashboardLayout></ProtectedRoute>} />
                 <Route path="/security" element={<ProtectedRoute><DashboardLayout><SecurityDashboard /></DashboardLayout></ProtectedRoute>} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <CookieBanner />
