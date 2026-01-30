@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { LucideIcon, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { motion } from "framer-motion";
+import { HelpTooltip } from "@/components/ui/help-tooltip";
 
 interface StatCardProps {
   title: string;
@@ -14,6 +15,7 @@ interface StatCardProps {
   variant?: "default" | "primary" | "success" | "warning" | "destructive" | "error" | "muted" | "info" | "critical";
   className?: string;
   onClick?: () => void;
+  helpText?: string;
 }
 
 export function StatCard({
@@ -25,6 +27,7 @@ export function StatCard({
   variant = "default",
   className,
   onClick,
+  helpText,
 }: StatCardProps) {
   // Map error and muted to existing variants
   const mappedVariant = variant === "error" ? "destructive" : variant === "muted" ? "default" : variant === "info" ? "primary" : variant === "critical" ? "critical" : variant;
@@ -77,8 +80,9 @@ export function StatCard({
     >
       <div className="flex items-start justify-between">
         <div className="space-y-1 flex-1 min-w-0">
-          <p className="text-sm font-medium text-muted-foreground truncate">
-            {title}
+          <p className="text-sm font-medium text-muted-foreground truncate flex items-center gap-1.5">
+            <span>{title}</span>
+            {helpText && <HelpTooltip text={helpText} />}
           </p>
           <p className={cn(
             "text-2xl font-semibold tracking-tight truncate",

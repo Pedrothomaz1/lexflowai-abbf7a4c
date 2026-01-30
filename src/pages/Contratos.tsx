@@ -33,6 +33,8 @@ import { cn } from "@/lib/utils";
 import { ContractImport } from "@/components/ContractImport/ContractImport";
 import { KanbanBoard } from "@/components/contracts/KanbanBoard";
 import { CalendarView, CalendarObligation } from "@/components/contracts/CalendarView";
+import { helpTexts } from "@/lib/help-texts";
+import { HelpTooltip } from "@/components/ui/help-tooltip";
 
 type Contrato = {
   id: string;
@@ -640,6 +642,7 @@ const Contratos = () => {
           >
             <List className="h-4 w-4" />
             Lista
+            <HelpTooltip text={helpTexts.contratos.vistaLista} />
           </TabsTrigger>
           <TabsTrigger 
             value="kanban" 
@@ -650,6 +653,7 @@ const Contratos = () => {
           >
             <KanbanIcon className="h-4 w-4" />
             Kanban
+            <HelpTooltip text={helpTexts.contratos.vistaKanban} />
           </TabsTrigger>
           <TabsTrigger 
             value="calendario" 
@@ -660,6 +664,7 @@ const Contratos = () => {
           >
             <Calendar className="h-4 w-4" />
             Calendário
+            <HelpTooltip text={helpTexts.contratos.vistaCalendario} />
           </TabsTrigger>
         </TabsList>
 
