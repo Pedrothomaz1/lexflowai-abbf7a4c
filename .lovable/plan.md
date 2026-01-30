@@ -1,147 +1,158 @@
-# Fases 7-9: Monitoring, Success Criteria & Risks - CONCLUÍDAS
 
-## Status: ✅ TODAS IMPLEMENTADAS
+# Plano: Formulário Externo de Requisição de Contratos
 
-Implementação completa das funcionalidades de monitoramento, critérios de sucesso e matriz de riscos.
+## Resumo
 
----
+Criar um formulário publicamente acessivel que permitira que usuarios externos (funcionarios, gestores de areas, etc.) possam enviar solicitacoes de contratos que serao recebidas e analisadas pela equipe juridica no modulo de Contratos do LexFlow.
 
-## Componentes Implementados
+## Fluxo Proposto
 
-### Novas Métricas (SecurityMetrics.tsx)
-- [x] Rate Limit Hits (média por usuário/dia)
-- [x] Audit Log Lag (tempo desde último log)
-- [x] Violações RLS (últimas 24h)
-- [x] Métricas anteriores mantidas (MTTD, MTTR, MFA, etc.)
+```text
++------------------------+        +----------------------------+        +------------------------+
+|  USUARIO EXTERNO       |        |  BACKEND (Edge Function)   |        |  MODULO CONTRATOS      |
+|  (sem login)           |        |                            |        |  (usuarios internos)   |
++------------------------+        +----------------------------+        +------------------------+
+         |                                    |                                    |
+         | 1. Acessa /requisicao              |                                    |
+         |-------------------------------->   |                                    |
+         |                                    |                                    |
+         | 2. Preenche formulario             |                                    |
+         |  - Nome solicitante                |                                    |
+         |  - Email                           |                                    |
+         |  - Departamento                    |                                    |
+         |  - Tipo de contrato                |                                    |
+         |  - Descricao da necessidade        |                                    |
+         |  - Valor estimado                  |                                    |
+         |  - Urgencia                        |                                    |
+         |  - Fornecedor sugerido             |                                    |
+         |                                    |                                    |
+         | 3. Submete formulario              |                                    |
+         |-------------------------------> 4. Valida dados                        |
+         |                                    |                                    |
+         |                                    | 5. Insere na tabela                |
+         |                                    |    contract_requests               |
+         |                                    |----------------------------------->|
+         |                                    |                                    |
+         |                                    | 6. Envia notificacao               |
+         |                                    |    (opcional: email/WhatsApp)      |
+         |                                    |                                    |
+         | 7. Confirmacao                     |                                    |
+         |<-------------------------------|  |                                    |
+         |                                    |                                    |
+         |                                    |         8. Equipe juridica         |
+         |                                    |            visualiza e aprova      |
+         |                                    |                                    |
+         |                                    |         9. Converte em contrato    |
+         |                                    |            (opcional)              |
++------------------------+        +----------------------------+        +------------------------+
+```
 
-### Matriz de Regras de Alerta (AlertingRulesMatrix.tsx)
-- [x] Alertas Críticos (resposta imediata/15 min)
-  - Security alerts críticos
-  - Múltiplas violações RLS
-  - Potencial data breach
-  - Conta admin comprometida
-- [x] Alertas Altos (resposta em 1h)
-  - Tentativas de login repetidas
-  - Exportação incomum de dados
-  - Escalação de privilégio
-  - MFA desabilitado para críticos
-- [x] Alertas Médios (resposta em 24h)
-  - Rate limit frequente
-  - Padrão de anomalia
-  - Acesso não autorizado
+## Componentes a Criar
 
-### Cronograma de Auditorias (AuditSchedule.tsx)
-- [x] Auditorias Diárias
-  - Revisar alertas críticos
-  - Verificar métricas de saúde
-- [x] Auditorias Semanais
-  - Revisar permissões de usuários
-  - Analisar tendências de segurança
-- [x] Auditorias Mensais
-  - Revisão completa de audit logs
-  - Atualizar rate limits
-  - Revisar regras de anomalia
-- [x] Auditorias Trimestrais
-  - Penetration testing
-  - Revisão de direitos de acesso
-  - Atualização de políticas
-  - Refresh de treinamento
-- [x] Auditorias Anuais
-  - Avaliação completa de segurança
-  - Auditoria de compliance (LGPD)
-  - Teste de disaster recovery
-  - Planejamento de roadmap
+### 1. Tabela no Banco de Dados
 
-### Dashboard Updates
-- [x] Nova aba "Regras de Alerta"
-- [x] Nova aba "Auditorias"
-- [x] Thresholds atualizados conforme PRD 7.1
+Nova tabela `contract_requests` para armazenar as solicitacoes:
 
----
+- `id` (uuid, PK)
+- `numero_requisicao` (text) - Numero sequencial gerado automaticamente
+- `solicitante_nome` (text) - Nome de quem esta solicitando
+- `solicitante_email` (text) - Email para contato
+- `solicitante_telefone` (text, opcional)
+- `departamento` (text) - Area/departamento solicitante
+- `tipo_contrato` (contract_type enum)
+- `titulo` (text) - Titulo/assunto da requisicao
+- `descricao` (text) - Descricao detalhada da necessidade
+- `justificativa` (text) - Por que e necessario
+- `valor_estimado` (numeric, opcional)
+- `urgencia` (text) - baixa/media/alta/critica
+- `data_necessidade` (date, opcional) - Quando precisa estar pronto
+- `fornecedor_sugerido` (text, opcional)
+- `anexo_url` (text, opcional) - Link para documentos de apoio
+- `status` (text) - pendente/em_analise/aprovado/rejeitado/convertido
+- `analisado_por` (uuid, FK profiles)
+- `analisado_em` (timestamp)
+- `contrato_id` (uuid, FK contratos) - Se convertido em contrato
+- `observacoes_analise` (text)
+- `created_at` (timestamp)
+- `ip_address` (text) - Para auditoria
+- `user_agent` (text) - Para auditoria
 
-## Thresholds Implementados (PRD 7.1)
+**RLS Policies:**
+- INSERT: Aberto ao publico (sem autenticacao)
+- SELECT/UPDATE/DELETE: Apenas usuarios autenticados com roles apropriadas
 
-| Métrica | Target | Alert |
-|---------|--------|-------|
-| Failed Logins | <10/dia | >50/dia |
-| Rate Limit Hits | <5/user/dia | >20/user/dia |
-| Critical Alerts | 0 | >0 |
-| MTTD | <5 min | >15 min |
-| MTTR | <30 min | >2h |
-| MFA Adoption | 100% | <90% |
-| Audit Log Lag | <1 min | >5 min |
-| RLS Violations | 0 | >0 |
+### 2. Edge Function: `processar-requisicao-contrato`
 
----
+Endpoint publico para receber e validar as requisicoes:
 
-## Resumo das 9 Fases Implementadas
+- Validacao de campos obrigatorios
+- Rate limiting por IP
+- Sanitizacao de inputs
+- Geracao de numero de requisicao
+- Insercao no banco
+- Envio de email de confirmacao ao solicitante
+- Notificacao opcional para equipe juridica
 
-| Fase | Nome | Status |
-|------|------|--------|
-| 1 | Foundation | ✅ RBAC, RLS, Audit Logs |
-| 2 | Protection | ✅ Validação, Rate Limiting |
-| 3 | Detection | ✅ Anomaly Detection, Alertas |
-| 4 | Compliance | ✅ PII Masking, LGPD, SoD |
-| 5 | Hardening | ✅ Role Limits, Playbooks, Sessions |
-| 6 | Monitoring | ✅ Métricas MTTD/MTTR, Go/No-Go |
-| 7 | Maintenance | ✅ Alerting Rules, Audit Schedule |
-| 8 | Success Criteria | ✅ Go/No-Go Checklist, Métricas de Sucesso, Business Impact |
-| 9 | Risks & Mitigation | ✅ Risk Matrix, Mitigations, Status Tracking |
+### 3. Pagina Publica: `/requisicao`
 
----
+Formulario acessivel sem login contendo:
 
-## Fase 8: Success Criteria - IMPLEMENTADA
+- Campos do formulario com validacao
+- Captcha ou honeypot para evitar spam (opcional)
+- Feedback visual de sucesso/erro
+- Numero de protocolo para acompanhamento
 
-### Critérios de Lançamento (Go/No-Go)
-- [x] Zero vulnerabilidades críticas em pentest
-- [x] 100% tabelas críticas com RLS
-- [x] MFA para Admin + Financeiro Senior
-- [x] Audit logging 100% ops financeiras
-- [x] Rate limiting funcional
-- [x] Playbooks documentados
-- [x] Treinamento de segurança
-- [x] Backup & DR testado
+### 4. Pagina Interna: `/requisicoes` (nova)
 
-### Métricas de Sucesso (3 meses pós-lançamento)
-- Incidentes de segurança: <2/mês
-- Acessos bloqueados: 100%
-- Risco de violação: Baixo
-- Conformidade LGPD: 100%
-- MTTD: <5 min
-- MTTR: <30 min
-- Treinamento: 100%
-- MFA adoption: 100%
+Dashboard para a equipe juridica visualizar e gerenciar requisicoes:
 
-### Métricas de Impacto
-- Redução de risco: -90%
-- Custo compliance: R$ 0
-- Eficiência operacional: -80%
-- Confiança usuário: >90%
-- Preparação auditoria: -70%
+- Lista de requisicoes com filtros (status, urgencia, data)
+- Visualizacao de detalhes
+- Acoes: Aprovar, Rejeitar, Solicitar mais informacoes
+- Botao "Converter em Contrato" que cria um rascunho pre-preenchido
+- Historico de alteracoes
 
----
+### 5. Atualizacoes no Sistema Existente
 
-## Fase 9: Risks & Mitigation - IMPLEMENTADA
+- Adicionar link para `/requisicoes` no menu lateral
+- Badge de notificacao com contagem de requisicoes pendentes
+- Opcao no formulario de novo contrato para vincular a uma requisicao
 
-### Riscos Identificados e Mitigados
-| Risco | Prob | Impacto | Status |
-|-------|------|---------|--------|
-| RLS misconfiguration | Médio | Alto | ✅ Mitigado |
-| Rate limiting power users | Médio | Médio | ✅ Mitigado |
-| Audit logging performance | Baixo | Médio | ✅ Mitigado |
-| False positive alerts | Médio | Médio | 🔄 Monitorando |
-| MFA friction | Alto | Baixo | ✅ Mitigado |
-| Encryption performance | Baixo | Médio | ✅ Mitigado |
-| External dependency failure | Baixo | Alto | ⚠️ Em Aberto |
-| Team expertise | Médio | Alto | 🔄 Monitorando |
+## Seguranca
 
----
+1. **Rate Limiting**: Maximo 5 requisicoes por IP por hora
+2. **Validacao de Input**: Usando Zod para validar todos os campos
+3. **Sanitizacao**: Limpeza de HTML/scripts nos textos
+4. **Captcha Invisivel**: Para evitar bots (opcional, pode usar honeypot)
+5. **Logs de Auditoria**: Registro de IP e user-agent
+6. **RLS**: Formulario publico so pode inserir, nunca ler ou modificar
 
-## Próximos Passos (Externos)
+## Detalhes Tecnicos
 
-1. Executar pentest externo (trimestral)
-2. Configurar Cloudflare WAF
-3. Completar treinamento da equipe
-4. Testar backup e disaster recovery
-5. Ativar HIBP no Supabase Auth
-6. Contratar especialista em segurança (se necessário)
+### Arquivos a Criar
+
+1. `src/pages/RequisicaoPublica.tsx` - Formulario publico
+2. `src/pages/Requisicoes.tsx` - Gerenciamento interno
+3. `supabase/functions/processar-requisicao-contrato/index.ts` - Edge function
+4. Atualizacao em `src/App.tsx` - Novas rotas
+5. Atualizacao em `src/components/AppSidebar.tsx` - Link no menu
+6. Migracao SQL - Nova tabela e politicas
+
+### Integracao com Fluxo Existente
+
+Quando uma requisicao for aprovada e convertida em contrato:
+
+1. Cria novo registro em `contratos` com dados da requisicao
+2. Atualiza `contract_requests.status` para "convertido"
+3. Atualiza `contract_requests.contrato_id` com o ID do novo contrato
+4. Registra em `audit_logs`
+
+## Etapas de Implementacao
+
+1. Criar tabela `contract_requests` com RLS
+2. Criar edge function para processar requisicoes
+3. Criar pagina publica `/requisicao`
+4. Criar pagina interna `/requisicoes`
+5. Integrar no menu e adicionar badge de notificacao
+6. Adicionar funcionalidade de converter em contrato
+7. Testar fluxo completo
