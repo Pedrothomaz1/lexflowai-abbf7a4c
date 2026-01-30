@@ -517,6 +517,99 @@ export type Database = {
           },
         ]
       }
+      contract_requests: {
+        Row: {
+          analisado_em: string | null
+          analisado_por: string | null
+          anexo_url: string | null
+          contrato_id: string | null
+          created_at: string
+          data_necessidade: string | null
+          departamento: string
+          descricao: string
+          fornecedor_sugerido: string | null
+          id: string
+          ip_address: string | null
+          justificativa: string | null
+          numero_requisicao: string
+          observacoes_analise: string | null
+          solicitante_email: string
+          solicitante_nome: string
+          solicitante_telefone: string | null
+          status: string
+          tipo_contrato: Database["public"]["Enums"]["contract_type"]
+          titulo: string
+          urgencia: string
+          user_agent: string | null
+          valor_estimado: number | null
+        }
+        Insert: {
+          analisado_em?: string | null
+          analisado_por?: string | null
+          anexo_url?: string | null
+          contrato_id?: string | null
+          created_at?: string
+          data_necessidade?: string | null
+          departamento: string
+          descricao: string
+          fornecedor_sugerido?: string | null
+          id?: string
+          ip_address?: string | null
+          justificativa?: string | null
+          numero_requisicao: string
+          observacoes_analise?: string | null
+          solicitante_email: string
+          solicitante_nome: string
+          solicitante_telefone?: string | null
+          status?: string
+          tipo_contrato?: Database["public"]["Enums"]["contract_type"]
+          titulo: string
+          urgencia?: string
+          user_agent?: string | null
+          valor_estimado?: number | null
+        }
+        Update: {
+          analisado_em?: string | null
+          analisado_por?: string | null
+          anexo_url?: string | null
+          contrato_id?: string | null
+          created_at?: string
+          data_necessidade?: string | null
+          departamento?: string
+          descricao?: string
+          fornecedor_sugerido?: string | null
+          id?: string
+          ip_address?: string | null
+          justificativa?: string | null
+          numero_requisicao?: string
+          observacoes_analise?: string | null
+          solicitante_email?: string
+          solicitante_nome?: string
+          solicitante_telefone?: string | null
+          status?: string
+          tipo_contrato?: Database["public"]["Enums"]["contract_type"]
+          titulo?: string
+          urgencia?: string
+          user_agent?: string | null
+          valor_estimado?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_requests_analisado_por_fkey"
+            columns: ["analisado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_requests_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_signatures: {
         Row: {
           completed_at: string | null

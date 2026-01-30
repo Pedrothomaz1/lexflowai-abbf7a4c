@@ -20,6 +20,7 @@ import {
   Activity,
   BarChart3,
   ShieldCheck,
+  FileInput,
 } from "lucide-react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
@@ -98,6 +99,7 @@ const contratosMenuSections: MenuSectionType[] = [
           { title: "Novo Contrato", url: "/contratos?novo=true", icon: Plus },
         ]
       },
+      { title: "Requisições", url: "/requisicoes", icon: FileInput, roles: ["all"] },
     ],
   },
   {
