@@ -128,7 +128,6 @@ const contratosMenuSections: MenuSectionType[] = [
       { title: "Templates", url: "/templates", icon: FileStack, roles: ["all"] },
       { title: "Fornecedores", url: "/fornecedores", icon: Users, roles: ["all"] },
       { title: "Workflows", url: "/workflows", icon: GitBranch, roles: ["administrador"] },
-      { title: "Usuários", url: "/usuarios", icon: Shield, roles: ["administrador"] },
     ],
   },
   {
@@ -141,7 +140,15 @@ const contratosMenuSections: MenuSectionType[] = [
       { title: "Segurança", url: "/security", icon: Shield, roles: ["administrador"] },
       { title: "Compliance LGPD", url: "/compliance", icon: ShieldCheck, roles: ["administrador"] },
       { title: "Trilha de Auditoria", url: "/audit-logs", icon: Activity, roles: ["administrador"] },
-      { title: "Configurações", url: "/settings", icon: Settings, roles: ["all"] },
+      { 
+        title: "Configurações", 
+        url: "/settings", 
+        icon: Settings, 
+        roles: ["all"],
+        subItems: [
+          { title: "Usuários", url: "/usuarios", icon: Shield },
+        ]
+      },
     ],
   },
 ];
@@ -166,7 +173,6 @@ const servicosMenuSections: MenuSectionType[] = [
       { title: "Fornecedores", url: "/fornecedores", icon: Users, roles: ["all"] },
       { title: "Unidades", url: "/unidades", icon: Building2, roles: ["all"] },
       { title: "Especificações", url: "/especificacoes", icon: Cog, roles: ["all"] },
-      { title: "Usuários", url: "/usuarios", icon: Shield, roles: ["administrador"] },
     ],
   },
   {
@@ -175,7 +181,15 @@ const servicosMenuSections: MenuSectionType[] = [
     icon: Monitor,
     defaultOpen: false,
     items: [
-      { title: "Configurações", url: "/settings", icon: Settings, roles: ["all"] },
+      { 
+        title: "Configurações", 
+        url: "/settings", 
+        icon: Settings, 
+        roles: ["all"],
+        subItems: [
+          { title: "Usuários", url: "/usuarios", icon: Shield },
+        ]
+      },
     ],
   },
 ];
