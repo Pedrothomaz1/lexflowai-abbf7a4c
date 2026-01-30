@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const requestingUserId = claimsData.claims.sub;
+    const requestingUserId = claimsData.claims.sub as string;
 
     // Parse request body
     const body: GDPRRequest = await req.json();
@@ -56,12 +56,39 @@ Deno.serve(async (req) => {
       );
     }
 
+    // =========================================================
+    // MULTI-TENANT: Resolve requesting user's organization
+    // =========================================================
+    const serviceClient = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
+
+    const { data: requestingMembership } = await serviceClient
+      .from('organization_members')
+      .select('organization_id')
+      .eq('user_id', requestingUserId)
+      .eq('is_active', true)
+      .single();
+
+    if (!requestingMembership?.organization_id) {
+      return new Response(
+        JSON.stringify({ error: 'Usuário não pertence a nenhuma organização' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const requestingOrgId = requestingMembership.organization_id;
+
     // Target user (self or specified by admin)
     const targetUserId = user_id || requestingUserId;
 
-    // If targeting another user, check admin permission
+    // =========================================================
+    // MULTI-TENANT: Verify target user belongs to same organization
+    // =========================================================
     if (targetUserId !== requestingUserId) {
-      const { data: roles } = await supabase
+      // Check if requesting user is admin
+      const { data: roles } = await serviceClient
         .from('user_roles')
         .select('role')
         .eq('user_id', requestingUserId)
@@ -73,13 +100,24 @@ Deno.serve(async (req) => {
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+
+      // Verify target user is in the same organization
+      const { data: targetMembership } = await serviceClient
+        .from('organization_members')
+        .select('organization_id')
+        .eq('user_id', targetUserId)
+        .eq('is_active', true)
+        .single();
+
+      if (targetMembership?.organization_id !== requestingOrgId) {
+        return new Response(
+          JSON.stringify({ error: 'Não é possível processar solicitações de usuários de outras organizações' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
-    // Create service role client for privileged operations
-    const serviceClient = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    );
+    console.log(`[GDPR] Processing ${action} for user ${targetUserId} in org ${requestingOrgId}`);
 
     let result: any;
 
@@ -97,6 +135,17 @@ Deno.serve(async (req) => {
           throw new Error(`Erro ao processar exclusão: ${error.message}`);
         }
 
+        // Log to compliance - SCOPED BY ORGANIZATION
+        await serviceClient.from('compliance_logs').insert({
+          organization_id: requestingOrgId,
+          tipo_evento: 'erasure_executed',
+          entidade: 'profiles',
+          entidade_id: targetUserId,
+          dados_afetados: { action: 'gdpr_delete_user', result: data },
+          base_legal: 'LGPD Art. 18',
+          user_id: requestingUserId
+        });
+
         result = {
           success: true,
           action: 'erasure',
@@ -110,15 +159,16 @@ Deno.serve(async (req) => {
       case 'export': {
         console.log(`Processing export request for user: ${targetUserId}`);
 
-        // Gather all user data
+        // Gather all user data - SCOPED BY ORGANIZATION
         const [profileData, contractsData, auditData] = await Promise.all([
           serviceClient.from('profiles').select('*').eq('id', targetUserId).single(),
-          serviceClient.from('contratos').select('*').eq('created_by', targetUserId),
-          serviceClient.from('audit_logs').select('acao, entidade, created_at').eq('user_id', targetUserId).limit(100)
+          serviceClient.from('contratos').select('*').eq('organization_id', requestingOrgId).eq('created_by', targetUserId),
+          serviceClient.from('audit_logs').select('acao, entidade, created_at').eq('organization_id', requestingOrgId).eq('user_id', targetUserId).limit(100)
         ]);
 
-        // Log the export event
+        // Log the export event - SCOPED BY ORGANIZATION
         await serviceClient.from('compliance_logs').insert({
+          organization_id: requestingOrgId,
           tipo_evento: 'exportacao',
           entidade: 'profiles',
           entidade_id: targetUserId,
@@ -151,18 +201,22 @@ Deno.serve(async (req) => {
           .eq('id', targetUserId)
           .single();
 
+        // Count data SCOPED BY ORGANIZATION
         const { count: contractCount } = await serviceClient
           .from('contratos')
           .select('*', { count: 'exact', head: true })
+          .eq('organization_id', requestingOrgId)
           .eq('created_by', targetUserId);
 
         const { count: auditCount } = await serviceClient
           .from('audit_logs')
           .select('*', { count: 'exact', head: true })
+          .eq('organization_id', requestingOrgId)
           .eq('user_id', targetUserId);
 
-        // Log the access event
+        // Log the access event - SCOPED BY ORGANIZATION
         await serviceClient.from('compliance_logs').insert({
+          organization_id: requestingOrgId,
           tipo_evento: 'acesso_dados',
           entidade: 'profiles',
           entidade_id: targetUserId,
@@ -198,7 +252,7 @@ Deno.serve(async (req) => {
         );
     }
 
-    console.log(`GDPR ${action} completed successfully for user ${targetUserId}`);
+    console.log(`GDPR ${action} completed successfully for user ${targetUserId} in org ${requestingOrgId}`);
 
     return new Response(
       JSON.stringify(result),

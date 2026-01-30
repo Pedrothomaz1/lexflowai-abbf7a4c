@@ -53,7 +53,10 @@ serve(async (req) => {
       );
     }
 
-    // Fetch the alert
+    // =========================================================
+    // MULTI-TENANT: Fetch the alert with organization_id
+    // The organization is resolved from the alert itself
+    // =========================================================
     const { data: alert, error: fetchError } = await supabase
       .from('security_alerts')
       .select('*')
@@ -67,7 +70,15 @@ serve(async (req) => {
       );
     }
 
-    console.log(`[security-alert-handler] Processing alert ${alert_id} with severity ${alert.severity}`);
+    const organizationId = alert.organization_id;
+    if (!organizationId) {
+      return new Response(
+        JSON.stringify({ error: 'Alerta sem organização associada' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`[security-alert-handler] Processing alert ${alert_id} with severity ${alert.severity} for org ${organizationId}`);
 
     const actions = RESPONSE_MATRIX[alert.severity] || RESPONSE_MATRIX['LOW'];
     const executedActions: string[] = [];
@@ -75,7 +86,7 @@ serve(async (req) => {
 
     // If specific action requested, execute only that
     if (action) {
-      const result = await executeAction(supabase, alert, action);
+      const result = await executeAction(supabase, alert, action, organizationId);
       if (result.success) {
         executedActions.push(action);
       } else {
@@ -85,7 +96,7 @@ serve(async (req) => {
       // Execute all automated actions for this severity
       for (const responseAction of actions.filter(a => a.automated)) {
         try {
-          const result = await executeAction(supabase, alert, responseAction.action);
+          const result = await executeAction(supabase, alert, responseAction.action, organizationId);
           if (result.success) {
             executedActions.push(responseAction.action);
           } else {
@@ -99,7 +110,7 @@ serve(async (req) => {
       }
     }
 
-    // Update alert status
+    // Update alert status - SCOPED BY ORGANIZATION
     const newStatus = action === 'resolve' ? 'resolved' : 
                       action === 'dismiss' ? 'false_positive' : 
                       'investigating';
@@ -110,10 +121,12 @@ serve(async (req) => {
         status: newStatus,
         ...(newStatus === 'resolved' ? { resolved_at: new Date().toISOString() } : {})
       })
-      .eq('id', alert_id);
+      .eq('id', alert_id)
+      .eq('organization_id', organizationId);
 
-    // Log to audit
+    // Log to audit - SCOPED BY ORGANIZATION
     await supabase.from('audit_logs').insert({
+      organization_id: organizationId,
       acao: 'SECURITY_RESPONSE',
       entidade: 'security_alerts',
       entidade_id: alert_id,
@@ -131,6 +144,7 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         alert_id,
+        organization_id: organizationId,
         new_status: newStatus,
         actions_executed: executedActions,
         errors: errors.length > 0 ? errors : undefined,
@@ -150,37 +164,57 @@ serve(async (req) => {
 async function executeAction(
   supabase: any, 
   alert: any, 
-  action: string
+  action: string,
+  organizationId: string
 ): Promise<{ success: boolean; error?: string }> {
-  console.log(`[security-alert-handler] Executing action: ${action} for alert ${alert.id}`);
+  console.log(`[security-alert-handler] Executing action: ${action} for alert ${alert.id} in org ${organizationId}`);
   
   switch (action) {
     case 'block_user':
       if (!alert.user_id) {
         return { success: false, error: 'No user_id in alert' };
       }
-      // In a real implementation, this would disable the user account
-      console.log(`[security-alert-handler] Would block user: ${alert.user_id}`);
+      // Verify user belongs to same organization
+      const { data: userMembership } = await supabase
+        .from('organization_members')
+        .select('id')
+        .eq('user_id', alert.user_id)
+        .eq('organization_id', organizationId)
+        .single();
+      
+      if (!userMembership) {
+        return { success: false, error: 'User not in organization' };
+      }
+      console.log(`[security-alert-handler] Would block user: ${alert.user_id} in org ${organizationId}`);
       return { success: true };
 
     case 'revoke_sessions':
       if (!alert.user_id) {
         return { success: false, error: 'No user_id in alert' };
       }
-      // In a real implementation, this would revoke all user sessions
-      console.log(`[security-alert-handler] Would revoke sessions for: ${alert.user_id}`);
+      console.log(`[security-alert-handler] Would revoke sessions for: ${alert.user_id} in org ${organizationId}`);
       return { success: true };
 
     case 'notify_admin':
-      // Get admin users
-      const { data: admins } = await supabase
-        .from('user_roles')
+      // Get admin users - SCOPED BY ORGANIZATION
+      const { data: orgMembers } = await supabase
+        .from('organization_members')
         .select('user_id')
-        .in('role', ['administrador', 'system_admin']);
+        .eq('organization_id', organizationId)
+        .eq('is_active', true);
       
-      if (admins && admins.length > 0) {
-        console.log(`[security-alert-handler] Would notify ${admins.length} admins about alert ${alert.id}`);
-        // In production, send email/push notification
+      if (orgMembers && orgMembers.length > 0) {
+        const memberIds = orgMembers.map((m: any) => m.user_id);
+        
+        const { data: admins } = await supabase
+          .from('user_roles')
+          .select('user_id')
+          .in('role', ['administrador', 'system_admin'])
+          .in('user_id', memberIds);
+        
+        if (admins && admins.length > 0) {
+          console.log(`[security-alert-handler] Would notify ${admins.length} admins in org ${organizationId} about alert ${alert.id}`);
+        }
       }
       return { success: true };
 
@@ -188,16 +222,15 @@ async function executeAction(
       await supabase
         .from('security_alerts')
         .update({ requires_review: true })
-        .eq('id', alert.id);
+        .eq('id', alert.id)
+        .eq('organization_id', organizationId);
       return { success: true };
 
     case 'create_ticket':
-      // In production, integrate with ticketing system
-      console.log(`[security-alert-handler] Would create ticket for: ${alert.rule_name}`);
+      console.log(`[security-alert-handler] Would create ticket for: ${alert.rule_name} in org ${organizationId}`);
       return { success: true };
 
     case 'log_event':
-      // Already logged via audit_logs
       return { success: true };
 
     case 'resolve':
@@ -207,14 +240,16 @@ async function executeAction(
           status: 'resolved',
           resolved_at: new Date().toISOString()
         })
-        .eq('id', alert.id);
+        .eq('id', alert.id)
+        .eq('organization_id', organizationId);
       return { success: true };
 
     case 'dismiss':
       await supabase
         .from('security_alerts')
         .update({ status: 'false_positive' })
-        .eq('id', alert.id);
+        .eq('id', alert.id)
+        .eq('organization_id', organizationId);
       return { success: true };
 
     default:

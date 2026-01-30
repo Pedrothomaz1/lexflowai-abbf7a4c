@@ -10,6 +10,7 @@ const corsHeaders = {
 interface EmailRequest {
   alertaId: string;
   contratoId: string;
+  organizationId?: string; // For CRON calls - resolved from contract/alert
   tipo: 'vencimento' | 'renovacao' | 'obrigacao' | 'pagamento';
   titulo: string;
   mensagem: string;
@@ -144,36 +145,54 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Validate token and get user
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Token inválido' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Verify user has permission to send notifications
-    const { data: userRole } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single();
-
-    const canSendNotifications = ['consultoria_juridica', 'administrador'].includes(userRole?.role || '');
-    if (!canSendNotifications) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Permissão negada' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     const body: EmailRequest = await req.json();
     console.log("Enviando email para alerta:", body.alertaId);
 
-    // Buscar usuários com email habilitado
+    // =========================================================
+    // MULTI-TENANT: Resolve organization from alert/contract
+    // NEVER trust organizationId from request body
+    // =========================================================
+    let organizationId: string | null = null;
+
+    // First, try to get organization from the alert
+    if (body.alertaId) {
+      const { data: alert } = await supabase
+        .from('contract_alerts')
+        .select('organization_id')
+        .eq('id', body.alertaId)
+        .single();
+      
+      if (alert?.organization_id) {
+        organizationId = alert.organization_id;
+      }
+    }
+
+    // If not found, try from the contract
+    if (!organizationId && body.contratoId) {
+      const { data: contract } = await supabase
+        .from('contratos')
+        .select('organization_id')
+        .eq('id', body.contratoId)
+        .single();
+      
+      if (contract?.organization_id) {
+        organizationId = contract.organization_id;
+      }
+    }
+
+    if (!organizationId) {
+      console.error("Não foi possível determinar a organização para o alerta");
+      return new Response(
+        JSON.stringify({ success: false, error: "Organização não encontrada" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Processando email para organização: ${organizationId}`);
+
+    // =========================================================
+    // Buscar usuários com email habilitado - SCOPED BY ORGANIZATION
+    // =========================================================
     const { data: preferences, error: prefError } = await supabase
       .from("notification_preferences")
       .select(`
@@ -186,6 +205,7 @@ serve(async (req) => {
           full_name
         )
       `)
+      .eq("organization_id", organizationId)
       .eq("email_enabled", true);
 
     if (prefError) {
@@ -196,29 +216,41 @@ serve(async (req) => {
       );
     }
 
-    // Se não há preferências, buscar todos os usuários com roles apropriados
+    // Se não há preferências, buscar todos os usuários com roles apropriados - SCOPED BY ORGANIZATION
     let usersToNotify: Array<{ email: string; name: string }> = [];
 
     if (!preferences || preferences.length === 0) {
       console.log("Nenhuma preferência encontrada, buscando usuários padrão...");
       
-      const { data: userRoles } = await supabase
-        .from("user_roles")
-        .select(`
-          user_id,
-          role,
-          profiles!inner (
-            email,
-            full_name
-          )
-        `)
-        .in("role", ["consultoria_juridica", "administrador"]);
+      // Get organization members first
+      const { data: orgMembers } = await supabase
+        .from('organization_members')
+        .select('user_id')
+        .eq('organization_id', organizationId)
+        .eq('is_active', true);
 
-      if (userRoles) {
-        usersToNotify = userRoles.map((ur: any) => ({
-          email: ur.profiles.email,
-          name: ur.profiles.full_name || "Usuário",
-        }));
+      if (orgMembers && orgMembers.length > 0) {
+        const memberUserIds = orgMembers.map(m => m.user_id);
+
+        const { data: userRoles } = await supabase
+          .from("user_roles")
+          .select(`
+            user_id,
+            role,
+            profiles!inner (
+              email,
+              full_name
+            )
+          `)
+          .in("role", ["consultoria_juridica", "administrador"])
+          .in("user_id", memberUserIds);
+
+        if (userRoles) {
+          usersToNotify = userRoles.map((ur: any) => ({
+            email: ur.profiles.email,
+            name: ur.profiles.full_name || "Usuário",
+          }));
+        }
       }
     } else {
       // Filtrar por tipo de alerta
@@ -251,56 +283,50 @@ serve(async (req) => {
     const html = getEmailTemplate(body, appUrl);
     const text = getPlainTextVersion(body);
 
-    // Usar batch.send() para enviar todos os emails de uma vez (até 100 por requisição)
-    // Isso evita rate limiting e é mais eficiente
-    console.log(`Enviando emails em batch para ${uniqueEmails.length} destinatários`);
+    // Usar batch.send() para enviar todos os emails de uma vez
+    console.log(`Enviando emails em batch para ${uniqueEmails.length} destinatários (org: ${organizationId})`);
 
-  const emailPayloads = uniqueEmails.map(user => ({
-    from: "LexFlow <alertas@porveri.com.br>",
-    to: [user.email],
-    subject,
-    html,
-    text,
-    replyTo: "suporte@porveri.com.br",
-    headers: {
-      "X-Alert-Id": body.alertaId,
-      "X-Contract-Id": body.contratoId,
-      "X-Idempotency-Key": `alert-${body.alertaId}`,
-    },
-  }));
+    const emailPayloads = uniqueEmails.map(user => ({
+      from: "LexFlow <alertas@porveri.com.br>",
+      to: [user.email],
+      subject,
+      html,
+      text,
+      replyTo: "suporte@porveri.com.br",
+      headers: {
+        "X-Alert-Id": body.alertaId,
+        "X-Contract-Id": body.contratoId,
+        "X-Organization-Id": organizationId,
+        "X-Idempotency-Key": `alert-${body.alertaId}-${organizationId}`,
+      },
+    }));
 
-  let emailsEnviados = 0;
-  const erros: string[] = [];
+    let emailsEnviados = 0;
+    const erros: string[] = [];
 
-  try {
-    // Batch send - envia até 100 emails em uma única requisição
-    const { data: batchResult, error: batchError } = await resend.batch.send(emailPayloads);
+    try {
+      const { data: batchResult, error: batchError } = await resend.batch.send(emailPayloads);
 
-    if (batchError) {
-      console.error("Erro no batch send:", batchError);
-      
-      // Tratamento específico de erros do Resend
-      if (batchError.name === 'rate_limit_exceeded') {
-        console.log("Rate limit atingido, aguardando 1s para retry...");
-        await new Promise(r => setTimeout(r, 1000));
+      if (batchError) {
+        console.error("Erro no batch send:", batchError);
         
-        // Retry uma vez
-        const { data: retryResult, error: retryError } = await resend.batch.send(emailPayloads);
-        
-        if (retryError) {
-          erros.push(`Retry falhou: ${retryError.message}`);
-        } else if (retryResult) {
-          emailsEnviados = retryResult.data?.length || 0;
-        }
-      } else if (batchError.name === 'validation_error') {
-          console.error("Erro de validação:", batchError.message);
-          erros.push(`Validação: ${batchError.message}`);
+        if (batchError.name === 'rate_limit_exceeded') {
+          console.log("Rate limit atingido, aguardando 1s para retry...");
+          await new Promise(r => setTimeout(r, 1000));
+          
+          const { data: retryResult, error: retryError } = await resend.batch.send(emailPayloads);
+          
+          if (retryError) {
+            erros.push(`Retry falhou: ${retryError.message}`);
+          } else if (retryResult) {
+            emailsEnviados = retryResult.data?.length || 0;
+          }
         } else {
           erros.push(batchError.message);
         }
       } else if (batchResult) {
         emailsEnviados = batchResult.data?.length || uniqueEmails.length;
-        console.log(`Batch send concluído: ${emailsEnviados} emails enviados`);
+        console.log(`Batch send concluído: ${emailsEnviados} emails enviados para org ${organizationId}`);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
@@ -308,7 +334,7 @@ serve(async (req) => {
       erros.push(errorMessage);
     }
 
-    // Atualizar status do alerta
+    // Atualizar status do alerta - SCOPED BY ORGANIZATION
     if (emailsEnviados > 0) {
       await supabase
         .from("contract_alerts")
@@ -316,8 +342,24 @@ serve(async (req) => {
           email_enviado: true,
           email_enviado_em: new Date().toISOString(),
         })
-        .eq("id", body.alertaId);
+        .eq("id", body.alertaId)
+        .eq("organization_id", organizationId);
     }
+
+    // Log audit - SCOPED BY ORGANIZATION
+    await supabase.from("audit_logs").insert({
+      organization_id: organizationId,
+      acao: 'EMAIL_NOTIFICATION_SENT',
+      entidade: 'contract_alerts',
+      entidade_id: body.alertaId,
+      metadata: {
+        emails_sent: emailsEnviados,
+        recipients: uniqueEmails.length,
+        tipo: body.tipo,
+      },
+      event_category: 'notification',
+      risk_level: 'low',
+    });
 
     return new Response(
       JSON.stringify({
