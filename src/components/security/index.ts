@@ -6,3 +6,5 @@ export { SecurityMetrics } from './SecurityMetrics';
 export { GoNoGoChecklist } from './GoNoGoChecklist';
 export { AlertingRulesMatrix } from './AlertingRulesMatrix';
 export { AuditSchedule } from './AuditSchedule';
+export { SuccessCriteria } from './SuccessCriteria';
+export { RiskMatrix } from './RiskMatrix';

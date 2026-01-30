@@ -16,6 +16,8 @@ import { SecurityMetrics } from "@/components/security/SecurityMetrics";
 import { GoNoGoChecklist } from "@/components/security/GoNoGoChecklist";
 import { AlertingRulesMatrix } from "@/components/security/AlertingRulesMatrix";
 import { AuditSchedule } from "@/components/security/AuditSchedule";
+import { SuccessCriteria } from "@/components/security/SuccessCriteria";
+import { RiskMatrix } from "@/components/security/RiskMatrix";
 import {
   Shield,
   AlertTriangle,
@@ -30,6 +32,8 @@ import {
   Rocket,
   Bell,
   Calendar,
+  Target,
+  TriangleAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -229,9 +233,17 @@ export default function SecurityDashboard() {
             <BarChart3 className="h-4 w-4 mr-2" />
             Métricas
           </TabsTrigger>
+          <TabsTrigger value="success">
+            <Target className="h-4 w-4 mr-2" />
+            Sucesso
+          </TabsTrigger>
+          <TabsTrigger value="risks">
+            <TriangleAlert className="h-4 w-4 mr-2" />
+            Riscos
+          </TabsTrigger>
           <TabsTrigger value="alerting-rules">
             <Bell className="h-4 w-4 mr-2" />
-            Regras de Alerta
+            Regras
           </TabsTrigger>
           <TabsTrigger value="audit-schedule">
             <Calendar className="h-4 w-4 mr-2" />
@@ -257,6 +269,14 @@ export default function SecurityDashboard() {
 
         <TabsContent value="metrics">
           <SecurityMetrics />
+        </TabsContent>
+
+        <TabsContent value="success">
+          <SuccessCriteria />
+        </TabsContent>
+
+        <TabsContent value="risks">
+          <RiskMatrix />
         </TabsContent>
 
         <TabsContent value="alerting-rules">
