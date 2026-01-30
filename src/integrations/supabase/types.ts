@@ -1093,6 +1093,87 @@ export type Database = {
         }
         Relationships: []
       }
+      franquias: {
+        Row: {
+          cnpj: string | null
+          consultora_informada: boolean | null
+          contrato_novo_assinado: boolean | null
+          created_at: string | null
+          created_by: string | null
+          data_assinatura: string | null
+          data_emissao_nf: string | null
+          data_termino: string | null
+          id: string
+          nome_completo: string
+          novo_contrato_enviado: boolean | null
+          numero_nf: string | null
+          observacoes: string | null
+          regime_tributario: string | null
+          renovacao_aceita: boolean | null
+          responsavel_id: string | null
+          status_contrato: string
+          status_vigencia: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          cnpj?: string | null
+          consultora_informada?: boolean | null
+          contrato_novo_assinado?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          data_assinatura?: string | null
+          data_emissao_nf?: string | null
+          data_termino?: string | null
+          id?: string
+          nome_completo: string
+          novo_contrato_enviado?: boolean | null
+          numero_nf?: string | null
+          observacoes?: string | null
+          regime_tributario?: string | null
+          renovacao_aceita?: boolean | null
+          responsavel_id?: string | null
+          status_contrato?: string
+          status_vigencia?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          cnpj?: string | null
+          consultora_informada?: boolean | null
+          contrato_novo_assinado?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          data_assinatura?: string | null
+          data_emissao_nf?: string | null
+          data_termino?: string | null
+          id?: string
+          nome_completo?: string
+          novo_contrato_enviado?: boolean | null
+          numero_nf?: string | null
+          observacoes?: string | null
+          regime_tributario?: string | null
+          renovacao_aceita?: boolean | null
+          responsavel_id?: string | null
+          status_contrato?: string
+          status_vigencia?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "franquias_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "franquias_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       go_nogo_checklist: {
         Row: {
           created_at: string | null
