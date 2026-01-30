@@ -758,6 +758,7 @@ export type Database = {
           data_assinatura: string | null
           data_fim: string | null
           data_inicio: string | null
+          data_renovacao: string | null
           descricao: string | null
           fornecedor_id: string | null
           id: string
@@ -765,10 +766,12 @@ export type Database = {
           moeda: string | null
           numero_contrato: string
           observacoes: string | null
+          renovacao_automatica: boolean | null
           status: Database["public"]["Enums"]["contract_status"]
           tags: string[] | null
           tipo: Database["public"]["Enums"]["contract_type"]
           titulo: string
+          unidade_id: string | null
           updated_at: string
           valor_total: number | null
           versao: number
@@ -781,6 +784,7 @@ export type Database = {
           data_assinatura?: string | null
           data_fim?: string | null
           data_inicio?: string | null
+          data_renovacao?: string | null
           descricao?: string | null
           fornecedor_id?: string | null
           id?: string
@@ -788,10 +792,12 @@ export type Database = {
           moeda?: string | null
           numero_contrato: string
           observacoes?: string | null
+          renovacao_automatica?: boolean | null
           status?: Database["public"]["Enums"]["contract_status"]
           tags?: string[] | null
           tipo?: Database["public"]["Enums"]["contract_type"]
           titulo: string
+          unidade_id?: string | null
           updated_at?: string
           valor_total?: number | null
           versao?: number
@@ -804,6 +810,7 @@ export type Database = {
           data_assinatura?: string | null
           data_fim?: string | null
           data_inicio?: string | null
+          data_renovacao?: string | null
           descricao?: string | null
           fornecedor_id?: string | null
           id?: string
@@ -811,10 +818,12 @@ export type Database = {
           moeda?: string | null
           numero_contrato?: string
           observacoes?: string | null
+          renovacao_automatica?: boolean | null
           status?: Database["public"]["Enums"]["contract_status"]
           tags?: string[] | null
           tipo?: Database["public"]["Enums"]["contract_type"]
           titulo?: string
+          unidade_id?: string | null
           updated_at?: string
           valor_total?: number | null
           versao?: number
@@ -825,6 +834,13 @@ export type Database = {
             columns: ["fornecedor_id"]
             isOneToOne: false
             referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contratos_unidade_id_fkey"
+            columns: ["unidade_id"]
+            isOneToOne: false
+            referencedRelation: "unidades"
             referencedColumns: ["id"]
           },
         ]
