@@ -56,6 +56,7 @@ interface AuditLog {
   ip_address: string | null;
   user_agent: string | null;
   metadata: Record<string, any> | null;
+  risk_level: string | null;
   created_at: string;
 }
 
@@ -116,6 +117,13 @@ const actionColors: Record<string, string> = {
   analyze: "bg-orange-500/10 text-orange-500",
 };
 
+const RISK_LEVELS = {
+  low: { label: "Baixo", color: "bg-blue-500/10 text-blue-500 border-blue-500/30" },
+  medium: { label: "Médio", color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/30" },
+  high: { label: "Alto", color: "bg-orange-500/10 text-orange-500 border-orange-500/30" },
+  critical: { label: "Crítico", color: "bg-red-500/10 text-red-500 border-red-500/30" },
+};
+
 export default function AuditLogs() {
   const { isAdmin, loading: roleLoading } = useUserRole();
   const [logs, setLogs] = useState<AuditLog[]>([]);
@@ -125,6 +133,7 @@ export default function AuditLogs() {
     search: "",
     action: "all",
     entity: "all",
+    riskLevel: "all",
   });
 
   useEffect(() => {
@@ -169,6 +178,7 @@ export default function AuditLogs() {
   const filteredLogs = logs.filter(log => {
     if (filters.action !== "all" && log.acao !== filters.action) return false;
     if (filters.entity !== "all" && log.entidade !== filters.entity) return false;
+    if (filters.riskLevel !== "all" && (log as any).risk_level !== filters.riskLevel) return false;
     if (filters.search) {
       const search = filters.search.toLowerCase();
       const userName = log.user_id ? userNames[log.user_id]?.toLowerCase() : "";
@@ -256,6 +266,22 @@ export default function AuditLogs() {
               </SelectContent>
             </Select>
 
+            <Select
+              value={filters.riskLevel}
+              onValueChange={(value) => setFilters(f => ({ ...f, riskLevel: value }))}
+            >
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Nível de risco" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os níveis</SelectItem>
+                <SelectItem value="low">Baixo</SelectItem>
+                <SelectItem value="medium">Médio</SelectItem>
+                <SelectItem value="high">Alto</SelectItem>
+                <SelectItem value="critical">Crítico</SelectItem>
+              </SelectContent>
+            </Select>
+
             <Button variant="outline" onClick={fetchLogs} disabled={loading}>
               <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
               Atualizar
@@ -312,6 +338,14 @@ export default function AuditLogs() {
                           <Badge variant="outline" className="text-xs">
                             {entityLabels[log.entidade] || log.entidade}
                           </Badge>
+                          {log.risk_level && RISK_LEVELS[log.risk_level as keyof typeof RISK_LEVELS] && (
+                            <Badge 
+                              variant="outline" 
+                              className={cn("text-xs", RISK_LEVELS[log.risk_level as keyof typeof RISK_LEVELS].color)}
+                            >
+                              {RISK_LEVELS[log.risk_level as keyof typeof RISK_LEVELS].label}
+                            </Badge>
+                          )}
                         </div>
                         
                         <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">

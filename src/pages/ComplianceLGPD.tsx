@@ -90,6 +90,8 @@ export default function ComplianceLGPD() {
   const [logs, setLogs] = useState<ComplianceLog[]>([]);
   const [policies, setPolicies] = useState<RetentionPolicy[]>([]);
   const [isCreatingPolicy, setIsCreatingPolicy] = useState(false);
+  const [isErasureDialogOpen, setIsErasureDialogOpen] = useState(false);
+  const [erasureLoading, setErasureLoading] = useState(false);
   const [stats, setStats] = useState({
     totalAcessos: 0,
     exportacoes30Dias: 0,
@@ -538,7 +540,32 @@ export default function ComplianceLGPD() {
           </Alert>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Card className="card-elevated cursor-pointer hover:border-primary/50 transition-colors">
+            <Card 
+              className="card-elevated cursor-pointer hover:border-primary/50 transition-colors"
+              onClick={async () => {
+                try {
+                  const { data: { session } } = await supabase.auth.getSession();
+                  if (!session) throw new Error("Não autenticado");
+                  
+                  const { data, error } = await supabase.functions.invoke('gdpr-handler', {
+                    body: { action: 'access' }
+                  });
+                  
+                  if (error) throw error;
+                  
+                  toast({
+                    title: "Dados Acessados",
+                    description: `Contratos: ${data.data?.contratos_criados || 0}, Registros de auditoria: ${data.data?.registros_auditoria || 0}`,
+                  });
+                } catch (error: any) {
+                  toast({
+                    title: "Erro",
+                    description: error.message,
+                    variant: "destructive"
+                  });
+                }
+              }}
+            >
               <CardContent className="pt-6">
                 <div className="flex items-center gap-4">
                   <div className="p-3 rounded-lg bg-primary/10">
@@ -552,7 +579,41 @@ export default function ComplianceLGPD() {
               </CardContent>
             </Card>
 
-            <Card className="card-elevated cursor-pointer hover:border-primary/50 transition-colors">
+            <Card 
+              className="card-elevated cursor-pointer hover:border-primary/50 transition-colors"
+              onClick={async () => {
+                try {
+                  const { data: { session } } = await supabase.auth.getSession();
+                  if (!session) throw new Error("Não autenticado");
+                  
+                  const { data, error } = await supabase.functions.invoke('gdpr-handler', {
+                    body: { action: 'export' }
+                  });
+                  
+                  if (error) throw error;
+                  
+                  // Download the exported data
+                  const blob = new Blob([JSON.stringify(data.data, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `meus-dados-${format(new Date(), 'yyyy-MM-dd')}.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  
+                  toast({
+                    title: "Dados Exportados",
+                    description: "Seus dados foram exportados com sucesso.",
+                  });
+                } catch (error: any) {
+                  toast({
+                    title: "Erro",
+                    description: error.message,
+                    variant: "destructive"
+                  });
+                }
+              }}
+            >
               <CardContent className="pt-6">
                 <div className="flex items-center gap-4">
                   <div className="p-3 rounded-lg bg-amber-500/10">
@@ -566,19 +627,95 @@ export default function ComplianceLGPD() {
               </CardContent>
             </Card>
 
-            <Card className="card-elevated cursor-pointer hover:border-primary/50 transition-colors">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-lg bg-destructive/10">
-                    <Trash2 className="h-6 w-6 text-destructive" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium">Direito de Exclusão</h3>
-                    <p className="text-xs text-muted-foreground">Solicitar remoção de dados</p>
+            <Dialog open={isErasureDialogOpen} onOpenChange={setIsErasureDialogOpen}>
+              <DialogTrigger asChild>
+                <Card className="card-elevated cursor-pointer hover:border-destructive/50 transition-colors">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 rounded-lg bg-destructive/10">
+                        <Trash2 className="h-6 w-6 text-destructive" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium">Direito de Exclusão</h3>
+                        <p className="text-xs text-muted-foreground">Solicitar remoção de dados</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2 text-destructive">
+                    <AlertTriangle className="h-5 w-5" />
+                    Solicitar Exclusão de Dados
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="py-4 space-y-4">
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Atenção: Ação Irreversível</AlertTitle>
+                    <AlertDescription>
+                      Conforme LGPD Art. 18, ao solicitar a exclusão seus dados pessoais serão anonimizados.
+                      Esta ação não pode ser desfeita.
+                    </AlertDescription>
+                  </Alert>
+                  <div className="text-sm text-muted-foreground space-y-2">
+                    <p><strong>Dados que serão anonimizados:</strong></p>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>Nome completo</li>
+                      <li>E-mail</li>
+                      <li>Telefone</li>
+                      <li>Foto de perfil</li>
+                    </ul>
+                    <p className="mt-2"><strong>Dados mantidos para compliance:</strong></p>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>Registros de auditoria (marcados como anonimizados)</li>
+                      <li>Contratos (por obrigação legal)</li>
+                    </ul>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsErasureDialogOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button 
+                    variant="destructive" 
+                    disabled={erasureLoading}
+                    onClick={async () => {
+                      setErasureLoading(true);
+                      try {
+                        const { data: { session } } = await supabase.auth.getSession();
+                        if (!session) throw new Error("Não autenticado");
+                        
+                        const { data, error } = await supabase.functions.invoke('gdpr-handler', {
+                          body: { action: 'erasure' }
+                        });
+                        
+                        if (error) throw error;
+                        
+                        toast({
+                          title: "Dados Anonimizados",
+                          description: "Seus dados foram anonimizados conforme LGPD Art. 18.",
+                        });
+                        
+                        setIsErasureDialogOpen(false);
+                        fetchData();
+                      } catch (error: any) {
+                        toast({
+                          title: "Erro",
+                          description: error.message,
+                          variant: "destructive"
+                        });
+                      } finally {
+                        setErasureLoading(false);
+                      }
+                    }}
+                  >
+                    {erasureLoading ? "Processando..." : "Confirmar Exclusão"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
 
             <Card className="card-elevated cursor-pointer hover:border-primary/50 transition-colors">
               <CardContent className="pt-6">

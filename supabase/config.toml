@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.security-alert-handler]
 verify_jwt = true
+
+[functions.gdpr-handler]
+verify_jwt = false
