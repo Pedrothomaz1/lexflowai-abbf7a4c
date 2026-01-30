@@ -14,6 +14,8 @@ import { PIIMaskingDemo } from "@/components/security/PIIMaskingDemo";
 import { IncidentPlaybooks } from "@/components/security/IncidentPlaybooks";
 import { SecurityMetrics } from "@/components/security/SecurityMetrics";
 import { GoNoGoChecklist } from "@/components/security/GoNoGoChecklist";
+import { AlertingRulesMatrix } from "@/components/security/AlertingRulesMatrix";
+import { AuditSchedule } from "@/components/security/AuditSchedule";
 import {
   Shield,
   AlertTriangle,
@@ -26,6 +28,8 @@ import {
   Monitor,
   BarChart3,
   Rocket,
+  Bell,
+  Calendar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -216,7 +220,7 @@ export default function SecurityDashboard() {
       </div>
 
       <Tabs defaultValue="alerts" className="space-y-4">
-        <TabsList>
+        <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="alerts">
             <ShieldAlert className="h-4 w-4 mr-2" />
             Alertas
@@ -224,6 +228,14 @@ export default function SecurityDashboard() {
           <TabsTrigger value="metrics">
             <BarChart3 className="h-4 w-4 mr-2" />
             Métricas
+          </TabsTrigger>
+          <TabsTrigger value="alerting-rules">
+            <Bell className="h-4 w-4 mr-2" />
+            Regras de Alerta
+          </TabsTrigger>
+          <TabsTrigger value="audit-schedule">
+            <Calendar className="h-4 w-4 mr-2" />
+            Auditorias
           </TabsTrigger>
           <TabsTrigger value="gonogo">
             <Rocket className="h-4 w-4 mr-2" />
@@ -235,7 +247,7 @@ export default function SecurityDashboard() {
           </TabsTrigger>
           <TabsTrigger value="masking">
             <Eye className="h-4 w-4 mr-2" />
-            Mascaramento PII
+            PII
           </TabsTrigger>
         </TabsList>
 
@@ -245,6 +257,14 @@ export default function SecurityDashboard() {
 
         <TabsContent value="metrics">
           <SecurityMetrics />
+        </TabsContent>
+
+        <TabsContent value="alerting-rules">
+          <AlertingRulesMatrix />
+        </TabsContent>
+
+        <TabsContent value="audit-schedule">
+          <AuditSchedule />
         </TabsContent>
 
         <TabsContent value="gonogo">

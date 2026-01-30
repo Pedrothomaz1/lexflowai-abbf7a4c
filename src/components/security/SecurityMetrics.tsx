@@ -37,6 +37,8 @@ const THRESHOLDS = {
   mfa_adoption: { target: 100, alert: 90, unit: "%" },
   high_risk_ops: { target: 5, alert: 20, unit: "/dia" },
   active_sessions: { target: 50, alert: 100, unit: "" },
+  audit_log_lag: { target: 1, alert: 5, unit: "min" },
+  rls_violations: { target: 0, alert: 1, unit: "" },
 };
 
 export function SecurityMetrics() {
@@ -62,6 +64,9 @@ export function SecurityMetrics() {
         mfaUsersResult,
         criticalRolesResult,
         sessionsResult,
+        rateLimitResult,
+        latestAuditLogResult,
+        rlsViolationsResult,
       ] = await Promise.all([
         // Failed logins in last 24h
         supabase
@@ -110,6 +115,26 @@ export function SecurityMetrics() {
           .select("id", { count: "exact", head: true })
           .eq("is_active", true)
           .gt("expires_at", now.toISOString()),
+
+        // Rate limit hits in last 24h (average per user)
+        supabase
+          .from("rate_limits")
+          .select("user_id, count")
+          .gte("window_start", yesterdayStr),
+
+        // Latest audit log for lag calculation
+        supabase
+          .from("audit_logs")
+          .select("created_at")
+          .order("created_at", { ascending: false })
+          .limit(1),
+
+        // RLS violations (security alerts with rule_id containing 'rls')
+        supabase
+          .from("security_alerts")
+          .select("id", { count: "exact", head: true })
+          .ilike("rule_id", "%rls%")
+          .gte("created_at", yesterdayStr),
       ]);
 
       // Calculate MTTD (using timestamp from event vs created_at of alert)
@@ -162,6 +187,22 @@ export function SecurityMetrics() {
       const criticalCount = criticalAlertsResult.count || 0;
       const highRiskOps = highRiskOpsResult.count || 0;
       const activeSessions = sessionsResult.count || 0;
+      const rlsViolations = rlsViolationsResult.count || 0;
+
+      // Calculate rate limit hits average per user
+      const rateLimitData = rateLimitResult.data || [];
+      const uniqueUsers = new Set(rateLimitData.map((r) => r.user_id).filter(Boolean));
+      const totalHits = rateLimitData.reduce((sum, r) => sum + (r.count || 0), 0);
+      const rateLimitAvg = uniqueUsers.size > 0 ? Math.round(totalHits / uniqueUsers.size) : 0;
+
+      // Calculate audit log lag (time since last log)
+      const latestLog = latestAuditLogResult.data?.[0];
+      let auditLogLag = 0;
+      if (latestLog?.created_at) {
+        auditLogLag = Math.round(
+          differenceInMinutes(now, new Date(latestLog.created_at))
+        );
+      }
 
       const metricsData: MetricData[] = [
         {
@@ -169,6 +210,12 @@ export function SecurityMetrics() {
           value: failedLogins,
           ...THRESHOLDS.failed_logins,
           status: getStatus(failedLogins, THRESHOLDS.failed_logins),
+        },
+        {
+          name: "Rate Limit Hits (avg/user)",
+          value: rateLimitAvg,
+          ...THRESHOLDS.rate_limit_hits,
+          status: getStatus(rateLimitAvg, THRESHOLDS.rate_limit_hits),
         },
         {
           name: "Alertas Críticos",
@@ -193,6 +240,18 @@ export function SecurityMetrics() {
           value: mfaAdoption,
           ...THRESHOLDS.mfa_adoption,
           status: getMfaStatus(mfaAdoption),
+        },
+        {
+          name: "Audit Log Lag",
+          value: auditLogLag,
+          ...THRESHOLDS.audit_log_lag,
+          status: getStatus(auditLogLag, THRESHOLDS.audit_log_lag),
+        },
+        {
+          name: "Violações RLS (24h)",
+          value: rlsViolations,
+          ...THRESHOLDS.rls_violations,
+          status: getStatus(rlsViolations, THRESHOLDS.rls_violations),
         },
         {
           name: "Ops Alto Risco (24h)",
@@ -336,6 +395,10 @@ export function SecurityMetrics() {
               <Badge variant="outline">&lt;10/dia</Badge>
             </div>
             <div className="flex items-center justify-between p-2 rounded-md bg-muted/50">
+              <span>Rate Limit Hits</span>
+              <Badge variant="outline">&lt;5/user/dia</Badge>
+            </div>
+            <div className="flex items-center justify-between p-2 rounded-md bg-muted/50">
               <span>MTTD</span>
               <Badge variant="outline">&lt;5 min</Badge>
             </div>
@@ -346,6 +409,18 @@ export function SecurityMetrics() {
             <div className="flex items-center justify-between p-2 rounded-md bg-muted/50">
               <span>MFA Críticos</span>
               <Badge variant="outline">100%</Badge>
+            </div>
+            <div className="flex items-center justify-between p-2 rounded-md bg-muted/50">
+              <span>Audit Log Lag</span>
+              <Badge variant="outline">&lt;1 min</Badge>
+            </div>
+            <div className="flex items-center justify-between p-2 rounded-md bg-muted/50">
+              <span>RLS Violations</span>
+              <Badge variant="outline">0</Badge>
+            </div>
+            <div className="flex items-center justify-between p-2 rounded-md bg-muted/50">
+              <span>Critical Alerts</span>
+              <Badge variant="outline">0</Badge>
             </div>
           </div>
         </CardContent>
