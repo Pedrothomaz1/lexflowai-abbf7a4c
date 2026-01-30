@@ -43,6 +43,7 @@ interface Franquia {
   nome_completo: string;
   cnpj: string | null;
   regime_tributario: string | null;
+  tipo_franquia: string | null;
   status_contrato: string;
   data_assinatura: string | null;
   data_termino: string | null;
@@ -56,6 +57,13 @@ interface Franquia {
   observacoes: string | null;
   created_at: string;
 }
+
+const tipoFranquiaLabels: Record<string, string> = {
+  home_based_gold: "Home Based Gold",
+  home_based_silver: "Home Based Silver",
+  lojas: "Lojas",
+  venda_direta: "Venda Direta",
+};
 
 type TabFilter = "todas" | "ativo" | "proximo_vencer" | "vencido";
 
@@ -268,6 +276,7 @@ export default function Franquias() {
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
+              <TableHead>Tipo</TableHead>
               <TableHead>CNPJ</TableHead>
               <TableHead>Vigência</TableHead>
               <TableHead>Término</TableHead>
@@ -280,6 +289,7 @@ export default function Franquias() {
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
                   <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-24" /></TableCell>
@@ -289,7 +299,7 @@ export default function Franquias() {
               ))
             ) : filteredData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
                   {searchTerm || activeTab !== "todas"
                     ? "Nenhuma franquia encontrada com os filtros aplicados"
                     : "Nenhuma franquia cadastrada"}
@@ -310,6 +320,9 @@ export default function Franquias() {
                   >
                     <TableCell className="font-medium">
                       {franquia.nome_completo}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {franquia.tipo_franquia ? tipoFranquiaLabels[franquia.tipo_franquia] || franquia.tipo_franquia : "-"}
                     </TableCell>
                     <TableCell className="font-mono text-sm text-muted-foreground">
                       {franquia.cnpj || "-"}

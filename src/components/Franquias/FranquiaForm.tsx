@@ -33,6 +33,7 @@ const formSchema = z.object({
   nome_completo: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
   cnpj: z.string().optional(),
   regime_tributario: z.string().optional(),
+  tipo_franquia: z.string().optional(),
   status_contrato: z.string(),
   data_assinatura: z.string().optional(),
   data_termino: z.string().optional(),
@@ -72,6 +73,13 @@ const regimeTributarioOptions = [
   { value: "MEI", label: "MEI" },
 ];
 
+const tipoFranquiaOptions = [
+  { value: "home_based_gold", label: "Home Based Gold" },
+  { value: "home_based_silver", label: "Home Based Silver" },
+  { value: "lojas", label: "Lojas" },
+  { value: "venda_direta", label: "Venda Direta" },
+];
+
 export function FranquiaForm({
   open,
   onOpenChange,
@@ -87,6 +95,7 @@ export function FranquiaForm({
       nome_completo: initialData?.nome_completo || "",
       cnpj: initialData?.cnpj || "",
       regime_tributario: initialData?.regime_tributario || "",
+      tipo_franquia: initialData?.tipo_franquia || "",
       status_contrato: initialData?.status_contrato || "pendente_assinatura",
       data_assinatura: initialData?.data_assinatura || "",
       data_termino: initialData?.data_termino || "",
@@ -171,31 +180,58 @@ export function FranquiaForm({
               />
             </div>
 
-            {/* Regime Tributário */}
-            <FormField
-              control={form.control}
-              name="regime_tributario"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Regime Tributário</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o regime" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {regimeTributarioOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Tipo de Franquia e Regime Tributário */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="tipo_franquia"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tipo de Franquia</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o tipo" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {tipoFranquiaOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="regime_tributario"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Regime Tributário</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o regime" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {regimeTributarioOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             {/* Status e Vigência */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

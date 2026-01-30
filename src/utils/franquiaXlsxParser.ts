@@ -4,6 +4,7 @@ export interface FranquiaImportData {
   nome_completo: string;
   cnpj: string | null;
   regime_tributario: string | null;
+  tipo_franquia: string | null;
   status_contrato: string;
   data_assinatura: string | null;
   data_termino: string | null;
@@ -93,6 +94,19 @@ function normalizeStatusVigencia(value: unknown): string {
   return "ativo";
 }
 
+// Normaliza tipo de franquia
+function normalizeTipoFranquia(value: unknown): string | null {
+  if (!value) return null;
+  const str = String(value).toLowerCase().trim();
+  
+  if (str.includes("gold") || str.includes("ouro")) return "home_based_gold";
+  if (str.includes("silver") || str.includes("prata")) return "home_based_silver";
+  if (str.includes("loja")) return "lojas";
+  if (str.includes("venda") || str.includes("direta")) return "venda_direta";
+  
+  return null;
+}
+
 // Limpa e formata CNPJ
 function formatCNPJ(value: unknown): string | null {
   if (!value) return null;
@@ -133,6 +147,7 @@ export function parseFranquiasXLSX(file: ArrayBuffer): FranquiaImportResult[] {
     nome: findColumn(headers, ["nome completo", "nome", "razão social", "razao social", "franqueada"]),
     cnpj: findColumn(headers, ["cnpj", "documento"]),
     regime: findColumn(headers, ["regime tributário", "regime tributario", "regime"]),
+    tipoFranquia: findColumn(headers, ["tipo", "tipo franquia", "modalidade", "tipo de franquia"]),
     statusContrato: findColumn(headers, ["status assinatura", "status contrato", "assinatura"]),
     dataAssinatura: findColumn(headers, ["data de assinatura", "data assinatura", "assinatura em"]),
     dataTermino: findColumn(headers, ["data término", "data termino", "término", "termino", "vencimento"]),
@@ -182,6 +197,7 @@ export function parseFranquiasXLSX(file: ArrayBuffer): FranquiaImportResult[] {
       nome_completo: nome,
       cnpj,
       regime_tributario: colMap.regime >= 0 ? String(row[colMap.regime] || "").trim() || null : null,
+      tipo_franquia: normalizeTipoFranquia(colMap.tipoFranquia >= 0 ? row[colMap.tipoFranquia] : null),
       status_contrato: normalizeStatusContrato(colMap.statusContrato >= 0 ? row[colMap.statusContrato] : null),
       data_assinatura: dataAssinatura,
       data_termino: dataTermino,
@@ -212,6 +228,7 @@ export function generateFranquiasTemplate(): ArrayBuffer {
     "Nome Completo",
     "CNPJ",
     "Regime Tributário",
+    "Tipo Franquia",
     "Status assinatura do contrato",
     "Data de assinatura do contrato",
     "Data Término",
@@ -229,6 +246,7 @@ export function generateFranquiasTemplate(): ArrayBuffer {
     "Franquia Exemplo LTDA",
     "12.345.678/0001-99",
     "Simples Nacional",
+    "Home Based Gold",
     "Assinado",
     "01/01/2024",
     "31/12/2024",

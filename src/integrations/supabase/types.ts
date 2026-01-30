@@ -1113,6 +1113,7 @@ export type Database = {
           responsavel_id: string | null
           status_contrato: string
           status_vigencia: string | null
+          tipo_franquia: string | null
           updated_at: string | null
         }
         Insert: {
@@ -1134,6 +1135,7 @@ export type Database = {
           responsavel_id?: string | null
           status_contrato?: string
           status_vigencia?: string | null
+          tipo_franquia?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -1155,6 +1157,7 @@ export type Database = {
           responsavel_id?: string | null
           status_contrato?: string
           status_vigencia?: string | null
+          tipo_franquia?: string | null
           updated_at?: string | null
         }
         Relationships: [
