@@ -1,112 +1,149 @@
 
-# Plano: Redesign do Header do Formulário Público
+# Plano: Correção Visual Completa do Formulário de Requisição
 
 ## Problema Identificado
 
-O header atual do formulário `/requisicao` está visualmente simples e desconectado do design premium do LexFlow. Faltam:
-- Container com backdrop/glassmorphism para o logo
-- Hierarquia visual adequada
-- Espaçamento e proporções profissionais
-- Elementos decorativos que transmitam confiança
+O header do formulário público está com cores muito desbotadas e sem contraste adequado:
+- Título "LexFlow" quase invisível (usando `--lexflow-off-white` que é cinza claro)
+- Subtítulos com verde muito pálido
+- Badge com cores muito translúcidas
+- Falta de hierarquia visual clara
 
-## Solução Proposta
+## Solução: Redesign com Cores de Alto Contraste
 
-Redesenhar o header seguindo o padrão visual do `SeletorModulo.tsx`, que utiliza o design system LexFlow corretamente.
+Usar cores sólidas e diretas para garantir legibilidade máxima:
+- **Branco puro (#FFFFFF)** para títulos principais
+- **Verde vibrante (#7F9C90)** para destaques e badges
+- Aumentar opacidade dos elementos decorativos
 
-### Mudanças Visuais
+## Mudanças Visuais Propostas
 
-**Antes:**
-- Logo pequeno (40x40) sem container
-- Título simples ao lado do logo
-- Subtítulos com cores diretas sem hierarquia
+| Elemento | Antes (Problema) | Depois (Solução) |
+|----------|------------------|------------------|
+| Logo Container | `bg-[...off-white/0.1]` muito transparente | `bg-white/15` com mais presença |
+| Título "LexFlow" | `text-[hsl(var(--lexflow-off-white))]` cinza | `text-white` branco puro |
+| Subtítulo Sistema | `text-[hsl(var(--lexflow-verde-claro))]` pálido | `text-white/80` claro e legível |
+| Badge | Cores translúcidas | `bg-white/20` com `text-white` |
+| Título Formulário | Cor pálida | `text-white` sólido |
+| Descrição | Opacidade muito baixa | `text-white/70` legível |
+| Separador | Verde translúcido | `bg-white/40` mais visível |
 
-**Depois:**
-- Logo em container glassmorphism (64x64) com backdrop blur e borda sutil
-- Título principal grande e elegante abaixo do logo
-- Subtítulo em cor `verde-claro` com melhor legibilidade
-- Descrição com opacidade reduzida para hierarquia
-- Separador visual sutil antes do card do formulário
-- Badge decorativo indicando "Departamento Jurídico"
-
-### Estrutura do Novo Header
+## Estrutura Visual Final
 
 ```text
-+--------------------------------------------------+
-|                                                  |
-|     +------------------+                         |
-|     |    [LOGO]        |   <- Container glass   |
-|     +------------------+                         |
-|                                                  |
-|           LEXFLOW                                |
-|     Sistema de Gestão de Contratos               |
-|                                                  |
-|     [Badge: Departamento Jurídico]               |
-|                                                  |
-|     Formulário de Requisição de Contratos        |
-|                                                  |
-|     Utilize este formulário para solicitar...    |
-|                                                  |
-|     ────────────────────────────                 |
-|                                                  |
-+--------------------------------------------------+
++----------------------------------------------------------+
+|                                                          |
+|     +------------------+                                 |
+|     |    [LOGO]        |   <- bg-white/15, borda branca  |
+|     +------------------+                                 |
+|                                                          |
+|           LEXFLOW              <- text-white (puro)      |
+|     Sistema de Gestão          <- text-white/80          |
+|                                                          |
+|     [ Departamento Jurídico ]  <- bg-white/20 + branco   |
+|                                                          |
+|     Formulário de Requisição   <- text-white (puro)      |
+|     Solicite a elaboração...   <- text-white/70          |
+|                                                          |
+|     ════════════════════       <- bg-white/40            |
+|                                                          |
++----------------------------------------------------------+
 ```
 
 ## Alterações Técnicas
 
 ### Arquivo: `src/pages/RequisicaoPublica.tsx`
 
-Modificar as linhas 177-189 (seção Header) com:
+Modificar o bloco de header (linhas 178-218):
 
-1. **Container do Logo** (glassmorphism):
+**1. Logo Container:**
 ```tsx
-<div className="h-20 w-20 rounded-2xl bg-[hsl(var(--lexflow-off-white)/0.1)] flex items-center justify-center backdrop-blur-sm border border-[hsl(var(--lexflow-off-white)/0.15)] shadow-lg">
-  <img src={logoVeridiana} alt="Veridiana" className="h-12 w-12 object-contain" />
-</div>
+// DE:
+<div className="h-20 w-20 rounded-2xl bg-[hsl(var(--lexflow-off-white)/0.1)] ... border border-[hsl(var(--lexflow-off-white)/0.15)]">
+
+// PARA:
+<div className="h-20 w-20 rounded-2xl bg-white/15 ... border border-white/20 shadow-xl">
 ```
 
-2. **Título Principal**:
+**2. Título Principal:**
 ```tsx
+// DE:
 <h1 className="text-4xl md:text-5xl font-bold text-[hsl(var(--lexflow-off-white))] tracking-tight">
-  LexFlow
-</h1>
+
+// PARA:
+<h1 className="text-4xl md:text-5xl font-bold text-white tracking-tight drop-shadow-sm">
+```
+
+**3. Subtítulo:**
+```tsx
+// DE:
 <p className="text-lg text-[hsl(var(--lexflow-verde-claro))]">
-  Sistema de Gestão de Contratos
-</p>
+
+// PARA:
+<p className="text-lg text-white/80">
 ```
 
-3. **Badge Departamento**:
+**4. Badge Departamento:**
 ```tsx
-<div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[hsl(var(--lexflow-verde-principal)/0.2)] border border-[hsl(var(--lexflow-verde-principal)/0.3)]">
-  <Scale className="h-4 w-4 text-[hsl(var(--lexflow-verde-principal))]" />
-  <span className="text-sm font-medium text-[hsl(var(--lexflow-verde-claro))]">
-    Departamento Jurídico
-  </span>
-</div>
+// DE:
+<div className="inline-flex ... bg-[hsl(var(--lexflow-verde-principal)/0.2)] border border-[hsl(var(--lexflow-verde-principal)/0.3)]">
+  <Scale className="... text-[hsl(var(--lexflow-verde-principal))]" />
+  <span className="... text-[hsl(var(--lexflow-verde-claro))]">
+
+// PARA:
+<div className="inline-flex ... bg-white/20 border border-white/30 backdrop-blur-sm">
+  <Scale className="... text-white" />
+  <span className="... text-white font-medium">
 ```
 
-4. **Subtítulo e Descrição**:
+**5. Título Formulário:**
 ```tsx
+// DE:
 <h2 className="text-2xl md:text-3xl font-semibold text-[hsl(var(--lexflow-off-white))]">
-  Formulário de Requisição
-</h2>
-<p className="text-[hsl(var(--lexflow-verde-claro)/0.8)] max-w-2xl mx-auto leading-relaxed">
-  Solicite a elaboração ou análise de contratos pela equipe jurídica.
-</p>
+
+// PARA:
+<h2 className="text-2xl md:text-3xl font-semibold text-white">
 ```
 
-5. **Separador Decorativo**:
+**6. Descrição:**
 ```tsx
-<div className="w-24 h-1 mx-auto rounded-full bg-gradient-to-r from-transparent via-[hsl(var(--lexflow-verde-principal))] to-transparent" />
+// DE:
+<p className="text-[hsl(var(--lexflow-verde-claro)/0.8)] max-w-2xl mx-auto leading-relaxed">
+
+// PARA:
+<p className="text-white/70 max-w-2xl mx-auto leading-relaxed">
 ```
 
-## Resumo das Alterações
+**7. Separador:**
+```tsx
+// DE:
+<div className="w-24 h-1 mx-auto rounded-full bg-gradient-to-r from-transparent via-[hsl(var(--lexflow-verde-principal))] to-transparent" />
 
-| Componente | Antes | Depois |
-|------------|-------|--------|
-| Container Logo | Nenhum | Glassmorphism 80x80 |
-| Logo Size | 40x40 | 48x48 |
-| Título | text-3xl inline | text-4xl/5xl centralizado |
-| Hierarquia | Plana | 4 níveis visuais |
-| Badge | Não existe | Departamento Jurídico |
-| Separador | Não existe | Gradiente sutil |
-| Espaçamento | mb-8 | space-y-6 com padding adequado |
+// PARA:
+<div className="w-32 h-1 mx-auto rounded-full bg-gradient-to-r from-transparent via-white/50 to-transparent" />
+```
+
+**8. Footer (mesma correção):**
+```tsx
+// DE:
+<div className="text-center mt-8 text-[hsl(var(--lexflow-verde-claro)/0.6)] text-sm">
+
+// PARA:
+<div className="text-center mt-8 text-white/50 text-sm">
+```
+
+## Resumo das Cores
+
+| Uso | Classe CSS |
+|-----|------------|
+| Títulos principais | `text-white` |
+| Subtítulos | `text-white/80` |
+| Descrições | `text-white/70` |
+| Footer | `text-white/50` |
+| Containers glass | `bg-white/15` ou `bg-white/20` |
+| Bordas | `border-white/20` ou `border-white/30` |
+| Separadores | `bg-white/50` |
+
+## Resultado Esperado
+
+Formulário com visual limpo, profissional e com alto contraste, garantindo que todos os textos sejam perfeitamente legíveis sobre o fundo verde escuro, mantendo a identidade visual LexFlow.
