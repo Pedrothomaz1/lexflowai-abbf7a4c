@@ -1,292 +1,337 @@
 
-# Fase 4: Compliance - Plano de Implementacao
+
+# Fase 5: Hardening - Plano de Implementacao
 
 ## Escopo
 
-Esta fase implementa os requisitos de compliance LGPD/GDPR e segregacao de funcoes conforme o PRD aprovado.
+Esta fase finaliza a implementacao de seguranca enterprise conforme o PRD aprovado, focando em:
+- Limites de rate por role detalhados
+- Biblioteca de playbooks de resposta a incidentes
+- Controle de sessoes concorrentes
+- Aprimoramentos no dashboard de seguranca
 
 ---
 
-## 1. Database: Funcoes SQL de Mascaramento e LGPD
+## 1. Analise do Estado Atual
 
-### 1.1 Funcao `mask_pii(value, field_type)`
+### Ja Implementado
+| Componente | Status |
+|------------|--------|
+| Rate limiter com multiplicadores por role | Funcional |
+| SecurityDashboard com metricas | Funcional |
+| SecurityAlertsList com acoes | Funcional |
+| MFAChallenge para operacoes criticas | Funcional |
+| useSecureInput com validacao XSS/SQLi | Funcional |
 
-Cria funcao SQL para mascarar dados sensiveis conforme regras:
+### Faltando para Fase 5
+| Componente | Descricao |
+|------------|-----------|
+| Limites detalhados por role | Limites especificos de exports/hora e sessoes concorrentes |
+| Playbooks de incidentes | 10 playbooks documentados conforme memoria |
+| Pagina de Playbooks | UI para consultar procedimentos |
+| Controle de sessoes | Limite de sessoes simultaneas por role |
+| Link no menu | Adicionar Security Dashboard no sidebar |
 
-| Campo | Original | Mascarado |
-|-------|----------|-----------|
-| CPF | 123.456.789-10 | \*\*\*.\*\*\*.\*89-10 |
-| Email | joao@veri.com | j\*\*\*@veri.com |
-| Telefone | (11) 99999-8888 | (11) \*\*\*\*-8888 |
-| Generico | qualquer valor | \*\*\*\*1234 |
+---
 
-### 1.2 Funcao `gdpr_delete_user(user_uuid)`
+## 2. Database: Tabela de Sessoes e Playbooks
 
-Implementa direito de exclusao LGPD (Art. 18):
-- Anonimiza dados do profile (nome, email, telefone)
-- Marca audit_logs como anonimizados (mantem para compliance)
-- Registra evento em compliance_logs com base legal
+### 2.1 Tabela `user_sessions`
 
-### 1.3 Tabela `sod_approvals` (Segregacao de Funcoes)
-
-Nova tabela para garantir que criador != aprovador:
+Rastreia sessoes ativas para controle de concorrencia:
 
 ```text
-sod_approvals
+user_sessions
 - id UUID
-- entity_type TEXT (contrato, compra, lancamento)
-- entity_id UUID
-- creator_id UUID (NOT NULL)
-- approver_id UUID
-- status TEXT (pending, approved, rejected)
-- amount DECIMAL(15,2)
-- threshold_rule TEXT
+- user_id UUID (NOT NULL)
+- session_token TEXT
+- device_info JSONB
+- ip_address INET
+- last_activity TIMESTAMP
+- expires_at TIMESTAMP
+- is_active BOOLEAN DEFAULT true
 - created_at TIMESTAMP
-- decided_at TIMESTAMP
-- notes TEXT
-- CONSTRAINT: creator_id != approver_id
+```
+
+### 2.2 Tabela `incident_playbooks`
+
+Armazena os 10 playbooks de resposta a incidentes:
+
+```text
+incident_playbooks
+- id UUID
+- incident_type TEXT (unauthorized_access, data_breach, ransomware, etc.)
+- title TEXT
+- severity TEXT (critical, high, medium, low)
+- steps JSONB (array de passos ordenados)
+- responsible_roles TEXT[]
+- escalation_contacts JSONB
+- time_to_respond_minutes INTEGER
+- is_active BOOLEAN
+- created_at TIMESTAMP
+- updated_at TIMESTAMP
 ```
 
 ---
 
-## 2. Backend: Edge Functions LGPD
+## 3. Backend: Aprimoramentos no Rate Limiter
 
-### 2.1 Edge Function `gdpr-handler`
-
-Endpoints para processar solicitacoes LGPD:
-- `POST /gdpr-handler` com body `{ action: 'erasure' | 'export' | 'access', user_id }`
-- Valida permissao do solicitante
-- Executa acao via funcao SQL
-- Retorna log de compliance
-
----
-
-## 3. Frontend: Componentes de Compliance
-
-### 3.1 Pagina `SecurityDashboard.tsx`
-
-Nova pagina `/security` para admins com:
-- Metricas: Alertas ativos, falhas de login 24h, operacoes alto risco
-- Lista de `security_alerts` com filtro por severidade
-- Acoes: Investigar, Resolver, Marcar falso positivo
-
-### 3.2 Aprimorar `AuditLogs.tsx`
+### 3.1 Atualizar `rate-limiter/index.ts`
 
 Adicionar:
-- Filtro por `risk_level` (low, medium, high, critical)
-- Filtro por data range
-- Badges coloridos por risco
-- Exportacao de relatorio PDF
+- Limites de exports por hora por role
+- Verificacao de sessoes concorrentes
+- Bloquear novas sessoes se limite excedido
 
-### 3.3 Componente `PIIMaskingDemo.tsx`
+Configuracao detalhada conforme PRD:
 
-Demonstracao de mascaramento para tela de compliance:
-- Mostra exemplo de dados originais vs mascarados
-- Util para treinamento e validacao
-
-### 3.4 Atualizar `ComplianceLGPD.tsx`
-
-Na aba "Direitos do Titular":
-- Botao funcional para "Solicitar Exclusao"
-- Dialog de confirmacao com aviso legal
-- Chama edge function `gdpr-handler`
-- Exibe resultado da operacao
+| Role | Calls/min | Exports/hora | Sessoes |
+|------|-----------|--------------|---------|
+| administrador | 500 | 20 | 3 |
+| consultoria_juridica | 200 | 10 | 2 |
+| analista_juridico | 100 | 5 | 1 |
 
 ---
 
-## 4. Arquivos a Criar/Modificar
+## 4. Frontend: Componentes de Hardening
+
+### 4.1 Componente `IncidentPlaybooks.tsx`
+
+Nova pagina/componente com:
+- Lista dos 10 playbooks
+- Busca por tipo de incidente
+- Visualizacao detalhada com passos
+- Indicador de severidade
+- Tempo estimado de resposta
+
+### 4.2 Atualizar `SecurityDashboard.tsx`
+
+Adicionar nova aba:
+- "Playbooks" com lista de procedimentos
+- Metricas de sessoes ativas
+
+### 4.3 Atualizar `AppSidebar.tsx`
+
+Adicionar link "Seguranca" no menu de Sistema para administradores.
+
+---
+
+## 5. Playbooks de Incidentes
+
+Os 10 playbooks conforme memoria aprovada:
+
+| ID | Tipo | Severidade | Tempo Resposta |
+|----|------|------------|----------------|
+| 1 | Unauthorized Access | critical | 15 min |
+| 2 | Data Breach | critical | 30 min |
+| 3 | Ransomware | critical | 15 min |
+| 4 | Phishing | high | 30 min |
+| 5 | Privilege Escalation | critical | 15 min |
+| 6 | Financial Fraud | critical | 15 min |
+| 7 | DDoS | high | 30 min |
+| 8 | Insider Threat | high | 30 min |
+| 9 | Account Takeover | critical | 15 min |
+| 10 | Data Corruption | high | 30 min |
+
+### Exemplo de Estrutura de Playbook
+
+```json
+{
+  "incident_type": "unauthorized_access",
+  "title": "Acesso Nao Autorizado",
+  "severity": "critical",
+  "time_to_respond_minutes": 15,
+  "steps": [
+    {"order": 1, "action": "Revogar sessoes do usuario", "tool": "supabase.auth.admin.signOut()"},
+    {"order": 2, "action": "Investigar logs de auditoria", "tool": "audit_logs"},
+    {"order": 3, "action": "Forcar reset de senha", "tool": "supabase.auth.admin.updateUser()"},
+    {"order": 4, "action": "Notificar DPO se dados sensiveis", "tool": "email"}
+  ],
+  "responsible_roles": ["administrador"],
+  "escalation_contacts": {"dpo": "dpo@empresa.com", "ti": "ti@empresa.com"}
+}
+```
+
+---
+
+## 6. Arquivos a Criar/Modificar
 
 ### Novos Arquivos
 | Arquivo | Descricao |
 |---------|-----------|
-| `src/pages/SecurityDashboard.tsx` | Dashboard de alertas de seguranca |
-| `src/components/security/SecurityAlertsList.tsx` | Lista de alertas com acoes |
-| `src/components/security/PIIMaskingDemo.tsx` | Demo de mascaramento |
+| `src/components/security/IncidentPlaybooks.tsx` | Lista de playbooks com detalhes |
 
 ### Arquivos a Modificar
 | Arquivo | Alteracao |
 |---------|-----------|
-| `src/pages/AuditLogs.tsx` | Filtros risk_level, date range, badges |
-| `src/pages/ComplianceLGPD.tsx` | Funcionalidade real de exclusao LGPD |
-| `src/App.tsx` | Rota `/security` |
-| `supabase/config.toml` | Registrar `gdpr-handler` |
+| `supabase/functions/rate-limiter/index.ts` | Limites detalhados por role, exports, sessoes |
+| `src/pages/SecurityDashboard.tsx` | Nova aba Playbooks |
+| `src/components/AppSidebar.tsx` | Link para /security |
 
 ### Migracoes SQL
-1. Criar funcao `mask_pii()`
-2. Criar funcao `gdpr_delete_user()`
-3. Criar tabela `sod_approvals` com RLS
-4. Criar indice para `security_alerts.status`
+1. Criar tabela `user_sessions`
+2. Criar tabela `incident_playbooks` com RLS
+3. Popular 10 playbooks iniciais
 
 ---
 
-## 5. Detalhes Tecnicos
+## 7. Detalhes Tecnicos
 
 ### Migracao SQL
 
 ```sql
--- 1. Funcao de mascaramento PII
-CREATE OR REPLACE FUNCTION public.mask_pii(
-  value TEXT,
-  field_type TEXT DEFAULT 'generic'
-) RETURNS TEXT
-LANGUAGE plpgsql
-IMMUTABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  IF value IS NULL OR value = '' THEN
-    RETURN value;
-  END IF;
-  
-  CASE field_type
-    WHEN 'cpf' THEN
-      RETURN regexp_replace(value, '(\d{3})\.(\d{3})\.(\d)(\d{2})-(\d{2})', '***.***.***\3-\5');
-    WHEN 'email' THEN
-      RETURN regexp_replace(value, '^(.).*(@.+)$', '\1***\2');
-    WHEN 'phone' THEN
-      RETURN regexp_replace(value, '(.+)(\d{4})$', '****-\2');
-    WHEN 'salary' THEN
-      RETURN 'R$ **.**0,00';
-    ELSE
-      IF length(value) > 4 THEN
-        RETURN repeat('*', length(value) - 4) || right(value, 4);
-      ELSE
-        RETURN repeat('*', length(value));
-      END IF;
-  END CASE;
-END;
-$$;
-
--- 2. Funcao LGPD Erasure
-CREATE OR REPLACE FUNCTION public.gdpr_delete_user(user_uuid UUID)
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  result jsonb;
-BEGIN
-  -- Anonimizar profile
-  UPDATE profiles
-  SET
-    full_name = 'Usuario Excluido',
-    email = concat('deleted_', user_uuid::text, '@deleted.local'),
-    phone = NULL,
-    avatar_url = NULL,
-    updated_at = NOW()
-  WHERE id = user_uuid;
-
-  -- Marcar audit_logs como anonimizados
-  UPDATE audit_logs
-  SET metadata = COALESCE(metadata, '{}'::jsonb) || '{"anonymized": true}'::jsonb
-  WHERE user_id = user_uuid;
-
-  -- Registrar no compliance_logs
-  INSERT INTO compliance_logs (
-    tipo_evento,
-    entidade,
-    entidade_id,
-    dados_afetados,
-    base_legal,
-    user_id
-  ) VALUES (
-    'erasure_request',
-    'profiles',
-    user_uuid,
-    '{"campos": ["full_name", "email", "phone", "avatar_url"]}'::jsonb,
-    'LGPD Art. 18',
-    auth.uid()
-  );
-
-  result := jsonb_build_object(
-    'success', true,
-    'user_id', user_uuid,
-    'action', 'erasure',
-    'timestamp', NOW()
-  );
-  
-  RETURN result;
-END;
-$$;
-
--- 3. Tabela SoD Approvals
-CREATE TABLE IF NOT EXISTS public.sod_approvals (
+-- 1. Tabela de sessoes ativas
+CREATE TABLE IF NOT EXISTS public.user_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  entity_type TEXT NOT NULL,
-  entity_id UUID NOT NULL,
-  creator_id UUID NOT NULL,
-  approver_id UUID,
-  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
-  amount DECIMAL(15,2),
-  threshold_rule TEXT,
-  notes TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  decided_at TIMESTAMP WITH TIME ZONE,
-  CONSTRAINT sod_different_users CHECK (
-    approver_id IS NULL OR creator_id != approver_id
-  )
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  session_token TEXT NOT NULL,
+  device_info JSONB DEFAULT '{}'::jsonb,
+  ip_address INET,
+  last_activity TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-ALTER TABLE sod_approvals ENABLE ROW LEVEL SECURITY;
+CREATE INDEX idx_user_sessions_user_active ON user_sessions(user_id, is_active);
+CREATE INDEX idx_user_sessions_expires ON user_sessions(expires_at);
 
--- RLS: Usuarios veem suas proprias solicitacoes ou sao aprovadores
-CREATE POLICY "sod_view_own_or_approver" ON sod_approvals
+ALTER TABLE user_sessions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "users_view_own_sessions" ON user_sessions
+  FOR SELECT USING (user_id = auth.uid() OR has_role(auth.uid(), 'administrador'));
+
+CREATE POLICY "system_manage_sessions" ON user_sessions
+  FOR ALL USING (auth.uid() IS NULL) WITH CHECK (true);
+
+-- 2. Tabela de playbooks
+CREATE TABLE IF NOT EXISTS public.incident_playbooks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  incident_type TEXT NOT NULL UNIQUE,
+  title TEXT NOT NULL,
+  severity TEXT NOT NULL CHECK (severity IN ('critical', 'high', 'medium', 'low')),
+  steps JSONB NOT NULL DEFAULT '[]'::jsonb,
+  responsible_roles TEXT[] NOT NULL,
+  escalation_contacts JSONB DEFAULT '{}'::jsonb,
+  time_to_respond_minutes INTEGER NOT NULL DEFAULT 30,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE incident_playbooks ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "admins_manage_playbooks" ON incident_playbooks
+  FOR ALL USING (has_role(auth.uid(), 'administrador'));
+
+CREATE POLICY "authorized_view_playbooks" ON incident_playbooks
   FOR SELECT USING (
-    creator_id = auth.uid() 
-    OR approver_id = auth.uid()
-    OR has_role(auth.uid(), 'administrador')
+    has_any_role(auth.uid(), ARRAY['administrador'::app_role, 'consultoria_juridica'::app_role])
   );
 
-CREATE POLICY "sod_insert_authenticated" ON sod_approvals
-  FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND creator_id = auth.uid()
-  );
+-- 3. Popular playbooks iniciais
+INSERT INTO incident_playbooks (incident_type, title, severity, time_to_respond_minutes, steps, responsible_roles, escalation_contacts) VALUES
+('unauthorized_access', 'Acesso Nao Autorizado', 'critical', 15, 
+ '[{"order":1,"action":"Revogar todas as sessoes do usuario","tool":"auth.admin.signOut"},{"order":2,"action":"Investigar audit_logs das ultimas 24h","tool":"audit_logs"},{"order":3,"action":"Forcar reset de senha","tool":"auth.admin.updateUser"},{"order":4,"action":"Notificar DPO se dados sensiveis acessados","tool":"email"}]',
+ ARRAY['administrador'], '{"dpo":"dpo@empresa.com","ti":"ti@empresa.com"}'),
 
-CREATE POLICY "sod_update_approver_only" ON sod_approvals
-  FOR UPDATE USING (
-    approver_id = auth.uid() 
-    OR has_role(auth.uid(), 'administrador')
-  );
+('data_breach', 'Vazamento de Dados', 'critical', 30,
+ '[{"order":1,"action":"Isolar sistemas afetados","tool":"network"},{"order":2,"action":"Notificar DPO imediatamente","tool":"email"},{"order":3,"action":"Iniciar processo de notificacao LGPD","tool":"compliance"},{"order":4,"action":"Preservar logs para investigacao","tool":"backup"},{"order":5,"action":"Preparar comunicado aos afetados","tool":"legal"}]',
+ ARRAY['administrador'], '{"dpo":"dpo@empresa.com","juridico":"juridico@empresa.com"}'),
+
+('ransomware', 'Ataque Ransomware', 'critical', 15,
+ '[{"order":1,"action":"Bloquear usuario/sistema afetado","tool":"network"},{"order":2,"action":"NAO pagar resgate","tool":"policy"},{"order":3,"action":"Preservar logs e evidencias","tool":"backup"},{"order":4,"action":"Acionar equipe de resposta","tool":"escalation"},{"order":5,"action":"Iniciar restauracao de backup","tool":"recovery"}]',
+ ARRAY['administrador'], '{"ciso":"ciso@empresa.com","ti":"ti@empresa.com"}'),
+
+('phishing', 'Ataque de Phishing', 'high', 30,
+ '[{"order":1,"action":"Forcar reset de MFA do usuario","tool":"auth.mfa"},{"order":2,"action":"Atualizar filtros de email","tool":"email_security"},{"order":3,"action":"Comunicar usuarios sobre o ataque","tool":"internal_comms"},{"order":4,"action":"Realizar treinamento de conscientizacao","tool":"training"}]',
+ ARRAY['administrador'], '{"ti":"ti@empresa.com"}'),
+
+('privilege_escalation', 'Escalacao de Privilegios', 'critical', 15,
+ '[{"order":1,"action":"Auditar todas mudancas de roles","tool":"audit_logs"},{"order":2,"action":"Revogar tokens do usuario","tool":"auth.admin"},{"order":3,"action":"Reverter alteracoes de permissao","tool":"user_roles"},{"order":4,"action":"Investigar origem do acesso","tool":"security_alerts"}]',
+ ARRAY['administrador'], '{"ciso":"ciso@empresa.com"}'),
+
+('financial_fraud', 'Fraude Financeira', 'critical', 15,
+ '[{"order":1,"action":"Bloquear transacoes pendentes","tool":"financial"},{"order":2,"action":"Congelar contas envolvidas","tool":"banking"},{"order":3,"action":"Iniciar revisao forense","tool":"forensics"},{"order":4,"action":"Notificar compliance e juridico","tool":"escalation"}]',
+ ARRAY['administrador'], '{"financeiro":"cfo@empresa.com","juridico":"juridico@empresa.com"}'),
+
+('ddos', 'Ataque DDoS', 'high', 30,
+ '[{"order":1,"action":"Ativar protecao Cloudflare","tool":"cdn"},{"order":2,"action":"Aumentar rate limits temporariamente","tool":"rate_limiter"},{"order":3,"action":"Comunicar usuarios sobre intermitencia","tool":"status_page"},{"order":4,"action":"Monitorar origem do ataque","tool":"analytics"}]',
+ ARRAY['administrador'], '{"ti":"ti@empresa.com","devops":"devops@empresa.com"}'),
+
+('insider_threat', 'Ameaca Interna', 'high', 30,
+ '[{"order":1,"action":"Restringir acessos do suspeito","tool":"permissions"},{"order":2,"action":"Revogar sessoes ativas","tool":"auth.admin"},{"order":3,"action":"Iniciar investigacao interna","tool":"hr"},{"order":4,"action":"Preservar evidencias","tool":"audit_logs"}]',
+ ARRAY['administrador'], '{"hr":"rh@empresa.com","juridico":"juridico@empresa.com"}'),
+
+('account_takeover', 'Sequestro de Conta', 'critical', 15,
+ '[{"order":1,"action":"Forcar reset de senha imediato","tool":"auth.admin.updateUser"},{"order":2,"action":"Exigir MFA para reativacao","tool":"mfa_requirements"},{"order":3,"action":"Invalidar todas as sessoes","tool":"auth.admin.signOut"},{"order":4,"action":"Revisar atividades recentes","tool":"audit_logs"}]',
+ ARRAY['administrador'], '{"ti":"ti@empresa.com"}'),
+
+('data_corruption', 'Corrupcao de Dados', 'high', 30,
+ '[{"order":1,"action":"Fazer rollback para versao anterior","tool":"versioning"},{"order":2,"action":"Restaurar backup mais recente","tool":"backup"},{"order":3,"action":"Revisar trilha de auditoria","tool":"audit_logs"},{"order":4,"action":"Validar integridade pos-restauracao","tool":"validation"}]',
+ ARRAY['administrador'], '{"dba":"dba@empresa.com","ti":"ti@empresa.com"}');
 ```
 
-### Edge Function gdpr-handler
+### Rate Limiter Aprimorado
+
+Estrutura de limites detalhados:
 
 ```typescript
-// Processa solicitacoes LGPD
-// Actions: erasure, export, access
-// Valida JWT e permissoes
-// Registra tudo em compliance_logs
+const ROLE_LIMITS: Record<string, RoleLimits> = {
+  'administrador': {
+    multiplier: 2.5,
+    callsPerMinute: 500,
+    exportsPerHour: 20,
+    maxConcurrentSessions: 3
+  },
+  'consultoria_juridica': {
+    multiplier: 2.0,
+    callsPerMinute: 200,
+    exportsPerHour: 10,
+    maxConcurrentSessions: 2
+  },
+  'analista_juridico': {
+    multiplier: 1.5,
+    callsPerMinute: 100,
+    exportsPerHour: 5,
+    maxConcurrentSessions: 1
+  },
+  'default': {
+    multiplier: 1.0,
+    callsPerMinute: 50,
+    exportsPerHour: 1,
+    maxConcurrentSessions: 1
+  }
+};
 ```
 
 ---
 
-## 6. Fluxo de Implementacao
+## 8. Fluxo de Implementacao
 
-1. **Migracao SQL** - Criar funcoes e tabela SoD
-2. **Edge Function** - gdpr-handler
-3. **SecurityDashboard** - Nova pagina
-4. **AuditLogs aprimorado** - Filtros e badges
-5. **ComplianceLGPD** - Direitos funcionais
-6. **Rota no App.tsx** - /security
-
----
-
-## 7. Consideracoes de Seguranca
-
-- Funcao `gdpr_delete_user` e SECURITY DEFINER para executar com privilegios elevados
-- Constraint SoD impede fraude (criador != aprovador)
-- Todas acoes LGPD sao logadas em compliance_logs
-- Mascaramento PII e funcao IMMUTABLE para performance
+1. **Migracao SQL** - Criar tabelas e popular playbooks
+2. **Rate Limiter** - Adicionar limites detalhados
+3. **IncidentPlaybooks** - Componente de visualizacao
+4. **SecurityDashboard** - Integrar aba Playbooks
+5. **AppSidebar** - Link para /security
 
 ---
 
-## 8. Resultado Esperado
+## 9. Consideracoes de Seguranca
+
+- Playbooks acessiveis apenas por admins e consultores
+- Sessoes expiram automaticamente apos inatividade
+- Rate limits impedem abuso mesmo por usuarios autenticados
+- Logs de todas as consultas a playbooks
+
+---
+
+## 10. Resultado Esperado
 
 Apos implementacao:
-- Dados sensiveis mascarados em relatorios e dashboards
-- Usuarios podem solicitar exclusao de dados (LGPD Art. 18)
-- Segregacao de funcoes impede auto-aprovacao
-- Dashboard de seguranca centraliza alertas
-- Audit logs filtrados por nivel de risco
+- Limites de API personalizados por nivel de acesso
+- 10 playbooks de resposta a incidentes disponiveis
+- Controle de sessoes concorrentes por usuario
+- Dashboard de seguranca completo no menu lateral
+- Sistema pronto para producao conforme Go/No-Go criteria
+
