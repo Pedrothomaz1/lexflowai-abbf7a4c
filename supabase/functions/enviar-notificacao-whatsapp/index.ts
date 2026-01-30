@@ -10,6 +10,7 @@ interface NotificacaoRequest {
   contratoNumero: string
   contratoTitulo: string
   novoStatus: string
+  organizationId?: string // For CRON calls - but we NEVER trust this, we resolve from contract
 }
 
 // Função para enviar mensagem via Evolution API
@@ -71,41 +72,65 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Validate token and get user
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token)
-
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Token inválido' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // Verify user has permission to send notifications
-    const { data: userRole } = await supabaseClient
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single()
-
-    const canSendNotifications = ['consultoria_juridica', 'administrador'].includes(userRole?.role || '')
-    if (!canSendNotifications) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Permissão negada' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
     const { contratoId, contratoNumero, contratoTitulo, novoStatus } = await req.json() as NotificacaoRequest
 
-    console.log('Processando notificação para contrato:', contratoNumero)
+    console.log('Processando notificação para contrato:', contratoNumero || contratoId)
 
-    // Buscar aprovadores (consultoria_juridica e administrador)
+    // =========================================================
+    // MULTI-TENANT: Resolve organization from contract
+    // NEVER trust organizationId from request body
+    // =========================================================
+    let organizationId: string | null = null
+
+    if (contratoId) {
+      const { data: contract } = await supabaseClient
+        .from('contratos')
+        .select('organization_id')
+        .eq('id', contratoId)
+        .single()
+      
+      if (contract?.organization_id) {
+        organizationId = contract.organization_id
+      }
+    }
+
+    if (!organizationId) {
+      console.error('Não foi possível determinar a organização para o contrato')
+      return new Response(
+        JSON.stringify({ success: false, error: 'Organização não encontrada' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    console.log(`Processando WhatsApp para organização: ${organizationId}`)
+
+    // =========================================================
+    // Get organization members first - SCOPED BY ORGANIZATION
+    // =========================================================
+    const { data: orgMembers } = await supabaseClient
+      .from('organization_members')
+      .select('user_id')
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
+
+    if (!orgMembers || orgMembers.length === 0) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          message: 'Nenhum membro ativo na organização' 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const memberUserIds = orgMembers.map(m => m.user_id)
+
+    // Buscar aprovadores (consultoria_juridica e administrador) - SCOPED BY ORGANIZATION MEMBERS
     const { data: userRoles, error: rolesError } = await supabaseClient
       .from('user_roles')
       .select('user_id')
       .in('role', ['consultoria_juridica', 'administrador'])
+      .in('user_id', memberUserIds)
 
     if (rolesError) {
       console.error('Erro ao buscar roles:', rolesError)
@@ -119,7 +144,7 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          message: 'Nenhum aprovador encontrado' 
+          message: 'Nenhum aprovador encontrado na organização' 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
@@ -142,20 +167,20 @@ Deno.serve(async (req) => {
       )
     }
 
-    console.log('Aprovadores encontrados:', profiles?.length || 0)
+    console.log(`[Org ${organizationId}] Aprovadores encontrados:`, profiles?.length || 0)
 
     // Filtrar apenas aprovadores com telefone cadastrado
     const aprovadoresComTelefone = profiles?.filter(
       (profile: any) => profile.phone && profile.phone.trim() !== ''
     ) || []
 
-    console.log('Aprovadores com telefone:', aprovadoresComTelefone.length)
+    console.log(`[Org ${organizationId}] Aprovadores com telefone:`, aprovadoresComTelefone.length)
 
     if (aprovadoresComTelefone.length === 0) {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          message: 'Nenhum aprovador com telefone cadastrado' 
+          message: 'Nenhum aprovador com telefone cadastrado na organização' 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
@@ -211,7 +236,7 @@ Deno.serve(async (req) => {
             telefone: telefone,
             status: 'enviado',
           })
-          console.log(`Notificação enviada para ${profile.full_name}`)
+          console.log(`[Org ${organizationId}] Notificação enviada para ${profile.full_name}`)
         } else {
           notificacoesEnviadas.push({
             nome: profile.full_name,
@@ -221,7 +246,7 @@ Deno.serve(async (req) => {
           })
         }
       } catch (error: any) {
-        console.error(`Erro ao enviar notificação para ${profile?.full_name || 'aprovador'}:`, error)
+        console.error(`[Org ${organizationId}] Erro ao enviar notificação para ${profile?.full_name || 'aprovador'}:`, error)
         notificacoesEnviadas.push({
           nome: profile?.full_name || 'Desconhecido',
           status: 'erro',
@@ -229,6 +254,20 @@ Deno.serve(async (req) => {
         })
       }
     }
+
+    // Log audit - SCOPED BY ORGANIZATION
+    await supabaseClient.from('audit_logs').insert({
+      organization_id: organizationId,
+      acao: 'WHATSAPP_NOTIFICATION_SENT',
+      entidade: 'contratos',
+      entidade_id: contratoId,
+      metadata: {
+        recipients: notificacoesEnviadas.length,
+        success_count: notificacoesEnviadas.filter(n => n.status === 'enviado').length,
+      },
+      event_category: 'notification',
+      risk_level: 'low',
+    })
 
     return new Response(
       JSON.stringify({

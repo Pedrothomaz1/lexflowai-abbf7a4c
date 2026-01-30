@@ -7,7 +7,7 @@
 |------|--------|------|
 | Fase 1: Schema Multi-Tenant | ✅ Concluída | 2026-01-30 |
 | Fase 2: Políticas RLS | ✅ Concluída | 2026-01-30 |
-| Fase 3: Edge Functions | ⏳ Pendente | - |
+| Fase 3: Edge Functions | ✅ Concluída | 2026-01-30 |
 | Fase 4: Frontend | ⏳ Pendente | - |
 | Fase 5: Validação | ⏳ Pendente | - |
 

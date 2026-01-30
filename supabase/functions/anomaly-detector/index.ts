@@ -11,7 +11,7 @@ interface AnomalyRule {
   id: string;
   name: string;
   severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  check: (supabase: any) => Promise<any[]>;
+  check: (supabase: any, organizationId: string) => Promise<any[]>;
 }
 
 const RULES: AnomalyRule[] = [
@@ -19,13 +19,13 @@ const RULES: AnomalyRule[] = [
     id: 'AFTER_HOURS_FINANCIAL',
     name: 'Operações financeiras fora do horário',
     severity: 'HIGH',
-    check: async (supabase) => {
+    check: async (supabase, organizationId) => {
       const { data } = await supabase
         .from('audit_logs')
         .select('*')
+        .eq('organization_id', organizationId)
         .in('event_category', ['financial'])
-        .gte('created_at', new Date(Date.now() - 60 * 60 * 1000).toISOString())
-        .or('created_at.gte.22:00:00,created_at.lt.06:00:00');
+        .gte('created_at', new Date(Date.now() - 60 * 60 * 1000).toISOString());
       
       // Filter by hour in application logic
       return (data || []).filter((log: any) => {
@@ -38,11 +38,12 @@ const RULES: AnomalyRule[] = [
     id: 'BULK_DELETE',
     name: 'Exclusões em massa detectadas',
     severity: 'CRITICAL',
-    check: async (supabase) => {
+    check: async (supabase, organizationId) => {
       const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
       const { data } = await supabase
         .from('audit_logs')
         .select('user_id, count')
+        .eq('organization_id', organizationId)
         .eq('acao', 'DELETE')
         .gte('created_at', fiveMinAgo);
       
@@ -62,11 +63,12 @@ const RULES: AnomalyRule[] = [
     id: 'LARGE_UNAPPROVED_PURCHASE',
     name: 'Compra grande sem aprovação',
     severity: 'HIGH',
-    check: async (supabase) => {
+    check: async (supabase, organizationId) => {
       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
       const { data } = await supabase
         .from('audit_logs')
         .select('*')
+        .eq('organization_id', organizationId)
         .eq('entidade', 'contratos')
         .eq('acao', 'INSERT')
         .gte('created_at', oneHourAgo);
@@ -81,11 +83,12 @@ const RULES: AnomalyRule[] = [
     id: 'PERMISSION_CHANGE',
     name: 'Alteração de permissões detectada',
     severity: 'CRITICAL',
-    check: async (supabase) => {
+    check: async (supabase, organizationId) => {
       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
       const { data } = await supabase
         .from('audit_logs')
         .select('*')
+        .eq('organization_id', organizationId)
         .eq('entidade', 'user_roles')
         .in('acao', ['INSERT', 'UPDATE', 'DELETE'])
         .gte('created_at', oneHourAgo);
@@ -97,11 +100,12 @@ const RULES: AnomalyRule[] = [
     id: 'MASS_EXPORT',
     name: 'Exportação em massa de dados',
     severity: 'MEDIUM',
-    check: async (supabase) => {
+    check: async (supabase, organizationId) => {
       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
       const { data } = await supabase
         .from('audit_logs')
         .select('*')
+        .eq('organization_id', organizationId)
         .eq('acao', 'export')
         .gte('created_at', oneHourAgo);
       
@@ -115,12 +119,34 @@ const RULES: AnomalyRule[] = [
     id: 'LOGIN_FAILURE_PATTERN',
     name: 'Padrão de falhas de login detectado',
     severity: 'HIGH',
-    check: async (supabase) => {
+    check: async (supabase, organizationId) => {
+      // Login attempts are not org-scoped, but we can filter by org members
+      const { data: orgMembers } = await supabase
+        .from('organization_members')
+        .select('user_id')
+        .eq('organization_id', organizationId)
+        .eq('is_active', true);
+      
+      if (!orgMembers || orgMembers.length === 0) return [];
+      
+      const memberIds = orgMembers.map((m: any) => m.user_id);
+      
+      // Get profiles with emails
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('email')
+        .in('id', memberIds);
+      
+      if (!profiles || profiles.length === 0) return [];
+      
+      const emails = profiles.map((p: any) => p.email).filter(Boolean);
+      
       const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
       const { data } = await supabase
         .from('login_attempts')
         .select('email, ip_address, count')
         .eq('success', false)
+        .in('email', emails)
         .gte('created_at', fiveMinAgo);
       
       // Group by email
@@ -139,11 +165,12 @@ const RULES: AnomalyRule[] = [
     id: 'UNUSUAL_ACCESS_TIME',
     name: 'Acesso em horário incomum',
     severity: 'MEDIUM',
-    check: async (supabase) => {
+    check: async (supabase, organizationId) => {
       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
       const { data } = await supabase
         .from('audit_logs')
         .select('*')
+        .eq('organization_id', organizationId)
         .gte('created_at', oneHourAgo);
       
       // Filter weekend or late night access
@@ -168,8 +195,6 @@ serve(async (req) => {
     const cronSecret = Deno.env.get('CRON_SECRET');
     
     if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      // Allow service role access as well
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
       const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
       
       if (!authHeader?.includes(supabaseServiceKey)) {
@@ -186,69 +211,112 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    console.log('[anomaly-detector] Starting anomaly detection scan...');
-    const alertsCreated: any[] = [];
+    console.log('[anomaly-detector] Starting anomaly detection scan (multi-tenant)...');
 
-    for (const rule of RULES) {
-      try {
-        console.log(`[anomaly-detector] Checking rule: ${rule.id}`);
-        const anomalies = await rule.check(supabase);
-        
-        if (anomalies.length > 0) {
-          console.log(`[anomaly-detector] Found ${anomalies.length} anomalies for ${rule.id}`);
+    // =========================================================
+    // MULTI-TENANT: Fetch all active organizations
+    // =========================================================
+    const { data: organizations, error: orgError } = await supabase
+      .from('organizations')
+      .select('id, nome')
+      .eq('is_active', true);
+
+    if (orgError) {
+      console.error('[anomaly-detector] Error fetching organizations:', orgError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch organizations' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!organizations || organizations.length === 0) {
+      console.log('[anomaly-detector] No active organizations found');
+      return new Response(
+        JSON.stringify({ success: true, message: 'No active organizations' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`[anomaly-detector] Processing ${organizations.length} organizations`);
+
+    const allAlertsCreated: any[] = [];
+
+    // =========================================================
+    // PROCESS EACH ORGANIZATION SEPARATELY
+    // =========================================================
+    for (const org of organizations) {
+      console.log(`[anomaly-detector] Processing organization: ${org.nome} (${org.id})`);
+      const orgAlerts: any[] = [];
+
+      for (const rule of RULES) {
+        try {
+          console.log(`[anomaly-detector] [${org.nome}] Checking rule: ${rule.id}`);
+          const anomalies = await rule.check(supabase, org.id);
           
-          for (const anomaly of anomalies) {
-            // Check if similar alert already exists (within last hour)
-            const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-            const { data: existingAlert } = await supabase
-              .from('security_alerts')
-              .select('id')
-              .eq('rule_id', rule.id)
-              .eq('user_id', anomaly.user_id || null)
-              .gte('created_at', oneHourAgo)
-              .eq('status', 'open')
-              .limit(1);
+          if (anomalies.length > 0) {
+            console.log(`[anomaly-detector] [${org.nome}] Found ${anomalies.length} anomalies for ${rule.id}`);
             
-            if (existingAlert && existingAlert.length > 0) {
-              console.log(`[anomaly-detector] Similar alert already exists for ${rule.id}`);
-              continue;
-            }
-            
-            // Create security alert
-            const { data: alert, error } = await supabase
-              .from('security_alerts')
-              .insert({
-                rule_id: rule.id,
-                rule_name: rule.name,
-                severity: rule.severity,
-                user_id: anomaly.user_id || null,
-                event_id: anomaly.id || null,
-                details: anomaly,
-                status: 'open'
-              })
-              .select()
-              .single();
-            
-            if (error) {
-              console.error(`[anomaly-detector] Error creating alert:`, error);
-            } else {
-              alertsCreated.push(alert);
-              console.log(`[anomaly-detector] Created alert: ${alert.id}`);
+            for (const anomaly of anomalies) {
+              // Check if similar alert already exists - SCOPED BY ORGANIZATION
+              const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+              const { data: existingAlert } = await supabase
+                .from('security_alerts')
+                .select('id')
+                .eq('organization_id', org.id)
+                .eq('rule_id', rule.id)
+                .eq('user_id', anomaly.user_id || null)
+                .gte('created_at', oneHourAgo)
+                .eq('status', 'open')
+                .limit(1);
+              
+              if (existingAlert && existingAlert.length > 0) {
+                console.log(`[anomaly-detector] [${org.nome}] Similar alert already exists for ${rule.id}`);
+                continue;
+              }
+              
+              // Create security alert - SCOPED BY ORGANIZATION
+              const { data: alert, error } = await supabase
+                .from('security_alerts')
+                .insert({
+                  organization_id: org.id,
+                  rule_id: rule.id,
+                  rule_name: rule.name,
+                  severity: rule.severity,
+                  user_id: anomaly.user_id || null,
+                  event_id: anomaly.id || null,
+                  details: anomaly,
+                  status: 'open'
+                })
+                .select()
+                .single();
+              
+              if (error) {
+                console.error(`[anomaly-detector] [${org.nome}] Error creating alert:`, error);
+              } else {
+                orgAlerts.push(alert);
+                allAlertsCreated.push(alert);
+                console.log(`[anomaly-detector] [${org.nome}] Created alert: ${alert.id}`);
+              }
             }
           }
+        } catch (ruleError) {
+          console.error(`[anomaly-detector] [${org.nome}] Error checking rule ${rule.id}:`, ruleError);
         }
-      } catch (ruleError) {
-        console.error(`[anomaly-detector] Error checking rule ${rule.id}:`, ruleError);
+      }
+
+      if (orgAlerts.length > 0) {
+        console.log(`[anomaly-detector] [${org.nome}] Created ${orgAlerts.length} alerts`);
       }
     }
 
-    console.log(`[anomaly-detector] Scan complete. Created ${alertsCreated.length} alerts.`);
+    console.log(`[anomaly-detector] Scan complete. Created ${allAlertsCreated.length} total alerts across ${organizations.length} organizations.`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        alerts_created: alertsCreated.length,
-        alerts: alertsCreated
+        organizations_processed: organizations.length,
+        alerts_created: allAlertsCreated.length,
+        alerts: allAlertsCreated
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
