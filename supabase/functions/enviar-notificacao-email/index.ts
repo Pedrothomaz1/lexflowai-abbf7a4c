@@ -256,12 +256,12 @@ serve(async (req) => {
     console.log(`Enviando emails em batch para ${uniqueEmails.length} destinatários`);
 
   const emailPayloads = uniqueEmails.map(user => ({
-    from: "LexFlow <onboarding@resend.dev>", // TODO: Alterar para "LexFlow <alertas@veridianaquirino.com.br>" quando o domínio estiver verificado
+    from: "LexFlow <alertas@porveri.com.br>",
     to: [user.email],
     subject,
     html,
     text,
-    replyTo: "suporte@veridianaquirino.com.br",
+    replyTo: "suporte@porveri.com.br",
     headers: {
       "X-Alert-Id": body.alertaId,
       "X-Contract-Id": body.contratoId,
