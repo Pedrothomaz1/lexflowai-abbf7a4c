@@ -1,158 +1,112 @@
 
-# Plano: Formulário Externo de Requisição de Contratos
+# Plano: Redesign do Header do Formulário Público
 
-## Resumo
+## Problema Identificado
 
-Criar um formulário publicamente acessivel que permitira que usuarios externos (funcionarios, gestores de areas, etc.) possam enviar solicitacoes de contratos que serao recebidas e analisadas pela equipe juridica no modulo de Contratos do LexFlow.
+O header atual do formulário `/requisicao` está visualmente simples e desconectado do design premium do LexFlow. Faltam:
+- Container com backdrop/glassmorphism para o logo
+- Hierarquia visual adequada
+- Espaçamento e proporções profissionais
+- Elementos decorativos que transmitam confiança
 
-## Fluxo Proposto
+## Solução Proposta
+
+Redesenhar o header seguindo o padrão visual do `SeletorModulo.tsx`, que utiliza o design system LexFlow corretamente.
+
+### Mudanças Visuais
+
+**Antes:**
+- Logo pequeno (40x40) sem container
+- Título simples ao lado do logo
+- Subtítulos com cores diretas sem hierarquia
+
+**Depois:**
+- Logo em container glassmorphism (64x64) com backdrop blur e borda sutil
+- Título principal grande e elegante abaixo do logo
+- Subtítulo em cor `verde-claro` com melhor legibilidade
+- Descrição com opacidade reduzida para hierarquia
+- Separador visual sutil antes do card do formulário
+- Badge decorativo indicando "Departamento Jurídico"
+
+### Estrutura do Novo Header
 
 ```text
-+------------------------+        +----------------------------+        +------------------------+
-|  USUARIO EXTERNO       |        |  BACKEND (Edge Function)   |        |  MODULO CONTRATOS      |
-|  (sem login)           |        |                            |        |  (usuarios internos)   |
-+------------------------+        +----------------------------+        +------------------------+
-         |                                    |                                    |
-         | 1. Acessa /requisicao              |                                    |
-         |-------------------------------->   |                                    |
-         |                                    |                                    |
-         | 2. Preenche formulario             |                                    |
-         |  - Nome solicitante                |                                    |
-         |  - Email                           |                                    |
-         |  - Departamento                    |                                    |
-         |  - Tipo de contrato                |                                    |
-         |  - Descricao da necessidade        |                                    |
-         |  - Valor estimado                  |                                    |
-         |  - Urgencia                        |                                    |
-         |  - Fornecedor sugerido             |                                    |
-         |                                    |                                    |
-         | 3. Submete formulario              |                                    |
-         |-------------------------------> 4. Valida dados                        |
-         |                                    |                                    |
-         |                                    | 5. Insere na tabela                |
-         |                                    |    contract_requests               |
-         |                                    |----------------------------------->|
-         |                                    |                                    |
-         |                                    | 6. Envia notificacao               |
-         |                                    |    (opcional: email/WhatsApp)      |
-         |                                    |                                    |
-         | 7. Confirmacao                     |                                    |
-         |<-------------------------------|  |                                    |
-         |                                    |                                    |
-         |                                    |         8. Equipe juridica         |
-         |                                    |            visualiza e aprova      |
-         |                                    |                                    |
-         |                                    |         9. Converte em contrato    |
-         |                                    |            (opcional)              |
-+------------------------+        +----------------------------+        +------------------------+
++--------------------------------------------------+
+|                                                  |
+|     +------------------+                         |
+|     |    [LOGO]        |   <- Container glass   |
+|     +------------------+                         |
+|                                                  |
+|           LEXFLOW                                |
+|     Sistema de Gestão de Contratos               |
+|                                                  |
+|     [Badge: Departamento Jurídico]               |
+|                                                  |
+|     Formulário de Requisição de Contratos        |
+|                                                  |
+|     Utilize este formulário para solicitar...    |
+|                                                  |
+|     ────────────────────────────                 |
+|                                                  |
++--------------------------------------------------+
 ```
 
-## Componentes a Criar
+## Alterações Técnicas
 
-### 1. Tabela no Banco de Dados
+### Arquivo: `src/pages/RequisicaoPublica.tsx`
 
-Nova tabela `contract_requests` para armazenar as solicitacoes:
+Modificar as linhas 177-189 (seção Header) com:
 
-- `id` (uuid, PK)
-- `numero_requisicao` (text) - Numero sequencial gerado automaticamente
-- `solicitante_nome` (text) - Nome de quem esta solicitando
-- `solicitante_email` (text) - Email para contato
-- `solicitante_telefone` (text, opcional)
-- `departamento` (text) - Area/departamento solicitante
-- `tipo_contrato` (contract_type enum)
-- `titulo` (text) - Titulo/assunto da requisicao
-- `descricao` (text) - Descricao detalhada da necessidade
-- `justificativa` (text) - Por que e necessario
-- `valor_estimado` (numeric, opcional)
-- `urgencia` (text) - baixa/media/alta/critica
-- `data_necessidade` (date, opcional) - Quando precisa estar pronto
-- `fornecedor_sugerido` (text, opcional)
-- `anexo_url` (text, opcional) - Link para documentos de apoio
-- `status` (text) - pendente/em_analise/aprovado/rejeitado/convertido
-- `analisado_por` (uuid, FK profiles)
-- `analisado_em` (timestamp)
-- `contrato_id` (uuid, FK contratos) - Se convertido em contrato
-- `observacoes_analise` (text)
-- `created_at` (timestamp)
-- `ip_address` (text) - Para auditoria
-- `user_agent` (text) - Para auditoria
+1. **Container do Logo** (glassmorphism):
+```tsx
+<div className="h-20 w-20 rounded-2xl bg-[hsl(var(--lexflow-off-white)/0.1)] flex items-center justify-center backdrop-blur-sm border border-[hsl(var(--lexflow-off-white)/0.15)] shadow-lg">
+  <img src={logoVeridiana} alt="Veridiana" className="h-12 w-12 object-contain" />
+</div>
+```
 
-**RLS Policies:**
-- INSERT: Aberto ao publico (sem autenticacao)
-- SELECT/UPDATE/DELETE: Apenas usuarios autenticados com roles apropriadas
+2. **Título Principal**:
+```tsx
+<h1 className="text-4xl md:text-5xl font-bold text-[hsl(var(--lexflow-off-white))] tracking-tight">
+  LexFlow
+</h1>
+<p className="text-lg text-[hsl(var(--lexflow-verde-claro))]">
+  Sistema de Gestão de Contratos
+</p>
+```
 
-### 2. Edge Function: `processar-requisicao-contrato`
+3. **Badge Departamento**:
+```tsx
+<div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[hsl(var(--lexflow-verde-principal)/0.2)] border border-[hsl(var(--lexflow-verde-principal)/0.3)]">
+  <Scale className="h-4 w-4 text-[hsl(var(--lexflow-verde-principal))]" />
+  <span className="text-sm font-medium text-[hsl(var(--lexflow-verde-claro))]">
+    Departamento Jurídico
+  </span>
+</div>
+```
 
-Endpoint publico para receber e validar as requisicoes:
+4. **Subtítulo e Descrição**:
+```tsx
+<h2 className="text-2xl md:text-3xl font-semibold text-[hsl(var(--lexflow-off-white))]">
+  Formulário de Requisição
+</h2>
+<p className="text-[hsl(var(--lexflow-verde-claro)/0.8)] max-w-2xl mx-auto leading-relaxed">
+  Solicite a elaboração ou análise de contratos pela equipe jurídica.
+</p>
+```
 
-- Validacao de campos obrigatorios
-- Rate limiting por IP
-- Sanitizacao de inputs
-- Geracao de numero de requisicao
-- Insercao no banco
-- Envio de email de confirmacao ao solicitante
-- Notificacao opcional para equipe juridica
+5. **Separador Decorativo**:
+```tsx
+<div className="w-24 h-1 mx-auto rounded-full bg-gradient-to-r from-transparent via-[hsl(var(--lexflow-verde-principal))] to-transparent" />
+```
 
-### 3. Pagina Publica: `/requisicao`
+## Resumo das Alterações
 
-Formulario acessivel sem login contendo:
-
-- Campos do formulario com validacao
-- Captcha ou honeypot para evitar spam (opcional)
-- Feedback visual de sucesso/erro
-- Numero de protocolo para acompanhamento
-
-### 4. Pagina Interna: `/requisicoes` (nova)
-
-Dashboard para a equipe juridica visualizar e gerenciar requisicoes:
-
-- Lista de requisicoes com filtros (status, urgencia, data)
-- Visualizacao de detalhes
-- Acoes: Aprovar, Rejeitar, Solicitar mais informacoes
-- Botao "Converter em Contrato" que cria um rascunho pre-preenchido
-- Historico de alteracoes
-
-### 5. Atualizacoes no Sistema Existente
-
-- Adicionar link para `/requisicoes` no menu lateral
-- Badge de notificacao com contagem de requisicoes pendentes
-- Opcao no formulario de novo contrato para vincular a uma requisicao
-
-## Seguranca
-
-1. **Rate Limiting**: Maximo 5 requisicoes por IP por hora
-2. **Validacao de Input**: Usando Zod para validar todos os campos
-3. **Sanitizacao**: Limpeza de HTML/scripts nos textos
-4. **Captcha Invisivel**: Para evitar bots (opcional, pode usar honeypot)
-5. **Logs de Auditoria**: Registro de IP e user-agent
-6. **RLS**: Formulario publico so pode inserir, nunca ler ou modificar
-
-## Detalhes Tecnicos
-
-### Arquivos a Criar
-
-1. `src/pages/RequisicaoPublica.tsx` - Formulario publico
-2. `src/pages/Requisicoes.tsx` - Gerenciamento interno
-3. `supabase/functions/processar-requisicao-contrato/index.ts` - Edge function
-4. Atualizacao em `src/App.tsx` - Novas rotas
-5. Atualizacao em `src/components/AppSidebar.tsx` - Link no menu
-6. Migracao SQL - Nova tabela e politicas
-
-### Integracao com Fluxo Existente
-
-Quando uma requisicao for aprovada e convertida em contrato:
-
-1. Cria novo registro em `contratos` com dados da requisicao
-2. Atualiza `contract_requests.status` para "convertido"
-3. Atualiza `contract_requests.contrato_id` com o ID do novo contrato
-4. Registra em `audit_logs`
-
-## Etapas de Implementacao
-
-1. Criar tabela `contract_requests` com RLS
-2. Criar edge function para processar requisicoes
-3. Criar pagina publica `/requisicao`
-4. Criar pagina interna `/requisicoes`
-5. Integrar no menu e adicionar badge de notificacao
-6. Adicionar funcionalidade de converter em contrato
-7. Testar fluxo completo
+| Componente | Antes | Depois |
+|------------|-------|--------|
+| Container Logo | Nenhum | Glassmorphism 80x80 |
+| Logo Size | 40x40 | 48x48 |
+| Título | text-3xl inline | text-4xl/5xl centralizado |
+| Hierarquia | Plana | 4 níveis visuais |
+| Badge | Não existe | Departamento Jurídico |
+| Separador | Não existe | Gradiente sutil |
+| Espaçamento | mb-8 | space-y-6 com padding adequado |
