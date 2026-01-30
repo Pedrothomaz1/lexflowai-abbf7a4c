@@ -1000,6 +1000,48 @@ export type Database = {
         }
         Relationships: []
       }
+      incident_playbooks: {
+        Row: {
+          created_at: string | null
+          escalation_contacts: Json | null
+          id: string
+          incident_type: string
+          is_active: boolean | null
+          responsible_roles: string[]
+          severity: string
+          steps: Json
+          time_to_respond_minutes: number
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          escalation_contacts?: Json | null
+          id?: string
+          incident_type: string
+          is_active?: boolean | null
+          responsible_roles: string[]
+          severity: string
+          steps?: Json
+          time_to_respond_minutes?: number
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          escalation_contacts?: Json | null
+          id?: string
+          incident_type?: string
+          is_active?: boolean | null
+          responsible_roles?: string[]
+          severity?: string
+          steps?: Json
+          time_to_respond_minutes?: number
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       integracao_config: {
         Row: {
           created_at: string | null
@@ -1833,6 +1875,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_sessions: {
+        Row: {
+          created_at: string | null
+          device_info: Json | null
+          expires_at: string
+          id: string
+          ip_address: unknown
+          is_active: boolean | null
+          last_activity: string | null
+          session_token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          device_info?: Json | null
+          expires_at: string
+          id?: string
+          ip_address?: unknown
+          is_active?: boolean | null
+          last_activity?: string | null
+          session_token: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          device_info?: Json | null
+          expires_at?: string
+          id?: string
+          ip_address?: unknown
+          is_active?: boolean | null
+          last_activity?: string | null
+          session_token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       uso_sistema: {
         Row: {
           contrato_id: string | null
@@ -1896,6 +1974,7 @@ export type Database = {
     }
     Functions: {
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
+      count_active_sessions: { Args: { _user_id: string }; Returns: number }
       gdpr_delete_user: { Args: { user_uuid: string }; Returns: Json }
       has_any_role: {
         Args: {

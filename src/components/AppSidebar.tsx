@@ -119,6 +119,7 @@ const contratosMenuSections: MenuSectionType[] = [
     defaultOpen: false,
     items: [
       { title: "Relatórios", url: "/relatorios", icon: BarChart3, roles: ["all"] },
+      { title: "Segurança", url: "/security", icon: Shield, roles: ["administrador"] },
       { title: "Compliance LGPD", url: "/compliance", icon: ShieldCheck, roles: ["administrador"] },
       { title: "Trilha de Auditoria", url: "/audit-logs", icon: Activity, roles: ["administrador"] },
       { title: "Configurações", url: "/settings", icon: Settings, roles: ["all"] },
