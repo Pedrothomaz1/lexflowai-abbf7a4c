@@ -22,7 +22,7 @@ export type Database = {
           is_active: boolean | null
           niveis: Json
           nome: string
-          organization_id: string | null
+          organization_id: string
           tipo_contrato: Database["public"]["Enums"]["contract_type"]
         }
         Insert: {
@@ -32,7 +32,7 @@ export type Database = {
           is_active?: boolean | null
           niveis: Json
           nome: string
-          organization_id?: string | null
+          organization_id: string
           tipo_contrato: Database["public"]["Enums"]["contract_type"]
         }
         Update: {
@@ -42,7 +42,7 @@ export type Database = {
           is_active?: boolean | null
           niveis?: Json
           nome?: string
-          organization_id?: string | null
+          organization_id?: string
           tipo_contrato?: Database["public"]["Enums"]["contract_type"]
         }
         Relationships: [
@@ -68,7 +68,7 @@ export type Database = {
           id: string
           ip_address: string | null
           metadata: Json | null
-          organization_id: string | null
+          organization_id: string
           requires_review: boolean | null
           risk_level: string | null
           session_id: string | null
@@ -88,7 +88,7 @@ export type Database = {
           id?: string
           ip_address?: string | null
           metadata?: Json | null
-          organization_id?: string | null
+          organization_id: string
           requires_review?: boolean | null
           risk_level?: string | null
           session_id?: string | null
@@ -108,7 +108,7 @@ export type Database = {
           id?: string
           ip_address?: string | null
           metadata?: Json | null
-          organization_id?: string | null
+          organization_id?: string
           requires_review?: boolean | null
           risk_level?: string | null
           session_id?: string | null
@@ -136,7 +136,7 @@ export type Database = {
           id: string
           ip_address: string | null
           justificativa: string | null
-          organization_id: string | null
+          organization_id: string
           tipo_evento: string
           user_id: string | null
         }
@@ -149,7 +149,7 @@ export type Database = {
           id?: string
           ip_address?: string | null
           justificativa?: string | null
-          organization_id?: string | null
+          organization_id: string
           tipo_evento: string
           user_id?: string | null
         }
@@ -162,7 +162,7 @@ export type Database = {
           id?: string
           ip_address?: string | null
           justificativa?: string | null
-          organization_id?: string | null
+          organization_id?: string
           tipo_evento?: string
           user_id?: string | null
         }
@@ -188,7 +188,7 @@ export type Database = {
           enviado: boolean | null
           id: string
           mensagem: string | null
-          organization_id: string | null
+          organization_id: string
           tipo_alerta: string
           titulo: string
           usuarios_notificados: string[] | null
@@ -204,7 +204,7 @@ export type Database = {
           enviado?: boolean | null
           id?: string
           mensagem?: string | null
-          organization_id?: string | null
+          organization_id: string
           tipo_alerta: string
           titulo: string
           usuarios_notificados?: string[] | null
@@ -220,7 +220,7 @@ export type Database = {
           enviado?: boolean | null
           id?: string
           mensagem?: string | null
-          organization_id?: string | null
+          organization_id?: string
           tipo_alerta?: string
           titulo?: string
           usuarios_notificados?: string[] | null
@@ -249,7 +249,7 @@ export type Database = {
           clausulas_importantes: Json | null
           contrato_id: string | null
           id: string
-          organization_id: string | null
+          organization_id: string
           riscos_identificados: Json | null
           score_risco: number | null
           sugestoes_melhoria: Json | null
@@ -260,7 +260,7 @@ export type Database = {
           clausulas_importantes?: Json | null
           contrato_id?: string | null
           id?: string
-          organization_id?: string | null
+          organization_id: string
           riscos_identificados?: Json | null
           score_risco?: number | null
           sugestoes_melhoria?: Json | null
@@ -271,7 +271,7 @@ export type Database = {
           clausulas_importantes?: Json | null
           contrato_id?: string | null
           id?: string
-          organization_id?: string | null
+          organization_id?: string
           riscos_identificados?: Json | null
           score_risco?: number | null
           sugestoes_melhoria?: Json | null
@@ -301,7 +301,7 @@ export type Database = {
           created_at: string
           data_aprovacao: string | null
           id: string
-          organization_id: string | null
+          organization_id: string
           status: string | null
         }
         Insert: {
@@ -311,7 +311,7 @@ export type Database = {
           created_at?: string
           data_aprovacao?: string | null
           id?: string
-          organization_id?: string | null
+          organization_id: string
           status?: string | null
         }
         Update: {
@@ -321,7 +321,7 @@ export type Database = {
           created_at?: string
           data_aprovacao?: string | null
           id?: string
-          organization_id?: string | null
+          organization_id?: string
           status?: string | null
         }
         Relationships: [
@@ -349,7 +349,7 @@ export type Database = {
           id: string
           mime_type: string | null
           nome_arquivo: string
-          organization_id: string | null
+          organization_id: string
           tamanho_bytes: number | null
           tipo_documento: string | null
           uploaded_by: string | null
@@ -361,7 +361,7 @@ export type Database = {
           id?: string
           mime_type?: string | null
           nome_arquivo: string
-          organization_id?: string | null
+          organization_id: string
           tamanho_bytes?: number | null
           tipo_documento?: string | null
           uploaded_by?: string | null
@@ -373,7 +373,7 @@ export type Database = {
           id?: string
           mime_type?: string | null
           nome_arquivo?: string
-          organization_id?: string | null
+          organization_id?: string
           tamanho_bytes?: number | null
           tipo_documento?: string | null
           uploaded_by?: string | null
@@ -401,7 +401,7 @@ export type Database = {
           contrato_id: string
           created_at: string
           id: string
-          organization_id: string | null
+          organization_id: string
           parent_id: string | null
           secao: string | null
           status: string
@@ -414,7 +414,7 @@ export type Database = {
           contrato_id: string
           created_at?: string
           id?: string
-          organization_id?: string | null
+          organization_id: string
           parent_id?: string | null
           secao?: string | null
           status?: string
@@ -427,7 +427,7 @@ export type Database = {
           contrato_id?: string
           created_at?: string
           id?: string
-          organization_id?: string | null
+          organization_id?: string
           parent_id?: string | null
           secao?: string | null
           status?: string
@@ -466,7 +466,7 @@ export type Database = {
           campo_alterado: string
           contrato_id: string
           id: string
-          organization_id: string | null
+          organization_id: string
           valor_anterior: string | null
           valor_novo: string | null
           versao: number
@@ -477,7 +477,7 @@ export type Database = {
           campo_alterado: string
           contrato_id: string
           id?: string
-          organization_id?: string | null
+          organization_id: string
           valor_anterior?: string | null
           valor_novo?: string | null
           versao: number
@@ -488,7 +488,7 @@ export type Database = {
           campo_alterado?: string
           contrato_id?: string
           id?: string
-          organization_id?: string | null
+          organization_id?: string
           valor_anterior?: string | null
           valor_novo?: string | null
           versao?: number
@@ -518,7 +518,7 @@ export type Database = {
           data_vencimento: string
           descricao: string | null
           id: string
-          organization_id: string | null
+          organization_id: string
           responsavel_id: string | null
           status: string | null
           tipo: string | null
@@ -532,7 +532,7 @@ export type Database = {
           data_vencimento: string
           descricao?: string | null
           id?: string
-          organization_id?: string | null
+          organization_id: string
           responsavel_id?: string | null
           status?: string | null
           tipo?: string | null
@@ -546,7 +546,7 @@ export type Database = {
           data_vencimento?: string
           descricao?: string | null
           id?: string
-          organization_id?: string | null
+          organization_id?: string
           responsavel_id?: string | null
           status?: string | null
           tipo?: string | null
@@ -579,7 +579,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
-          organization_id: string | null
+          organization_id: string
           reviewed_at: string | null
           reviewed_by: string | null
           status: string
@@ -593,7 +593,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
-          organization_id?: string | null
+          organization_id: string
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
@@ -607,7 +607,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
-          organization_id?: string | null
+          organization_id?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
@@ -743,7 +743,7 @@ export type Database = {
           external_id: string
           id: string
           metadata: Json | null
-          organization_id: string | null
+          organization_id: string
           provider: string
           sent_at: string | null
           signed_document_url: string | null
@@ -760,7 +760,7 @@ export type Database = {
           external_id: string
           id?: string
           metadata?: Json | null
-          organization_id?: string | null
+          organization_id: string
           provider: string
           sent_at?: string | null
           signed_document_url?: string | null
@@ -777,7 +777,7 @@ export type Database = {
           external_id?: string
           id?: string
           metadata?: Json | null
-          organization_id?: string | null
+          organization_id?: string
           provider?: string
           sent_at?: string | null
           signed_document_url?: string | null
@@ -812,7 +812,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           nome: string
-          organization_id: string | null
+          organization_id: string
           tipo: Database["public"]["Enums"]["contract_type"]
           updated_at: string
         }
@@ -825,7 +825,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           nome: string
-          organization_id?: string | null
+          organization_id: string
           tipo: Database["public"]["Enums"]["contract_type"]
           updated_at?: string
         }
@@ -838,7 +838,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           nome?: string
-          organization_id?: string | null
+          organization_id?: string
           tipo?: Database["public"]["Enums"]["contract_type"]
           updated_at?: string
         }
@@ -860,7 +860,7 @@ export type Database = {
           created_by: string | null
           id: string
           motivo: string | null
-          organization_id: string | null
+          organization_id: string
           snapshot: Json
           versao: number
         }
@@ -871,7 +871,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           motivo?: string | null
-          organization_id?: string | null
+          organization_id: string
           snapshot: Json
           versao: number
         }
@@ -882,7 +882,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           motivo?: string | null
-          organization_id?: string | null
+          organization_id?: string
           snapshot?: Json
           versao?: number
         }
@@ -920,7 +920,7 @@ export type Database = {
           moeda: string | null
           numero_contrato: string
           observacoes: string | null
-          organization_id: string | null
+          organization_id: string
           renovacao_automatica: boolean | null
           status: Database["public"]["Enums"]["contract_status"]
           tags: string[] | null
@@ -947,7 +947,7 @@ export type Database = {
           moeda?: string | null
           numero_contrato: string
           observacoes?: string | null
-          organization_id?: string | null
+          organization_id: string
           renovacao_automatica?: boolean | null
           status?: Database["public"]["Enums"]["contract_status"]
           tags?: string[] | null
@@ -974,7 +974,7 @@ export type Database = {
           moeda?: string | null
           numero_contrato?: string
           observacoes?: string | null
-          organization_id?: string | null
+          organization_id?: string
           renovacao_automatica?: boolean | null
           status?: Database["public"]["Enums"]["contract_status"]
           tags?: string[] | null
@@ -1020,7 +1020,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           nome: string
-          organization_id: string | null
+          organization_id: string
           periodo_retencao_meses: number
           ultima_execucao: string | null
         }
@@ -1034,7 +1034,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           nome: string
-          organization_id?: string | null
+          organization_id: string
           periodo_retencao_meses?: number
           ultima_execucao?: string | null
         }
@@ -1048,7 +1048,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           nome?: string
-          organization_id?: string | null
+          organization_id?: string
           periodo_retencao_meses?: number
           ultima_execucao?: string | null
         }
@@ -1072,7 +1072,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           nome: string
-          organization_id: string | null
+          organization_id: string
           orgao_regulador: string | null
           requer_certificado: boolean | null
           updated_at: string | null
@@ -1087,7 +1087,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           nome: string
-          organization_id?: string | null
+          organization_id: string
           orgao_regulador?: string | null
           requer_certificado?: boolean | null
           updated_at?: string | null
@@ -1102,7 +1102,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           nome?: string
-          organization_id?: string | null
+          organization_id?: string
           orgao_regulador?: string | null
           requer_certificado?: boolean | null
           updated_at?: string | null
@@ -1132,7 +1132,7 @@ export type Database = {
           fornecedor_id: string
           id: string
           nome_arquivo: string
-          organization_id: string | null
+          organization_id: string
           tamanho_bytes: number | null
           tipo_documento: string | null
           uploaded_by: string | null
@@ -1143,7 +1143,7 @@ export type Database = {
           fornecedor_id: string
           id?: string
           nome_arquivo: string
-          organization_id?: string | null
+          organization_id: string
           tamanho_bytes?: number | null
           tipo_documento?: string | null
           uploaded_by?: string | null
@@ -1154,7 +1154,7 @@ export type Database = {
           fornecedor_id?: string
           id?: string
           nome_arquivo?: string
-          organization_id?: string | null
+          organization_id?: string
           tamanho_bytes?: number | null
           tipo_documento?: string | null
           uploaded_by?: string | null
@@ -1182,21 +1182,21 @@ export type Database = {
           created_at: string | null
           fornecedor_id: string
           id: string
-          organization_id: string | null
+          organization_id: string
         }
         Insert: {
           categoria: string
           created_at?: string | null
           fornecedor_id: string
           id?: string
-          organization_id?: string | null
+          organization_id: string
         }
         Update: {
           categoria?: string
           created_at?: string | null
           fornecedor_id?: string
           id?: string
-          organization_id?: string | null
+          organization_id?: string
         }
         Relationships: [
           {
@@ -1240,7 +1240,7 @@ export type Database = {
           is_active: boolean | null
           nome: string
           notas: string | null
-          organization_id: string | null
+          organization_id: string
           pix: string | null
           porte_empresa: string | null
           telefone: string | null
@@ -1273,7 +1273,7 @@ export type Database = {
           is_active?: boolean | null
           nome: string
           notas?: string | null
-          organization_id?: string | null
+          organization_id: string
           pix?: string | null
           porte_empresa?: string | null
           telefone?: string | null
@@ -1306,7 +1306,7 @@ export type Database = {
           is_active?: boolean | null
           nome?: string
           notas?: string | null
-          organization_id?: string | null
+          organization_id?: string
           pix?: string | null
           porte_empresa?: string | null
           telefone?: string | null
@@ -1340,7 +1340,7 @@ export type Database = {
           novo_contrato_enviado: boolean | null
           numero_nf: string | null
           observacoes: string | null
-          organization_id: string | null
+          organization_id: string
           regime_tributario: string | null
           renovacao_aceita: boolean | null
           responsavel_id: string | null
@@ -1363,7 +1363,7 @@ export type Database = {
           novo_contrato_enviado?: boolean | null
           numero_nf?: string | null
           observacoes?: string | null
-          organization_id?: string | null
+          organization_id: string
           regime_tributario?: string | null
           renovacao_aceita?: boolean | null
           responsavel_id?: string | null
@@ -1386,7 +1386,7 @@ export type Database = {
           novo_contrato_enviado?: boolean | null
           numero_nf?: string | null
           observacoes?: string | null
-          organization_id?: string | null
+          organization_id?: string
           regime_tributario?: string | null
           renovacao_aceita?: boolean | null
           responsavel_id?: string | null
@@ -1428,7 +1428,7 @@ export type Database = {
           id: string
           is_automated: boolean | null
           last_check_at: string | null
-          organization_id: string | null
+          organization_id: string
           sort_order: number | null
           status: string | null
         }
@@ -1440,7 +1440,7 @@ export type Database = {
           id?: string
           is_automated?: boolean | null
           last_check_at?: string | null
-          organization_id?: string | null
+          organization_id: string
           sort_order?: number | null
           status?: string | null
         }
@@ -1452,7 +1452,7 @@ export type Database = {
           id?: string
           is_automated?: boolean | null
           last_check_at?: string | null
-          organization_id?: string | null
+          organization_id?: string
           sort_order?: number | null
           status?: string | null
         }
@@ -1516,7 +1516,7 @@ export type Database = {
           is_active: boolean | null
           mapeamento_campos: Json | null
           nome: string
-          organization_id: string | null
+          organization_id: string
           status_ultimo_teste: string | null
           tipo: string
           tipo_autenticacao: string | null
@@ -1531,7 +1531,7 @@ export type Database = {
           is_active?: boolean | null
           mapeamento_campos?: Json | null
           nome: string
-          organization_id?: string | null
+          organization_id: string
           status_ultimo_teste?: string | null
           tipo: string
           tipo_autenticacao?: string | null
@@ -1546,7 +1546,7 @@ export type Database = {
           is_active?: boolean | null
           mapeamento_campos?: Json | null
           nome?: string
-          organization_id?: string | null
+          organization_id?: string
           status_ultimo_teste?: string | null
           tipo?: string
           tipo_autenticacao?: string | null
@@ -1635,7 +1635,7 @@ export type Database = {
           id: string
           notas: string | null
           numero_revisoes: number | null
-          organization_id: string | null
+          organization_id: string
           partes_envolvidas: Json | null
           principais_pontos_negociados: Json | null
           resultado: string | null
@@ -1656,7 +1656,7 @@ export type Database = {
           id?: string
           notas?: string | null
           numero_revisoes?: number | null
-          organization_id?: string | null
+          organization_id: string
           partes_envolvidas?: Json | null
           principais_pontos_negociados?: Json | null
           resultado?: string | null
@@ -1677,7 +1677,7 @@ export type Database = {
           id?: string
           notas?: string | null
           numero_revisoes?: number | null
-          organization_id?: string | null
+          organization_id?: string
           partes_envolvidas?: Json | null
           principais_pontos_negociados?: Json | null
           resultado?: string | null
@@ -1712,7 +1712,7 @@ export type Database = {
           email_enabled: boolean
           frequency: Database["public"]["Enums"]["notification_frequency"]
           id: string
-          organization_id: string | null
+          organization_id: string
           updated_at: string
           user_id: string
           whatsapp_enabled: boolean
@@ -1723,7 +1723,7 @@ export type Database = {
           email_enabled?: boolean
           frequency?: Database["public"]["Enums"]["notification_frequency"]
           id?: string
-          organization_id?: string | null
+          organization_id: string
           updated_at?: string
           user_id: string
           whatsapp_enabled?: boolean
@@ -1734,7 +1734,7 @@ export type Database = {
           email_enabled?: boolean
           frequency?: Database["public"]["Enums"]["notification_frequency"]
           id?: string
-          organization_id?: string | null
+          organization_id?: string
           updated_at?: string
           user_id?: string
           whatsapp_enabled?: boolean
@@ -1954,7 +1954,7 @@ export type Database = {
           is_public: boolean | null
           nome: string
           ordenacao: Json | null
-          organization_id: string | null
+          organization_id: string
           tipo_relatorio: string
           updated_at: string
           visualizacao: string | null
@@ -1971,7 +1971,7 @@ export type Database = {
           is_public?: boolean | null
           nome: string
           ordenacao?: Json | null
-          organization_id?: string | null
+          organization_id: string
           tipo_relatorio?: string
           updated_at?: string
           visualizacao?: string | null
@@ -1988,7 +1988,7 @@ export type Database = {
           is_public?: boolean | null
           nome?: string
           ordenacao?: Json | null
-          organization_id?: string | null
+          organization_id?: string
           tipo_relatorio?: string
           updated_at?: string
           visualizacao?: string | null
@@ -2104,7 +2104,7 @@ export type Database = {
           id: string
           metadata: Json | null
           metric_type: string
-          organization_id: string | null
+          organization_id: string
           period_end: string
           period_start: string
           value: number
@@ -2114,7 +2114,7 @@ export type Database = {
           id?: string
           metadata?: Json | null
           metric_type: string
-          organization_id?: string | null
+          organization_id: string
           period_end: string
           period_start: string
           value: number
@@ -2124,7 +2124,7 @@ export type Database = {
           id?: string
           metadata?: Json | null
           metric_type?: string
-          organization_id?: string | null
+          organization_id?: string
           period_end?: string
           period_start?: string
           value?: number
@@ -2348,7 +2348,7 @@ export type Database = {
           entity_type: string
           id: string
           notes: string | null
-          organization_id: string | null
+          organization_id: string
           status: string | null
           threshold_rule: string | null
         }
@@ -2362,7 +2362,7 @@ export type Database = {
           entity_type: string
           id?: string
           notes?: string | null
-          organization_id?: string | null
+          organization_id: string
           status?: string | null
           threshold_rule?: string | null
         }
@@ -2376,7 +2376,7 @@ export type Database = {
           entity_type?: string
           id?: string
           notes?: string | null
-          organization_id?: string | null
+          organization_id?: string
           status?: string | null
           threshold_rule?: string | null
         }
@@ -2398,7 +2398,7 @@ export type Database = {
           enviado_em: string | null
           erro_mensagem: string | null
           id: string
-          organization_id: string | null
+          organization_id: string
           payload_enviado: Json | null
           resposta_api: Json | null
           servico_id: string
@@ -2412,7 +2412,7 @@ export type Database = {
           enviado_em?: string | null
           erro_mensagem?: string | null
           id?: string
-          organization_id?: string | null
+          organization_id: string
           payload_enviado?: Json | null
           resposta_api?: Json | null
           servico_id: string
@@ -2426,7 +2426,7 @@ export type Database = {
           enviado_em?: string | null
           erro_mensagem?: string | null
           id?: string
-          organization_id?: string | null
+          organization_id?: string
           payload_enviado?: Json | null
           resposta_api?: Json | null
           servico_id?: string
@@ -2462,7 +2462,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           nome: string
-          organization_id: string | null
+          organization_id: string
           responsavel_id: string | null
           telefone: string | null
           tipo: string | null
@@ -2479,7 +2479,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           nome: string
-          organization_id?: string | null
+          organization_id: string
           responsavel_id?: string | null
           telefone?: string | null
           tipo?: string | null
@@ -2496,7 +2496,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           nome?: string
-          organization_id?: string | null
+          organization_id?: string
           responsavel_id?: string | null
           telefone?: string | null
           tipo?: string | null
@@ -2564,7 +2564,7 @@ export type Database = {
           created_at: string
           id: string
           modulo_padrao: string | null
-          organization_id: string | null
+          organization_id: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
@@ -2572,7 +2572,7 @@ export type Database = {
           created_at?: string
           id?: string
           modulo_padrao?: string | null
-          organization_id?: string | null
+          organization_id: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
@@ -2580,7 +2580,7 @@ export type Database = {
           created_at?: string
           id?: string
           modulo_padrao?: string | null
-          organization_id?: string | null
+          organization_id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
