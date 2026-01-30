@@ -128,7 +128,7 @@ export default function RequisicaoPublica() {
 
   if (submitSuccess) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[hsl(var(--lexflow-verde-escuro))] to-[hsl(var(--lexflow-verde-medio))] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-[#384E46] to-[#7F9C90] flex items-center justify-center p-4">
         <Card className="w-full max-w-md text-center">
           <CardHeader>
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
@@ -172,7 +172,7 @@ export default function RequisicaoPublica() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[hsl(var(--lexflow-verde-escuro))] to-[hsl(var(--lexflow-verde-medio))]">
+    <div className="min-h-screen bg-gradient-to-br from-[#384E46] to-[#7F9C90]">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-10 space-y-6">
