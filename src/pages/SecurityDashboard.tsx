@@ -18,6 +18,7 @@ import { AlertingRulesMatrix } from "@/components/security/AlertingRulesMatrix";
 import { AuditSchedule } from "@/components/security/AuditSchedule";
 import { SuccessCriteria } from "@/components/security/SuccessCriteria";
 import { RiskMatrix } from "@/components/security/RiskMatrix";
+import { SecurityAppendices } from "@/components/security/SecurityAppendices";
 import {
   Shield,
   AlertTriangle,
@@ -34,6 +35,7 @@ import {
   Calendar,
   Target,
   TriangleAlert,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -261,6 +263,10 @@ export default function SecurityDashboard() {
             <Eye className="h-4 w-4 mr-2" />
             PII
           </TabsTrigger>
+          <TabsTrigger value="appendices">
+            <FileText className="h-4 w-4 mr-2" />
+            Docs
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="alerts">
@@ -297,6 +303,10 @@ export default function SecurityDashboard() {
 
         <TabsContent value="masking">
           <PIIMaskingDemo />
+        </TabsContent>
+
+        <TabsContent value="appendices">
+          <SecurityAppendices />
         </TabsContent>
       </Tabs>
     </div>
