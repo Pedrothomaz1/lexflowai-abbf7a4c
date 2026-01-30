@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
-import { Resend } from "https://esm.sh/resend@2.0.0";
+import { Resend } from "https://esm.sh/resend@4.0.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -95,9 +95,13 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     let emailHtml = "";
+    let emailText = "";
     let emailSubject = "";
+    let idempotencyKey = "";
 
     if (tipo === "contrato" && contratoId) {
+      idempotencyKey = `finance-contrato-${contratoId}-${Date.now()}`;
+      
       // Fetch contrato data
       const { data: contrato, error: contratoError } = await supabase
         .from("contratos")
@@ -141,7 +145,10 @@ const handler = async (req: Request): Promise<Response> => {
 
       emailSubject = `[LexFlow] Aprovação de Contrato - ${contrato.numero_contrato}`;
       emailHtml = buildContratoEmail(contrato, fornecedor, obrigacoes || [], observacoes, supabaseUrl.replace(".supabase.co", ".lovable.app"));
+      emailText = buildContratoPlainText(contrato, fornecedor, obrigacoes || [], observacoes);
     } else if (tipo === "servico" && servicoId) {
+      idempotencyKey = `finance-servico-${servicoId}-${Date.now()}`;
+      
       // Fetch servico data
       const { data: servico, error: servicoError } = await supabase
         .from("servicos_periodicos")
@@ -191,6 +198,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       emailSubject = `[LexFlow] Renovação de Serviço - ${especificacao?.nome || "Serviço"}`;
       emailHtml = buildServicoEmail(servico, especificacao, unidade, fornecedor, observacoes);
+      emailText = buildServicoPlainText(servico, especificacao, unidade, fornecedor, observacoes);
     }
 
     // Parse additional emails
@@ -203,22 +211,61 @@ const handler = async (req: Request): Promise<Response> => {
       recipients.push(...additionalEmails);
     }
 
-    // Send email via Resend
+    // Send email via Resend with improvements
     const resend = new Resend(resendKey);
 
-    const { error: sendError } = await resend.emails.send({
+    console.log(`Enviando notificação financeira para ${recipients.length} destinatários`);
+
+    const { data: emailResult, error: sendError } = await resend.emails.send({
       from: "LexFlow <pedro@porveri.com.br>",
       to: recipients,
       subject: emailSubject,
       html: emailHtml,
+      text: emailText,
+      replyTo: "suporte@veridianaquirino.com.br",
+      headers: {
+        "X-Entity-Type": tipo,
+        "X-Entity-Id": tipo === "contrato" ? contratoId! : servicoId!,
+        "X-Idempotency-Key": idempotencyKey,
+      },
     });
 
     if (sendError) {
       console.error("Error sending email:", sendError);
-      return new Response(
-        JSON.stringify({ success: false, error: "Erro ao enviar email" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      
+      // Tratamento específico de erros
+      if (sendError.name === 'rate_limit_exceeded') {
+        console.log("Rate limit atingido, aguardando retry...");
+        await new Promise(r => setTimeout(r, 1000));
+        
+        // Retry uma vez
+        const { error: retryError } = await resend.emails.send({
+          from: "LexFlow <pedro@porveri.com.br>",
+          to: recipients,
+          subject: emailSubject,
+          html: emailHtml,
+          text: emailText,
+          replyTo: "suporte@veridianaquirino.com.br",
+        });
+        
+        if (retryError) {
+          return new Response(
+            JSON.stringify({ success: false, error: "Erro ao enviar email após retry" }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      } else if (sendError.name === 'validation_error') {
+        console.error("Validation error:", sendError.message);
+        return new Response(
+          JSON.stringify({ success: false, error: `Erro de validação: ${sendError.message}` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } else {
+        return new Response(
+          JSON.stringify({ success: false, error: "Erro ao enviar email" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Log usage
@@ -228,13 +275,13 @@ const handler = async (req: Request): Promise<Response> => {
       user_id: userId,
       contrato_id: tipo === "contrato" ? contratoId : null,
       servico_id: tipo === "servico" ? servicoId : null,
-      metadata: { destinatarios: recipients.length },
+      metadata: { destinatarios: recipients.length, email_id: emailResult?.id },
     });
 
     console.log(`Finance notification sent successfully to ${recipients.length} recipients`);
 
     return new Response(
-      JSON.stringify({ success: true }),
+      JSON.stringify({ success: true, emailId: emailResult?.id }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
@@ -258,6 +305,115 @@ function formatDate(dateStr: string | null): string {
   if (!dateStr) return "N/A";
   const date = new Date(dateStr);
   return date.toLocaleDateString("pt-BR");
+}
+
+function buildContratoPlainText(
+  contrato: any,
+  fornecedor: any,
+  obrigacoes: any[],
+  observacoes?: string
+): string {
+  let text = `COMUNICADO AO SETOR FINANCEIRO
+
+Informamos que o contrato abaixo foi aprovado e requer providências de pagamento:
+
+DADOS DO CONTRATO
+-----------------
+Número: ${contrato.numero_contrato}
+Título: ${contrato.titulo}
+Fornecedor: ${fornecedor?.nome || "N/A"}
+${fornecedor?.cnpj ? `CNPJ: ${fornecedor.cnpj}` : ""}
+Valor Total: ${formatCurrency(contrato.valor_total)}
+Vigência: ${formatDate(contrato.data_inicio)} a ${formatDate(contrato.data_fim)}
+
+CRONOGRAMA DE PAGAMENTOS
+------------------------
+`;
+
+  if (obrigacoes.length > 0) {
+    obrigacoes.forEach((o, i) => {
+      text += `${i + 1}/${obrigacoes.length} - ${o.titulo}: ${formatDate(o.data_vencimento)} - ${formatCurrency(o.valor)} (${o.status || "Pendente"})\n`;
+    });
+  } else {
+    text += "Nenhuma parcela cadastrada.\n";
+  }
+
+  if (fornecedor && (fornecedor.banco || fornecedor.pix)) {
+    text += `
+DADOS BANCÁRIOS DO FORNECEDOR
+-----------------------------
+${fornecedor.banco ? `Banco: ${fornecedor.banco}` : ""}
+${fornecedor.agencia ? `Agência: ${fornecedor.agencia}` : ""}
+${fornecedor.conta ? `Conta: ${fornecedor.conta}` : ""}
+${fornecedor.pix ? `PIX: ${fornecedor.pix}` : ""}
+${fornecedor.titular_conta ? `Titular: ${fornecedor.titular_conta}` : ""}
+`;
+  }
+
+  if (observacoes) {
+    text += `
+OBSERVAÇÕES
+-----------
+${observacoes}
+`;
+  }
+
+  text += `
+---
+LexFlow - Sistema de Gestão de Contratos
+Email automático. Não responda.`;
+
+  return text;
+}
+
+function buildServicoPlainText(
+  servico: any,
+  especificacao: any,
+  unidade: any,
+  fornecedor: any,
+  observacoes?: string
+): string {
+  let text = `RENOVAÇÃO DE SERVIÇO
+
+Informamos que o serviço abaixo foi renovado e requer providências de pagamento:
+
+DADOS DO SERVIÇO
+----------------
+Tipo: ${especificacao?.nome || "N/A"}
+Categoria: ${especificacao?.categoria || "N/A"}
+Unidade: ${unidade?.nome || "N/A"}
+Fornecedor: ${fornecedor?.nome || "N/A"}
+${fornecedor?.cnpj ? `CNPJ: ${fornecedor.cnpj}` : ""}
+Valor: ${formatCurrency(servico.valor)}
+Validade: ${formatDate(servico.data_inicio)} a ${formatDate(servico.data_vencimento)}
+`;
+
+  if (fornecedor && (fornecedor.banco || fornecedor.pix)) {
+    text += `
+DADOS BANCÁRIOS DO FORNECEDOR
+-----------------------------
+${fornecedor.banco ? `Banco: ${fornecedor.banco}` : ""}
+${fornecedor.agencia ? `Agência: ${fornecedor.agencia}` : ""}
+${fornecedor.conta ? `Conta: ${fornecedor.conta}` : ""}
+${fornecedor.pix ? `PIX: ${fornecedor.pix}` : ""}
+${fornecedor.titular_conta ? `Titular: ${fornecedor.titular_conta}` : ""}
+`;
+  }
+
+  if (observacoes) {
+    text += `
+OBSERVAÇÕES
+-----------
+${observacoes}
+`;
+  }
+
+  text += `
+---
+LexFlow - Sistema de Gestão de Contratos
+Email automático. Não responda.`;
+
+  return text;
 }
 
 function buildContratoEmail(
@@ -424,13 +580,13 @@ function buildServicoEmail(
           <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
             <h3 style="margin: 0 0 15px 0; color: #111827; font-size: 16px;">🔧 DADOS DO SERVIÇO</h3>
             <table style="width: 100%;">
-              <tr><td style="padding: 5px 0; color: #6b7280;">Serviço:</td><td style="padding: 5px 0; font-weight: 600;">${especificacao?.nome || "N/A"}</td></tr>
+              <tr><td style="padding: 5px 0; color: #6b7280;">Tipo:</td><td style="padding: 5px 0; font-weight: 600;">${especificacao?.nome || "N/A"}</td></tr>
               <tr><td style="padding: 5px 0; color: #6b7280;">Categoria:</td><td style="padding: 5px 0; font-weight: 500;">${especificacao?.categoria || "N/A"}</td></tr>
               <tr><td style="padding: 5px 0; color: #6b7280;">Unidade:</td><td style="padding: 5px 0; font-weight: 500;">${unidade?.nome || "N/A"}</td></tr>
               <tr><td style="padding: 5px 0; color: #6b7280;">Fornecedor:</td><td style="padding: 5px 0; font-weight: 500;">${fornecedor?.nome || "N/A"}</td></tr>
               ${fornecedor?.cnpj ? `<tr><td style="padding: 5px 0; color: #6b7280;">CNPJ:</td><td style="padding: 5px 0; font-weight: 500;">${fornecedor.cnpj}</td></tr>` : ""}
-              <tr><td style="padding: 5px 0; color: #6b7280;">Valor Estimado:</td><td style="padding: 5px 0; font-weight: 600; color: #059669;">${formatCurrency(servico.valor_estimado)}</td></tr>
-              <tr><td style="padding: 5px 0; color: #6b7280;">Próximo Vencimento:</td><td style="padding: 5px 0; font-weight: 500;">${formatDate(servico.data_validade)}</td></tr>
+              <tr><td style="padding: 5px 0; color: #6b7280;">Valor:</td><td style="padding: 5px 0; font-weight: 600; color: #059669;">${formatCurrency(servico.valor)}</td></tr>
+              <tr><td style="padding: 5px 0; color: #6b7280;">Validade:</td><td style="padding: 5px 0; font-weight: 500;">${formatDate(servico.data_inicio)} a ${formatDate(servico.data_vencimento)}</td></tr>
             </table>
           </div>
 
