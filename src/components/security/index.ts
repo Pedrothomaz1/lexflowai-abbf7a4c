@@ -4,3 +4,5 @@ export { PIIMaskingDemo } from './PIIMaskingDemo';
 export { IncidentPlaybooks } from './IncidentPlaybooks';
 export { SecurityMetrics } from './SecurityMetrics';
 export { GoNoGoChecklist } from './GoNoGoChecklist';
+export { AlertingRulesMatrix } from './AlertingRulesMatrix';
+export { AuditSchedule } from './AuditSchedule';
