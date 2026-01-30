@@ -35,7 +35,7 @@ import {
   SidebarHeader,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -180,6 +180,7 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const [userEmail, setUserEmail] = useState<string>("");
   const [userName, setUserName] = useState<string>("");
+  const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
   
   const menuSections = moduloAtivo === "contratos" ? contratosMenuSections : servicosMenuSections;
   
@@ -202,10 +203,12 @@ export function AppSidebar() {
         setUserEmail(data.user.email || "");
         const { data: profile } = await supabase
           .from("profiles")
-          .select("full_name")
+          .select("full_name, avatar_url")
           .eq("id", data.user.id)
-          .single();
+          .maybeSingle();
+
         setUserName(profile?.full_name || data.user.email?.split("@")[0] || "");
+        setUserAvatarUrl(profile?.avatar_url || null);
       }
     };
     getUser();
@@ -414,6 +417,7 @@ export function AppSidebar() {
               )}
             >
               <Avatar className="h-8 w-8 shrink-0">
+                 <AvatarImage src={userAvatarUrl || undefined} alt={userName || "Usuário"} />
                 <AvatarFallback 
                   className="text-xs font-medium"
                   style={{ 
