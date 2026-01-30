@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { CheckCircle2, Send, FileText, AlertTriangle, Copy, Check } from "lucide-react";
+import { CheckCircle2, Send, FileText, AlertTriangle, Copy, Check, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -175,17 +175,46 @@ export default function RequisicaoPublica() {
     <div className="min-h-screen bg-gradient-to-br from-[hsl(var(--lexflow-verde-escuro))] to-[hsl(var(--lexflow-verde-medio))]">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <img src={logoVeridiana} alt="Veridiana" className="h-10 w-10" />
-            <h1 className="text-3xl font-bold text-white">LexFlow</h1>
+        <div className="text-center mb-10 space-y-6">
+          {/* Logo Container with Glassmorphism */}
+          <div className="flex justify-center">
+            <div className="h-20 w-20 rounded-2xl bg-[hsl(var(--lexflow-off-white)/0.1)] flex items-center justify-center backdrop-blur-sm border border-[hsl(var(--lexflow-off-white)/0.15)] shadow-lg">
+              <img src={logoVeridiana} alt="Veridiana" className="h-12 w-12 object-contain" />
+            </div>
           </div>
-          <h2 className="text-xl text-[hsl(var(--lexflow-verde-claro))]">
-            Formulário de Requisição de Contratos
-          </h2>
-          <p className="text-[hsl(var(--lexflow-verde-claro)/0.8)] mt-2 max-w-2xl mx-auto">
-            Utilize este formulário para solicitar a elaboração ou análise de contratos pela equipe jurídica.
-          </p>
+
+          {/* Main Title */}
+          <div className="space-y-1">
+            <h1 className="text-4xl md:text-5xl font-bold text-[hsl(var(--lexflow-off-white))] tracking-tight">
+              LexFlow
+            </h1>
+            <p className="text-lg text-[hsl(var(--lexflow-verde-claro))]">
+              Sistema de Gestão de Contratos
+            </p>
+          </div>
+
+          {/* Department Badge */}
+          <div className="flex justify-center">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[hsl(var(--lexflow-verde-principal)/0.2)] border border-[hsl(var(--lexflow-verde-principal)/0.3)]">
+              <Scale className="h-4 w-4 text-[hsl(var(--lexflow-verde-principal))]" />
+              <span className="text-sm font-medium text-[hsl(var(--lexflow-verde-claro))]">
+                Departamento Jurídico
+              </span>
+            </div>
+          </div>
+
+          {/* Subtitle and Description */}
+          <div className="space-y-2">
+            <h2 className="text-2xl md:text-3xl font-semibold text-[hsl(var(--lexflow-off-white))]">
+              Formulário de Requisição
+            </h2>
+            <p className="text-[hsl(var(--lexflow-verde-claro)/0.8)] max-w-2xl mx-auto leading-relaxed">
+              Solicite a elaboração ou análise de contratos pela equipe jurídica.
+            </p>
+          </div>
+
+          {/* Decorative Separator */}
+          <div className="w-24 h-1 mx-auto rounded-full bg-gradient-to-r from-transparent via-[hsl(var(--lexflow-verde-principal))] to-transparent" />
         </div>
 
         {/* Form Card */}
