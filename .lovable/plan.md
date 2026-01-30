@@ -1,156 +1,136 @@
 
 
-# Fase 5: Hardening - Plano de Implementacao
+# Fase 6: Monitoring e Metricas Avancadas
 
-## Escopo
+## Objetivo
 
-Esta fase finaliza a implementacao de seguranca enterprise conforme o PRD aprovado, focando em:
-- Limites de rate por role detalhados
-- Biblioteca de playbooks de resposta a incidentes
-- Controle de sessoes concorrentes
-- Aprimoramentos no dashboard de seguranca
+Implementar as funcionalidades de monitoramento e metricas pendentes das secoes 6-10 do PRD, focando em:
+- Dashboard de metricas MTTD/MTTR
+- Sistema de alertas com thresholds configurados
+- Visualizacao de metricas de sucesso do PRD
+- Checklist Go/No-Go para producao
 
 ---
 
-## 1. Analise do Estado Atual
+## 1. Estado Atual
 
-### Ja Implementado
+### Implementado nas Fases 1-5
 | Componente | Status |
 |------------|--------|
-| Rate limiter com multiplicadores por role | Funcional |
-| SecurityDashboard com metricas | Funcional |
-| SecurityAlertsList com acoes | Funcional |
-| MFAChallenge para operacoes criticas | Funcional |
-| useSecureInput com validacao XSS/SQLi | Funcional |
+| SecurityDashboard com KPIs basicos | Funcional |
+| 10 Playbooks de incidentes | Populados no DB |
+| Rate limiter com ROLE_LIMITS | Funcional |
+| Audit logs com risk_level | Funcional |
+| Login attempts tracking | Funcional |
+| Security alerts com status/severity | Funcional |
 
-### Faltando para Fase 5
+### Pendente (Secoes 6-10)
 | Componente | Descricao |
 |------------|-----------|
-| Limites detalhados por role | Limites especificos de exports/hora e sessoes concorrentes |
-| Playbooks de incidentes | 10 playbooks documentados conforme memoria |
-| Pagina de Playbooks | UI para consultar procedimentos |
-| Controle de sessoes | Limite de sessoes simultaneas por role |
-| Link no menu | Adicionar Security Dashboard no sidebar |
+| Metricas MTTD/MTTR | Tempo medio de deteccao e resposta |
+| Alert Thresholds | Limites de alerta conforme PRD |
+| Go/No-Go Checklist | Verificacao automatizada de criterios |
+| Success Metrics Dashboard | Metricas de sucesso pos-lancamento |
 
 ---
 
-## 2. Database: Tabela de Sessoes e Playbooks
+## 2. Database: Tabelas de Metricas
 
-### 2.1 Tabela `user_sessions`
+### 2.1 Tabela `security_metrics`
 
-Rastreia sessoes ativas para controle de concorrencia:
+Nova tabela para rastrear metricas de seguranca ao longo do tempo:
 
 ```text
-user_sessions
+security_metrics
 - id UUID
-- user_id UUID (NOT NULL)
-- session_token TEXT
-- device_info JSONB
-- ip_address INET
-- last_activity TIMESTAMP
-- expires_at TIMESTAMP
-- is_active BOOLEAN DEFAULT true
+- metric_type TEXT (mttd, mttr, failed_logins, rate_limit_hits, etc.)
+- value NUMERIC
+- period_start TIMESTAMP
+- period_end TIMESTAMP
+- metadata JSONB
 - created_at TIMESTAMP
 ```
 
-### 2.2 Tabela `incident_playbooks`
+### 2.2 Tabela `go_nogo_checklist`
 
-Armazena os 10 playbooks de resposta a incidentes:
+Checklist automatizado de criterios de producao:
 
 ```text
-incident_playbooks
+go_nogo_checklist
 - id UUID
-- incident_type TEXT (unauthorized_access, data_breach, ransomware, etc.)
-- title TEXT
-- severity TEXT (critical, high, medium, low)
-- steps JSONB (array de passos ordenados)
-- responsible_roles TEXT[]
-- escalation_contacts JSONB
-- time_to_respond_minutes INTEGER
-- is_active BOOLEAN
+- criteria_name TEXT
+- criteria_description TEXT
+- is_automated BOOLEAN
+- last_check_at TIMESTAMP
+- status TEXT (passed, failed, pending)
+- details JSONB
 - created_at TIMESTAMP
-- updated_at TIMESTAMP
 ```
 
 ---
 
-## 3. Backend: Aprimoramentos no Rate Limiter
+## 3. Backend: Calculo de Metricas
 
-### 3.1 Atualizar `rate-limiter/index.ts`
+### 3.1 Nova Edge Function `security-metrics`
 
-Adicionar:
-- Limites de exports por hora por role
-- Verificacao de sessoes concorrentes
-- Bloquear novas sessoes se limite excedido
+Calcula e armazena metricas periodicamente:
 
-Configuracao detalhada conforme PRD:
+- **MTTD (Mean Time to Detect):** Diferenca entre `created_at` do alerta e `timestamp` do evento
+- **MTTR (Mean Time to Respond):** Diferenca entre `resolved_at` e `created_at` do alerta
+- **Failed Logins/Day:** Contagem diaria de `login_attempts.success = false`
+- **Rate Limit Hits/User/Day:** Contagem de violacoes do rate limiter
 
-| Role | Calls/min | Exports/hora | Sessoes |
-|------|-----------|--------------|---------|
-| administrador | 500 | 20 | 3 |
-| consultoria_juridica | 200 | 10 | 2 |
-| analista_juridico | 100 | 5 | 1 |
+### 3.2 Thresholds de Alerta (conforme PRD)
 
----
-
-## 4. Frontend: Componentes de Hardening
-
-### 4.1 Componente `IncidentPlaybooks.tsx`
-
-Nova pagina/componente com:
-- Lista dos 10 playbooks
-- Busca por tipo de incidente
-- Visualizacao detalhada com passos
-- Indicador de severidade
-- Tempo estimado de resposta
-
-### 4.2 Atualizar `SecurityDashboard.tsx`
-
-Adicionar nova aba:
-- "Playbooks" com lista de procedimentos
-- Metricas de sessoes ativas
-
-### 4.3 Atualizar `AppSidebar.tsx`
-
-Adicionar link "Seguranca" no menu de Sistema para administradores.
+| Metrica | Target | Alert Threshold |
+|---------|--------|-----------------|
+| Failed login attempts | menos de 10/dia | mais de 50/dia |
+| Rate limit hits | menos de 5/user/dia | mais de 20/user/dia |
+| Critical security alerts | 0 | mais de 0 |
+| MTTD | menos de 5 min | mais de 15 min |
+| MTTR | menos de 30 min | mais de 2 hours |
+| MFA adoption (critical) | 100% | menos de 90% |
+| Audit log lag | menos de 1 min | mais de 5 min |
+| RLS violations | 0 | mais de 0 |
 
 ---
 
-## 5. Playbooks de Incidentes
+## 4. Frontend: Dashboard de Metricas
 
-Os 10 playbooks conforme memoria aprovada:
+### 4.1 Novo Componente `SecurityMetrics.tsx`
 
-| ID | Tipo | Severidade | Tempo Resposta |
-|----|------|------------|----------------|
-| 1 | Unauthorized Access | critical | 15 min |
-| 2 | Data Breach | critical | 30 min |
-| 3 | Ransomware | critical | 15 min |
-| 4 | Phishing | high | 30 min |
-| 5 | Privilege Escalation | critical | 15 min |
-| 6 | Financial Fraud | critical | 15 min |
-| 7 | DDoS | high | 30 min |
-| 8 | Insider Threat | high | 30 min |
-| 9 | Account Takeover | critical | 15 min |
-| 10 | Data Corruption | high | 30 min |
+Adicionar ao SecurityDashboard:
+- Grafico de tendencia de MTTD/MTTR
+- Indicadores de status com cores (verde/amarelo/vermelho)
+- Comparacao Target vs Atual
 
-### Exemplo de Estrutura de Playbook
+### 4.2 Novo Componente `GoNoGoChecklist.tsx`
 
-```json
-{
-  "incident_type": "unauthorized_access",
-  "title": "Acesso Nao Autorizado",
-  "severity": "critical",
-  "time_to_respond_minutes": 15,
-  "steps": [
-    {"order": 1, "action": "Revogar sessoes do usuario", "tool": "supabase.auth.admin.signOut()"},
-    {"order": 2, "action": "Investigar logs de auditoria", "tool": "audit_logs"},
-    {"order": 3, "action": "Forcar reset de senha", "tool": "supabase.auth.admin.updateUser()"},
-    {"order": 4, "action": "Notificar DPO se dados sensiveis", "tool": "email"}
-  ],
-  "responsible_roles": ["administrador"],
-  "escalation_contacts": {"dpo": "dpo@empresa.com", "ti": "ti@empresa.com"}
-}
-```
+Checklist visual para lancamento:
+- Lista dos 10 criterios do PRD
+- Status automatizado onde possivel
+- Botao para executar verificacao
+
+### 4.3 Atualizar `SecurityDashboard.tsx`
+
+Adicionar novas abas:
+- "Metricas" com graficos de tendencia
+- "Go/No-Go" com checklist de producao
+
+---
+
+## 5. Criterios Go/No-Go (Automatizaveis)
+
+| Criterio | Verificacao Automatica |
+|----------|------------------------|
+| Zero critical CVEs | Manual (pentest externo) |
+| 100% RLS em tabelas criticas | Sim - query nas policies |
+| MFA para Admin/Financeiro Senior | Sim - query mfa_requirements |
+| 100% audit logging financeiro | Sim - verificar triggers |
+| Rate limiting funcional | Sim - testar endpoint |
+| Playbooks documentados | Sim - contar incident_playbooks |
+| Training completo | Manual (registro externo) |
+| Backup testado | Manual (processo externo) |
 
 ---
 
@@ -159,19 +139,20 @@ Os 10 playbooks conforme memoria aprovada:
 ### Novos Arquivos
 | Arquivo | Descricao |
 |---------|-----------|
-| `src/components/security/IncidentPlaybooks.tsx` | Lista de playbooks com detalhes |
+| `src/components/security/SecurityMetrics.tsx` | Dashboard de metricas MTTD/MTTR |
+| `src/components/security/GoNoGoChecklist.tsx` | Checklist de criterios de producao |
+| `supabase/functions/security-metrics/index.ts` | Calculo periodico de metricas |
 
 ### Arquivos a Modificar
 | Arquivo | Alteracao |
 |---------|-----------|
-| `supabase/functions/rate-limiter/index.ts` | Limites detalhados por role, exports, sessoes |
-| `src/pages/SecurityDashboard.tsx` | Nova aba Playbooks |
-| `src/components/AppSidebar.tsx` | Link para /security |
+| `src/pages/SecurityDashboard.tsx` | Adicionar abas Metricas e Go/No-Go |
+| `src/components/security/index.ts` | Exportar novos componentes |
 
 ### Migracoes SQL
-1. Criar tabela `user_sessions`
-2. Criar tabela `incident_playbooks` com RLS
-3. Popular 10 playbooks iniciais
+1. Criar tabela `security_metrics`
+2. Criar tabela `go_nogo_checklist`
+3. Popular criterios iniciais
 
 ---
 
@@ -180,158 +161,120 @@ Os 10 playbooks conforme memoria aprovada:
 ### Migracao SQL
 
 ```sql
--- 1. Tabela de sessoes ativas
-CREATE TABLE IF NOT EXISTS public.user_sessions (
+-- 1. Tabela de metricas de seguranca
+CREATE TABLE IF NOT EXISTS public.security_metrics (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  session_token TEXT NOT NULL,
-  device_info JSONB DEFAULT '{}'::jsonb,
-  ip_address INET,
-  last_activity TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-  is_active BOOLEAN DEFAULT true,
+  metric_type TEXT NOT NULL,
+  value NUMERIC NOT NULL,
+  period_start TIMESTAMP WITH TIME ZONE NOT NULL,
+  period_end TIMESTAMP WITH TIME ZONE NOT NULL,
+  metadata JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_user_sessions_user_active ON user_sessions(user_id, is_active);
-CREATE INDEX idx_user_sessions_expires ON user_sessions(expires_at);
+CREATE INDEX idx_security_metrics_type_period 
+  ON security_metrics(metric_type, period_start DESC);
 
-ALTER TABLE user_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE security_metrics ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "users_view_own_sessions" ON user_sessions
-  FOR SELECT USING (user_id = auth.uid() OR has_role(auth.uid(), 'administrador'));
-
-CREATE POLICY "system_manage_sessions" ON user_sessions
-  FOR ALL USING (auth.uid() IS NULL) WITH CHECK (true);
-
--- 2. Tabela de playbooks
-CREATE TABLE IF NOT EXISTS public.incident_playbooks (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  incident_type TEXT NOT NULL UNIQUE,
-  title TEXT NOT NULL,
-  severity TEXT NOT NULL CHECK (severity IN ('critical', 'high', 'medium', 'low')),
-  steps JSONB NOT NULL DEFAULT '[]'::jsonb,
-  responsible_roles TEXT[] NOT NULL,
-  escalation_contacts JSONB DEFAULT '{}'::jsonb,
-  time_to_respond_minutes INTEGER NOT NULL DEFAULT 30,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
-ALTER TABLE incident_playbooks ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "admins_manage_playbooks" ON incident_playbooks
+CREATE POLICY "admins_manage_metrics" ON security_metrics
   FOR ALL USING (has_role(auth.uid(), 'administrador'));
 
-CREATE POLICY "authorized_view_playbooks" ON incident_playbooks
-  FOR SELECT USING (
-    has_any_role(auth.uid(), ARRAY['administrador'::app_role, 'consultoria_juridica'::app_role])
-  );
+-- 2. Tabela de checklist Go/No-Go
+CREATE TABLE IF NOT EXISTS public.go_nogo_checklist (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  criteria_name TEXT NOT NULL UNIQUE,
+  criteria_description TEXT,
+  is_automated BOOLEAN DEFAULT false,
+  last_check_at TIMESTAMP WITH TIME ZONE,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('passed', 'failed', 'pending', 'na')),
+  details JSONB DEFAULT '{}'::jsonb,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
--- 3. Popular playbooks iniciais
-INSERT INTO incident_playbooks (incident_type, title, severity, time_to_respond_minutes, steps, responsible_roles, escalation_contacts) VALUES
-('unauthorized_access', 'Acesso Nao Autorizado', 'critical', 15, 
- '[{"order":1,"action":"Revogar todas as sessoes do usuario","tool":"auth.admin.signOut"},{"order":2,"action":"Investigar audit_logs das ultimas 24h","tool":"audit_logs"},{"order":3,"action":"Forcar reset de senha","tool":"auth.admin.updateUser"},{"order":4,"action":"Notificar DPO se dados sensiveis acessados","tool":"email"}]',
- ARRAY['administrador'], '{"dpo":"dpo@empresa.com","ti":"ti@empresa.com"}'),
+ALTER TABLE go_nogo_checklist ENABLE ROW LEVEL SECURITY;
 
-('data_breach', 'Vazamento de Dados', 'critical', 30,
- '[{"order":1,"action":"Isolar sistemas afetados","tool":"network"},{"order":2,"action":"Notificar DPO imediatamente","tool":"email"},{"order":3,"action":"Iniciar processo de notificacao LGPD","tool":"compliance"},{"order":4,"action":"Preservar logs para investigacao","tool":"backup"},{"order":5,"action":"Preparar comunicado aos afetados","tool":"legal"}]',
- ARRAY['administrador'], '{"dpo":"dpo@empresa.com","juridico":"juridico@empresa.com"}'),
+CREATE POLICY "admins_manage_gonogo" ON go_nogo_checklist
+  FOR ALL USING (has_role(auth.uid(), 'administrador'));
 
-('ransomware', 'Ataque Ransomware', 'critical', 15,
- '[{"order":1,"action":"Bloquear usuario/sistema afetado","tool":"network"},{"order":2,"action":"NAO pagar resgate","tool":"policy"},{"order":3,"action":"Preservar logs e evidencias","tool":"backup"},{"order":4,"action":"Acionar equipe de resposta","tool":"escalation"},{"order":5,"action":"Iniciar restauracao de backup","tool":"recovery"}]',
- ARRAY['administrador'], '{"ciso":"ciso@empresa.com","ti":"ti@empresa.com"}'),
-
-('phishing', 'Ataque de Phishing', 'high', 30,
- '[{"order":1,"action":"Forcar reset de MFA do usuario","tool":"auth.mfa"},{"order":2,"action":"Atualizar filtros de email","tool":"email_security"},{"order":3,"action":"Comunicar usuarios sobre o ataque","tool":"internal_comms"},{"order":4,"action":"Realizar treinamento de conscientizacao","tool":"training"}]',
- ARRAY['administrador'], '{"ti":"ti@empresa.com"}'),
-
-('privilege_escalation', 'Escalacao de Privilegios', 'critical', 15,
- '[{"order":1,"action":"Auditar todas mudancas de roles","tool":"audit_logs"},{"order":2,"action":"Revogar tokens do usuario","tool":"auth.admin"},{"order":3,"action":"Reverter alteracoes de permissao","tool":"user_roles"},{"order":4,"action":"Investigar origem do acesso","tool":"security_alerts"}]',
- ARRAY['administrador'], '{"ciso":"ciso@empresa.com"}'),
-
-('financial_fraud', 'Fraude Financeira', 'critical', 15,
- '[{"order":1,"action":"Bloquear transacoes pendentes","tool":"financial"},{"order":2,"action":"Congelar contas envolvidas","tool":"banking"},{"order":3,"action":"Iniciar revisao forense","tool":"forensics"},{"order":4,"action":"Notificar compliance e juridico","tool":"escalation"}]',
- ARRAY['administrador'], '{"financeiro":"cfo@empresa.com","juridico":"juridico@empresa.com"}'),
-
-('ddos', 'Ataque DDoS', 'high', 30,
- '[{"order":1,"action":"Ativar protecao Cloudflare","tool":"cdn"},{"order":2,"action":"Aumentar rate limits temporariamente","tool":"rate_limiter"},{"order":3,"action":"Comunicar usuarios sobre intermitencia","tool":"status_page"},{"order":4,"action":"Monitorar origem do ataque","tool":"analytics"}]',
- ARRAY['administrador'], '{"ti":"ti@empresa.com","devops":"devops@empresa.com"}'),
-
-('insider_threat', 'Ameaca Interna', 'high', 30,
- '[{"order":1,"action":"Restringir acessos do suspeito","tool":"permissions"},{"order":2,"action":"Revogar sessoes ativas","tool":"auth.admin"},{"order":3,"action":"Iniciar investigacao interna","tool":"hr"},{"order":4,"action":"Preservar evidencias","tool":"audit_logs"}]',
- ARRAY['administrador'], '{"hr":"rh@empresa.com","juridico":"juridico@empresa.com"}'),
-
-('account_takeover', 'Sequestro de Conta', 'critical', 15,
- '[{"order":1,"action":"Forcar reset de senha imediato","tool":"auth.admin.updateUser"},{"order":2,"action":"Exigir MFA para reativacao","tool":"mfa_requirements"},{"order":3,"action":"Invalidar todas as sessoes","tool":"auth.admin.signOut"},{"order":4,"action":"Revisar atividades recentes","tool":"audit_logs"}]',
- ARRAY['administrador'], '{"ti":"ti@empresa.com"}'),
-
-('data_corruption', 'Corrupcao de Dados', 'high', 30,
- '[{"order":1,"action":"Fazer rollback para versao anterior","tool":"versioning"},{"order":2,"action":"Restaurar backup mais recente","tool":"backup"},{"order":3,"action":"Revisar trilha de auditoria","tool":"audit_logs"},{"order":4,"action":"Validar integridade pos-restauracao","tool":"validation"}]',
- ARRAY['administrador'], '{"dba":"dba@empresa.com","ti":"ti@empresa.com"}');
+-- 3. Popular criterios iniciais
+INSERT INTO go_nogo_checklist (criteria_name, criteria_description, is_automated, sort_order) VALUES
+('zero_critical_cves', 'Zero vulnerabilidades criticas no pentest', false, 1),
+('rls_coverage', '100% das tabelas criticas com RLS', true, 2),
+('mfa_critical_roles', 'MFA obrigatorio para Admin e Financeiro Senior', true, 3),
+('audit_financial_ops', '100% das operacoes financeiras auditadas', true, 4),
+('rate_limiting_functional', 'Rate limiting funcional em todos endpoints', true, 5),
+('playbooks_documented', 'Todos os 10 playbooks documentados', true, 6),
+('password_policy', 'Politica de senha de 12+ caracteres ativa', true, 7),
+('hibp_enabled', 'Verificacao de senhas vazadas ativa', false, 8),
+('team_training', 'Treinamento da equipe concluido', false, 9),
+('backup_tested', 'Backup e disaster recovery testados', false, 10);
 ```
 
-### Rate Limiter Aprimorado
-
-Estrutura de limites detalhados:
+### Estrutura de Metricas
 
 ```typescript
-const ROLE_LIMITS: Record<string, RoleLimits> = {
-  'administrador': {
-    multiplier: 2.5,
-    callsPerMinute: 500,
-    exportsPerHour: 20,
-    maxConcurrentSessions: 3
-  },
-  'consultoria_juridica': {
-    multiplier: 2.0,
-    callsPerMinute: 200,
-    exportsPerHour: 10,
-    maxConcurrentSessions: 2
-  },
-  'analista_juridico': {
-    multiplier: 1.5,
-    callsPerMinute: 100,
-    exportsPerHour: 5,
-    maxConcurrentSessions: 1
-  },
-  'default': {
-    multiplier: 1.0,
-    callsPerMinute: 50,
-    exportsPerHour: 1,
-    maxConcurrentSessions: 1
-  }
-};
+interface SecurityMetric {
+  metric_type: 
+    | 'mttd'           // Mean Time to Detect (minutes)
+    | 'mttr'           // Mean Time to Respond (minutes)
+    | 'failed_logins'  // Count per day
+    | 'rate_limit_hits'// Count per day
+    | 'critical_alerts'// Count per day
+    | 'mfa_adoption'   // Percentage
+    | 'active_sessions'// Count
+    | 'high_risk_ops'; // Count per day
+  value: number;
+  period_start: string;
+  period_end: string;
+  metadata: {
+    threshold_target?: number;
+    threshold_alert?: number;
+    status?: 'ok' | 'warning' | 'critical';
+  };
+}
 ```
 
 ---
 
 ## 8. Fluxo de Implementacao
 
-1. **Migracao SQL** - Criar tabelas e popular playbooks
-2. **Rate Limiter** - Adicionar limites detalhados
-3. **IncidentPlaybooks** - Componente de visualizacao
-4. **SecurityDashboard** - Integrar aba Playbooks
-5. **AppSidebar** - Link para /security
+1. **Migracao SQL** - Criar tabelas security_metrics e go_nogo_checklist
+2. **Edge Function** - Criar security-metrics para calculo periodico
+3. **SecurityMetrics.tsx** - Componente de visualizacao de metricas
+4. **GoNoGoChecklist.tsx** - Componente de checklist de producao
+5. **SecurityDashboard** - Integrar novas abas
 
 ---
 
-## 9. Consideracoes de Seguranca
+## 9. Consideracoes
 
-- Playbooks acessiveis apenas por admins e consultores
-- Sessoes expiram automaticamente apos inatividade
-- Rate limits impedem abuso mesmo por usuarios autenticados
-- Logs de todas as consultas a playbooks
+### Metricas Calculadas vs Manuais
+
+- **Automatizadas:** MTTD, MTTR, failed logins, rate limits, RLS coverage
+- **Manuais:** Pentest, training, backup testing
+
+### Frequencia de Calculo
+
+- Metricas em tempo real: A cada requisicao ao dashboard
+- Metricas agregadas: Calculadas diariamente por cron job (opcional)
+
+### Thresholds Visiveis
+
+Dashboard mostrara claramente:
+- Valor atual vs Target
+- Status com codigo de cores
+- Tendencia (melhorando/piorando)
 
 ---
 
 ## 10. Resultado Esperado
 
 Apos implementacao:
-- Limites de API personalizados por nivel de acesso
-- 10 playbooks de resposta a incidentes disponiveis
-- Controle de sessoes concorrentes por usuario
-- Dashboard de seguranca completo no menu lateral
-- Sistema pronto para producao conforme Go/No-Go criteria
+- Dashboard completo de metricas de seguranca
+- MTTD/MTTR visiveis e rastreados
+- Checklist Go/No-Go automatizado
+- Sistema pronto para auditoria externa
+- Visibilidade completa do estado de seguranca
 
