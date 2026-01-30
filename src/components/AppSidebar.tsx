@@ -21,6 +21,8 @@ import {
   BarChart3,
   ShieldCheck,
   FileInput,
+  UserCog,
+  Building,
 } from "lucide-react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
@@ -52,6 +54,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useModulo, ModuloAtivo } from "@/contexts/ModuloContext";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { cn } from "@/lib/utils";
 import logoVeridiana from "@/assets/logo-veridiana.png";
 import { Badge } from "@/components/ui/badge";
@@ -151,6 +154,16 @@ const contratosMenuSections: MenuSectionType[] = [
       },
     ],
   },
+  {
+    id: "organizacao",
+    title: "Organização",
+    icon: Building,
+    defaultOpen: false,
+    items: [
+      { title: "Configurações", url: "/organization/settings", icon: Building2, roles: ["org_admin"] },
+      { title: "Membros", url: "/organization/members", icon: UserCog, roles: ["org_admin"] },
+    ],
+  },
 ];
 
 // Menu sections para módulo de Serviços
@@ -192,6 +205,16 @@ const servicosMenuSections: MenuSectionType[] = [
       },
     ],
   },
+  {
+    id: "organizacao",
+    title: "Organização",
+    icon: Building,
+    defaultOpen: false,
+    items: [
+      { title: "Configurações", url: "/organization/settings", icon: Building2, roles: ["org_admin"] },
+      { title: "Membros", url: "/organization/members", icon: UserCog, roles: ["org_admin"] },
+    ],
+  },
 ];
 
 const roleLabels: Record<string, string> = {
@@ -207,6 +230,7 @@ export function AppSidebar() {
   const { toast } = useToast();
   const { userRole } = useUserRole();
   const { moduloAtivo, moduloPadrao, setModuloAtivo } = useModulo();
+  const { organization, isOrgAdmin } = useOrganization();
   const collapsed = state === "collapsed";
   const [userEmail, setUserEmail] = useState<string>("");
   const [userName, setUserName] = useState<string>("");
@@ -280,7 +304,13 @@ export function AppSidebar() {
   };
 
   const filterByRole = (items: MenuItemType[]) =>
-    items.filter((item) => item.roles.includes("all") || (userRole && item.roles.includes(userRole)));
+    items.filter((item) => {
+      // Handle org_admin role check
+      if (item.roles.includes("org_admin")) {
+        return isOrgAdmin;
+      }
+      return item.roles.includes("all") || (userRole && item.roles.includes(userRole));
+    });
 
   const getInitials = (name: string) => {
     return name
