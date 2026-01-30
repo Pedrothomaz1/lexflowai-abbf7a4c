@@ -16,7 +16,7 @@ interface HelpTooltipProps {
 
 export function HelpTooltip({
   text,
-  side = "top",
+  side = "right",
   align = "center",
   className,
   iconClassName,
