@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,16 @@ import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import DOMPurify from "dompurify";
+
+// Configure DOMPurify to only allow safe tags for redlining
+const sanitizeHTML = (html: string): string => {
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ['ins', 'del', 'span'],
+    ALLOWED_ATTR: ['class'],
+    KEEP_CONTENT: true
+  });
+};
 
 interface ContractRedlineEditorProps {
   contratoId: string;
@@ -309,7 +319,7 @@ export function ContractRedlineEditor({ contratoId, conteudoOriginal = "" }: Con
               <div 
                 className="text-sm prose prose-sm max-w-none"
                 dangerouslySetInnerHTML={{ 
-                  __html: generateMarkedContent(conteudoOriginal, editedContent) 
+                  __html: sanitizeHTML(generateMarkedContent(conteudoOriginal, editedContent))
                 }}
               />
             </div>
@@ -347,7 +357,7 @@ export function ContractRedlineEditor({ contratoId, conteudoOriginal = "" }: Con
                       {showChanges && (
                         <div 
                           className="text-sm border rounded p-3 bg-muted/20 mb-3 prose prose-sm max-w-none"
-                          dangerouslySetInnerHTML={{ __html: redline.conteudo_marcado }}
+                          dangerouslySetInnerHTML={{ __html: sanitizeHTML(redline.conteudo_marcado) }}
                         />
                       )}
 
