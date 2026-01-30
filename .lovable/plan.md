@@ -1,408 +1,441 @@
 
-# Plano de Implementação: Multi-Tenancy LexFlow SaaS
+# Plano de Testes Automatizados - LexFlow Multi-Tenant
 
-## Status de Implementação
+## Visao Geral
 
-| Fase | Status | Data |
-|------|--------|------|
-| Fase 1: Schema Multi-Tenant | ✅ Concluída | 2026-01-30 |
-| Fase 2: Políticas RLS | ✅ Concluída | 2026-01-30 |
-| Fase 3: Edge Functions | ✅ Concluída | 2026-01-30 |
-| Fase 4: Frontend | ✅ Concluída | 2026-01-30 |
-| Fase 5: Validação | ⏳ Pendente | - |
-
-## Fase 4 Implementation Details
-
-- [x] Created `src/contexts/OrganizationContext.tsx` with organization data, loading state, isOwner/isOrgAdmin flags
-- [x] Created `src/hooks/useOrganization.ts` hook
-- [x] Updated `src/App.tsx` to wrap with OrganizationProvider
-- [x] Updated `src/pages/AuthCallback.tsx` to check organization membership after login
-- [x] Updated `src/components/ProtectedRoute.tsx` with `requireOrg` prop for organization enforcement
-- [x] Updated `src/components/DashboardLayout.tsx` with organization loading state
-- [x] Updated `src/components/GlobalHeader.tsx` to show organization name badge
-- [x] Updated `src/components/AppSidebar.tsx` with organization settings/members links (org_admin only)
-- [x] Created `src/pages/OnboardingOrganization.tsx` page for first-time org creation
-- [x] Created `src/pages/WaitingForInvite.tsx` page for users without organization
-- [x] Created `src/pages/OrganizationSettings.tsx` page (owner/admin only)
-- [x] Created `src/pages/OrganizationMembers.tsx` page (admin only)
-
-## Resumo Executivo
-
-Este plano transforma o LexFlow de single-tenant para multi-tenant SaaS, permitindo que múltiplas empresas usem a mesma infraestrutura com isolamento total de dados.
+Este plano estrutura a implementacao de testes automatizados para o sistema LexFlow em 7 categorias hierarquicas de criticidade, utilizando a infraestrutura existente de Vitest/React Testing Library para testes de frontend e Deno para testes de Edge Functions.
 
 ---
 
-## Análise do Gap: Estado Atual vs PRD
+## Estrutura de Arquivos Proposta
 
-| Aspecto | Estado Atual | PRD Requerido |
-|---------|--------------|---------------|
-| Escopo de Dados | Global (todos veem tudo) | Isolado por Empresa |
-| Conceito de Tenant | Não existe | Empresa = Tenant |
-| Usuários | Pertencem ao sistema | Pertencem a uma Empresa |
-| Contratos | Visíveis por role | Visíveis apenas dentro da Empresa |
-| RLS Policies | Baseadas em role | Baseadas em empresa + role |
-| Fornecedores | Compartilhados | Isolados por Empresa |
-| Alertas | Globais | Por Empresa |
-
----
-
-## Fase 1: Criação do Schema Multi-Tenant
-
-### 1.1 Nova Tabela: `organizations` (Tenant)
-
-```sql
-CREATE TABLE public.organizations (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  nome TEXT NOT NULL,
-  cnpj TEXT UNIQUE,
-  slug TEXT UNIQUE NOT NULL, -- para URLs amigáveis
-  email_contato TEXT,
-  telefone TEXT,
-  endereco TEXT,
-  cidade TEXT,
-  estado TEXT,
-  cep TEXT,
-  logo_url TEXT,
-  plano TEXT DEFAULT 'basico', -- para futuro billing
-  max_usuarios INTEGER DEFAULT 10,
-  is_active BOOLEAN DEFAULT true,
-  configuracoes JSONB DEFAULT '{}',
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
 ```
+src/
+  test/
+    setup.ts                    # (existente - atualizar)
+    example.test.ts             # (existente)
+    mocks/
+      supabase.ts               # Mock do cliente Supabase
+      auth.ts                   # Mock de autenticacao
+      organization.ts           # Mock de organizacao
+    utils/
+      test-factories.ts         # Fabricas de dados de teste
+      test-helpers.ts           # Helpers comuns
+  __tests__/
+    rls/                        # 1. Testes de RLS (Critico)
+      rls-isolation.test.ts
+      rls-policies.test.ts
+    security/                   # 2. Testes de Seguranca
+      auth-flow.test.ts
+      mfa.test.ts
+      permissions.test.ts
+    rbac/                       # 4. Testes de RBAC
+      roles.test.ts
+      permissions.test.ts
+    flow/                       # 5. Testes de Fluxo (UX)
+      contract-flow.test.tsx
+      organization-flow.test.tsx
+      auth-flow.test.tsx
+    regression/                 # 6. Testes de Regressao
+      critical-paths.test.tsx
+  utils/
+    documentValidation.test.ts  # (existente)
+  components/
+    ui/
+      Button.test.tsx           # (existente)
+      Card.test.tsx             # (existente)
+    charts/
+      PremiumCharts.test.tsx    # (existente)
 
-### 1.2 Tabela de Associação: `organization_members`
-
-```sql
-CREATE TABLE public.organization_members (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  is_owner BOOLEAN DEFAULT false,
-  is_active BOOLEAN DEFAULT true,
-  joined_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(organization_id, user_id)
-);
-```
-
-### 1.3 Adicionar `organization_id` às Tabelas Principais
-
-Tabelas que receberão a coluna `organization_id`:
-
-| Tabela | Impacto |
-|--------|---------|
-| `contratos` | Contratos isolados por empresa |
-| `fornecedores` | Fornecedores isolados por empresa |
-| `contract_alerts` | Alertas isolados por empresa |
-| `contract_obligations` | Obrigações isoladas por empresa |
-| `contract_requests` | Requisições isoladas por empresa |
-| `unidades` | Unidades/filiais isoladas por empresa |
-| `user_roles` | Roles dentro da empresa |
-| `profiles` | Perfis associados à empresa |
-| `audit_logs` | Logs de auditoria por empresa |
-| `compliance_logs` | Compliance LGPD por empresa |
-| `notification_preferences` | Preferências por empresa |
-| `contract_templates` | Templates por empresa |
-| `report_configurations` | Relatórios por empresa |
-
----
-
-## Fase 2: Funções SQL Helper Multi-Tenant
-
-### 2.1 Função para obter organização do usuário
-
-```sql
-CREATE OR REPLACE FUNCTION public.get_user_organization(uid UUID)
-RETURNS UUID
-LANGUAGE SQL
-SECURITY DEFINER
-STABLE
-AS $$
-  SELECT organization_id 
-  FROM organization_members 
-  WHERE user_id = uid 
-  AND is_active = true 
-  LIMIT 1;
-$$;
-```
-
-### 2.2 Função para verificar pertencimento
-
-```sql
-CREATE OR REPLACE FUNCTION public.belongs_to_organization(uid UUID, org_id UUID)
-RETURNS BOOLEAN
-LANGUAGE SQL
-SECURITY DEFINER
-STABLE
-AS $$
-  SELECT EXISTS(
-    SELECT 1 FROM organization_members 
-    WHERE user_id = uid 
-    AND organization_id = org_id 
-    AND is_active = true
-  );
-$$;
-```
-
-### 2.3 Função para contexto atual
-
-```sql
-CREATE OR REPLACE FUNCTION public.current_user_org()
-RETURNS UUID
-LANGUAGE SQL
-SECURITY DEFINER
-STABLE
-AS $$
-  SELECT get_user_organization(auth.uid());
-$$;
+supabase/
+  functions/
+    verificar-alertas/
+      index_test.ts             # 3. Testes de Edge Functions
+    enviar-notificacao-email/
+      index_test.ts
+    gdpr-handler/
+      index_test.ts
+    security-alert-handler/
+      index_test.ts
+    anomaly-detector/
+      index_test.ts
 ```
 
 ---
 
-## Fase 3: Atualização das Políticas RLS
+## 1. Testes de Banco (RLS) - CRITICOS
 
-### 3.1 Padrão de Policy Multi-Tenant
+### Objetivo
+Verificar isolamento multi-tenant via RLS - nenhum usuario pode acessar dados de outra organizacao.
 
-**Antes (atual):**
-```sql
-CREATE POLICY "Authenticated users can view contratos" 
-ON contratos FOR SELECT
-USING (auth.uid() IS NOT NULL);
-```
+### Arquivo: `src/__tests__/rls/rls-isolation.test.ts`
 
-**Depois (multi-tenant):**
-```sql
-CREATE POLICY "Users can view own organization contracts" 
-ON contratos FOR SELECT
-USING (
-  organization_id = current_user_org()
-);
-```
+**Casos de Teste:**
 
-### 3.2 Políticas por Tabela
+| ID | Cenario | Esperado |
+|----|---------|----------|
+| RLS-001 | Usuario Org A tenta SELECT em contrato de Org B | 0 registros retornados |
+| RLS-002 | Usuario sem organizacao tenta SELECT em contratos | 0 registros retornados |
+| RLS-003 | Admin Org A tenta SELECT em audit_logs Org B | 0 registros retornados |
+| RLS-004 | Usuario tenta INSERT com organization_id diferente | Erro RLS violation |
+| RLS-005 | Usuario tenta UPDATE mudando organization_id | Erro ou nenhuma linha afetada |
+| RLS-006 | Usuario pode ver apenas membros da propria org | Apenas membros da org retornados |
 
-| Tabela | SELECT | INSERT | UPDATE | DELETE |
-|--------|--------|--------|--------|--------|
-| `organizations` | Apenas sua org | Super admin | Owner/Admin | Super admin |
-| `contratos` | Mesma org | Mesma org + role | Mesma org + role | Admin apenas |
-| `fornecedores` | Mesma org | Mesma org + role | Mesma org + role | Admin apenas |
-| `contract_alerts` | Mesma org | Mesma org | Mesma org | Mesma org |
-| `audit_logs` | Mesma org (admin) | Trigger apenas | Nenhum | Nenhum |
+**Tabelas Cobertas:**
+- contratos
+- fornecedores
+- contract_alerts
+- audit_logs
+- organization_members
+- unidades
+- franquias
 
----
+### Arquivo: `src/__tests__/rls/rls-policies.test.ts`
 
-## Fase 4: Atualização do Frontend
+**Casos de Teste:**
 
-### 4.1 Novo Contexto: `OrganizationContext`
-
-**Arquivo:** `src/contexts/OrganizationContext.tsx`
-
-```tsx
-interface OrganizationContextType {
-  organization: Organization | null;
-  loading: boolean;
-  isOwner: boolean;
-  switchOrganization: (orgId: string) => Promise<void>;
-  refresh: () => Promise<void>;
-}
-```
-
-### 4.2 Atualização do AuthContext
-
-Adicionar fetch da organização após login bem-sucedido.
-
-### 4.3 Componentes Afetados
-
-| Componente | Alteração |
-|------------|-----------|
-| `AuthCallback.tsx` | Redirecionar para seletor de org se múltiplas |
-| `DashboardLayout.tsx` | Mostrar nome da organização no header |
-| `AppSidebar.tsx` | Exibir contexto da empresa |
-| `GlobalHeader.tsx` | Adicionar switcher de organização |
-| Todas as páginas de listagem | Dados já filtrados por RLS |
-
-### 4.4 Nova Página: Configurações da Organização
-
-**Arquivo:** `src/pages/OrganizationSettings.tsx`
-
-- Editar dados da empresa
-- Gerenciar membros
-- Configurações específicas da org
+| ID | Cenario | Esperado |
+|----|---------|----------|
+| RLS-007 | current_user_org() retorna org do usuario autenticado | UUID correto |
+| RLS-008 | current_user_org() retorna NULL para anonimo | NULL |
+| RLS-009 | belongs_to_org() valida pertencimento corretamente | true/false |
+| RLS-010 | is_org_owner() identifica owner corretamente | true apenas para owner |
+| RLS-011 | is_org_admin() identifica admin/owner | true para admin ou owner |
 
 ---
 
-## Fase 5: Atualização das Edge Functions
+## 2. Testes de Seguranca
 
-### 5.1 Funções que precisam de contexto de organização
+### Arquivo: `src/__tests__/security/auth-flow.test.ts`
 
-| Função | Alteração |
-|--------|-----------|
-| `verificar-alertas` | Iterar por organização |
-| `enviar-notificacao-email` | Incluir org context |
-| `enviar-notificacao-whatsapp` | Incluir org context |
-| `gdpr-handler` | Escopo por organização |
-| `security-alert-handler` | Alertas por org |
+**Casos de Teste:**
 
-### 5.2 Padrão de Atualização
+| ID | Cenario | Esperado |
+|----|---------|----------|
+| SEC-001 | Login com credenciais validas | Sessao criada |
+| SEC-002 | Login com senha incorreta | Erro "Invalid credentials" |
+| SEC-003 | Bloqueio apos 5 tentativas falhas | Conta bloqueada temporariamente |
+| SEC-004 | Logout invalida sessao | Sessao removida |
+| SEC-005 | Token expirado nao permite acesso | Redirect para /auth |
+
+### Arquivo: `src/__tests__/security/mfa.test.ts`
+
+**Casos de Teste:**
+
+| ID | Cenario | Esperado |
+|----|---------|----------|
+| MFA-001 | Usuario com MFA habilitado precisa verificar | TwoFactorVerification exibido |
+| MFA-002 | Codigo TOTP valido permite acesso | Acesso liberado |
+| MFA-003 | Codigo TOTP invalido bloqueia | Erro exibido |
+| MFA-004 | Role que requer MFA redireciona para setup | Redirect para /settings/2fa |
+| MFA-005 | Backup code valido funciona | Acesso liberado |
+
+### Arquivo: `src/__tests__/security/permissions.test.ts`
+
+**Casos de Teste:**
+
+| ID | Cenario | Esperado |
+|----|---------|----------|
+| PERM-001 | has_permission() retorna true para permissao existente | true |
+| PERM-002 | has_permission() retorna false para permissao inexistente | false |
+| PERM-003 | ProtectedRoute bloqueia sem permissao | Tela de acesso negado |
+| PERM-004 | ProtectedRoute permite com permissao | Componente renderizado |
+
+---
+
+## 3. Testes de Edge Functions
+
+### Metodologia
+Testes Deno usando framework nativo `Deno.test()`, executados via ferramenta de teste de Edge Functions.
+
+### Arquivo: `supabase/functions/verificar-alertas/index_test.ts`
 
 ```typescript
-// Antes
-const { data: contratos } = await supabase
-  .from('contratos')
-  .select('*')
-  .eq('status', 'vigente');
+import "https://deno.land/std@0.224.0/dotenv/load.ts";
 
-// Depois
-const { data: organizations } = await supabase
-  .from('organizations')
-  .select('id')
-  .eq('is_active', true);
+const SUPABASE_URL = Deno.env.get("VITE_SUPABASE_URL")!;
+const SUPABASE_ANON_KEY = Deno.env.get("VITE_SUPABASE_PUBLISHABLE_KEY")!;
 
-for (const org of organizations) {
-  const { data: contratos } = await supabase
-    .from('contratos')
-    .select('*')
-    .eq('organization_id', org.id)
-    .eq('status', 'vigente');
-  // processar por org
+Deno.test("verificar-alertas - rejeita requisicao sem CRON_SECRET", async () => {
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/verificar-alertas`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+  await response.text();
+  assertEquals(response.status, 401);
+});
+
+Deno.test("verificar-alertas - processa por organizacao", async () => {
+  // Teste com CRON_SECRET valido
+});
+```
+
+**Casos de Teste por Funcao:**
+
+| Funcao | Casos |
+|--------|-------|
+| verificar-alertas | CRON auth, processamento por org, criacao de alertas |
+| enviar-notificacao-email | Auth, scoping por org, formato de email |
+| gdpr-handler | Auth, validacao cross-org, erasure/export/access |
+| security-alert-handler | Response matrix, scoping por org, audit log |
+| anomaly-detector | Processamento por org, metricas isoladas |
+
+---
+
+## 4. Testes de RBAC
+
+### Arquivo: `src/__tests__/rbac/roles.test.ts`
+
+**Casos de Teste:**
+
+| ID | Cenario | Esperado |
+|----|---------|----------|
+| RBAC-001 | Administrador tem todas as permissoes | Todas retornam true |
+| RBAC-002 | Analista juridico tem permissoes limitadas | Subset de permissoes |
+| RBAC-003 | Membro sem role especifica | Permissoes basicas |
+| RBAC-004 | has_role() funciona corretamente | true/false |
+| RBAC-005 | has_any_role() com array de roles | true se alguma corresponde |
+
+### Arquivo: `src/__tests__/rbac/permissions.test.ts`
+
+**Casos de Teste:**
+
+| ID | Cenario | Esperado |
+|----|---------|----------|
+| RBAC-006 | usePermissions() carrega permissoes do usuario | Array de permissoes |
+| RBAC-007 | canViewContracts calculado corretamente | boolean baseado em permissoes |
+| RBAC-008 | canApproveContracts exige permissao especifica | true apenas com contract:approve |
+| RBAC-009 | isSystemAdmin exige system:admin | true apenas para system_admin |
+
+---
+
+## 5. Testes de Fluxo (UX)
+
+### Arquivo: `src/__tests__/flow/contract-flow.test.tsx`
+
+**Casos de Teste:**
+
+| ID | Cenario | Esperado |
+|----|---------|----------|
+| UX-001 | Criar contrato preenche todos campos | Contrato salvo |
+| UX-002 | Editar contrato atualiza dados | Versao incrementada |
+| UX-003 | Visualizar contrato mostra todos detalhes | Dados exibidos |
+| UX-004 | Kanban atualiza status via drag-and-drop | Status atualizado |
+
+### Arquivo: `src/__tests__/flow/organization-flow.test.tsx`
+
+**Casos de Teste:**
+
+| ID | Cenario | Esperado |
+|----|---------|----------|
+| UX-005 | Onboarding cria organizacao | Org criada + membro owner |
+| UX-006 | Convidar membro envia convite | Email enviado |
+| UX-007 | Alterar role de membro atualiza role_in_org | Role atualizada |
+| UX-008 | Settings salva configuracoes | Dados persistidos |
+
+### Arquivo: `src/__tests__/flow/auth-flow.test.tsx`
+
+**Casos de Teste:**
+
+| ID | Cenario | Esperado |
+|----|---------|----------|
+| UX-009 | Login redireciona para dashboard | Navegacao correta |
+| UX-010 | Logout limpa sessao e redireciona | /auth exibido |
+| UX-011 | Usuario sem org vai para waiting-for-invite | Pagina correta |
+| UX-012 | AuthCallback processa login e redireciona | Fluxo completo |
+
+---
+
+## 6. Testes de Regressao
+
+### Arquivo: `src/__tests__/regression/critical-paths.test.tsx`
+
+**Cobertura de Caminhos Criticos:**
+
+| Caminho | Componentes | Validacao |
+|---------|-------------|-----------|
+| Login -> Dashboard | Auth, ProtectedRoute, Dashboard | Acesso completo |
+| Criar Contrato | Form, Supabase insert, Listagem | Contrato visivel |
+| Aprovar Contrato | Workflow, Status change | Status = aprovado |
+| Gerar Alerta | Trigger, Lista de alertas | Alerta criado |
+| LGPD Export | gdpr-handler, Download | Dados exportados |
+
+---
+
+## 7. Testes de Performance
+
+### Metodologia
+Medicao de tempos de resposta e limites de carga usando metricas do browser e timing de queries.
+
+### Metricas a Capturar
+
+| Metrica | Limite Aceitavel | Metodo |
+|---------|------------------|--------|
+| Tempo de login | < 2s | Performance API |
+| Carregamento Dashboard | < 3s | First Contentful Paint |
+| Query de contratos (100 itens) | < 500ms | Supabase timing |
+| Render de tabela (100 linhas) | < 1s | React Profiler |
+
+### Implementacao
+
+```typescript
+// src/__tests__/performance/load-times.test.ts
+describe("Performance Benchmarks", () => {
+  it("Dashboard carrega em menos de 3s", async () => {
+    const start = performance.now();
+    render(<Dashboard />);
+    await waitFor(() => screen.getByText("Dashboard"));
+    const duration = performance.now() - start;
+    expect(duration).toBeLessThan(3000);
+  });
+});
+```
+
+---
+
+## Infraestrutura de Testes
+
+### Atualizacao do Setup (`src/test/setup.ts`)
+
+Adicionar:
+- Mock global do Supabase client
+- Mock do AuthContext
+- Mock do OrganizationContext
+- Helpers para criar usuarios de teste
+
+### Fabricas de Dados (`src/test/utils/test-factories.ts`)
+
+```typescript
+export const createTestOrganization = (overrides = {}) => ({
+  id: crypto.randomUUID(),
+  nome: "Test Org",
+  slug: "test-org",
+  is_active: true,
+  ...overrides,
+});
+
+export const createTestUser = (overrides = {}) => ({
+  id: crypto.randomUUID(),
+  email: "test@example.com",
+  ...overrides,
+});
+
+export const createTestContract = (orgId: string, overrides = {}) => ({
+  id: crypto.randomUUID(),
+  organization_id: orgId,
+  titulo: "Contrato Teste",
+  numero_contrato: "CTR-001",
+  status: "rascunho",
+  tipo: "servico",
+  ...overrides,
+});
+```
+
+### Mocks Reutilizaveis (`src/test/mocks/`)
+
+**supabase.ts:**
+```typescript
+export const mockSupabaseClient = {
+  from: vi.fn(() => ({
+    select: vi.fn().mockReturnThis(),
+    insert: vi.fn().mockReturnThis(),
+    update: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    single: vi.fn(),
+    maybeSingle: vi.fn(),
+  })),
+  auth: {
+    getSession: vi.fn(),
+    getUser: vi.fn(),
+    signIn: vi.fn(),
+    signOut: vi.fn(),
+  },
+  rpc: vi.fn(),
+};
+```
+
+---
+
+## Scripts de Execucao
+
+### package.json Updates
+
+```json
+{
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
+    "test:rls": "vitest run src/__tests__/rls/",
+    "test:security": "vitest run src/__tests__/security/",
+    "test:rbac": "vitest run src/__tests__/rbac/",
+    "test:flow": "vitest run src/__tests__/flow/",
+    "test:regression": "vitest run src/__tests__/regression/",
+    "test:critical": "vitest run src/__tests__/rls/ src/__tests__/security/"
+  }
 }
 ```
 
 ---
 
-## Fase 6: Migração de Dados Existentes
+## Ordem de Implementacao
 
-### 6.1 Estratégia
-
-1. Criar organização "default" para dados existentes
-2. Associar todos os usuários existentes a essa org
-3. Atribuir `organization_id` a todos os registros existentes
-
-```sql
--- 1. Criar org default
-INSERT INTO organizations (nome, slug) 
-VALUES ('Empresa Padrão', 'default');
-
--- 2. Migrar usuários
-INSERT INTO organization_members (organization_id, user_id, is_owner)
-SELECT 
-  (SELECT id FROM organizations WHERE slug = 'default'),
-  user_id,
-  (role = 'administrador')
-FROM user_roles;
-
--- 3. Migrar contratos
-UPDATE contratos SET organization_id = (
-  SELECT id FROM organizations WHERE slug = 'default'
-);
-```
+| Prioridade | Categoria | Justificativa |
+|------------|-----------|---------------|
+| 1 | Testes de RLS | Isolamento multi-tenant e mais critico |
+| 2 | Testes de Seguranca | Protecao de dados e autenticacao |
+| 3 | Testes de Edge Functions | Backend critico para operacoes |
+| 4 | Testes de RBAC | Controle de acesso e autorizacao |
+| 5 | Testes de Fluxo | Experiencia do usuario |
+| 6 | Testes de Regressao | Prevencao de bugs |
+| 7 | Testes de Performance | Otimizacao |
 
 ---
 
-## Fase 7: Fluxo de Onboarding
+## Arquivos a Criar (Resumo)
 
-### 7.1 Registro de Nova Empresa
+| Arquivo | Linhas Estimadas |
+|---------|------------------|
+| `src/test/mocks/supabase.ts` | ~80 |
+| `src/test/mocks/auth.ts` | ~40 |
+| `src/test/mocks/organization.ts` | ~30 |
+| `src/test/utils/test-factories.ts` | ~100 |
+| `src/test/utils/test-helpers.ts` | ~60 |
+| `src/__tests__/rls/rls-isolation.test.ts` | ~200 |
+| `src/__tests__/rls/rls-policies.test.ts` | ~150 |
+| `src/__tests__/security/auth-flow.test.ts` | ~120 |
+| `src/__tests__/security/mfa.test.ts` | ~100 |
+| `src/__tests__/security/permissions.test.ts` | ~80 |
+| `src/__tests__/rbac/roles.test.ts` | ~100 |
+| `src/__tests__/rbac/permissions.test.ts` | ~80 |
+| `src/__tests__/flow/contract-flow.test.tsx` | ~150 |
+| `src/__tests__/flow/organization-flow.test.tsx` | ~120 |
+| `src/__tests__/flow/auth-flow.test.tsx` | ~100 |
+| `src/__tests__/regression/critical-paths.test.tsx` | ~180 |
+| Edge Function tests (5 arquivos) | ~400 total |
 
-1. Usuário acessa `/signup`
-2. Preenche dados da empresa + dados pessoais
-3. Sistema cria `organization` + `user` + `organization_member`
-4. Envia email de verificação
-5. Após verificar, redireciona para dashboard
-
-### 7.2 Convite de Usuário
-
-1. Admin acessa Configurações > Usuários
-2. Clica "Convidar Membro"
-3. Sistema envia email com magic link
-4. Novo usuário cria senha e é associado à org
-
----
-
-## Fase 8: Segurança e Auditoria
-
-### 8.1 Validações Adicionais
-
-- Trigger para garantir `organization_id` nunca é NULL
-- Trigger para prevenir mudança de `organization_id`
-- Log de todas as operações cross-org (super admin)
-
-### 8.2 Índices de Performance
-
-```sql
-CREATE INDEX idx_contratos_org ON contratos(organization_id);
-CREATE INDEX idx_fornecedores_org ON fornecedores(organization_id);
-CREATE INDEX idx_members_org ON organization_members(organization_id);
-CREATE INDEX idx_members_user ON organization_members(user_id);
-```
+**Total estimado: ~2.000 linhas de codigo de teste**
 
 ---
 
-## Cronograma de Implementação
+## Secao Tecnica
 
-| Fase | Descrição | Estimativa |
-|------|-----------|------------|
-| 1 | Schema Multi-Tenant | 1 sessão |
-| 2 | Funções SQL Helper | 1 sessão |
-| 3 | Políticas RLS | 2 sessões |
-| 4 | Frontend (contextos + componentes) | 3 sessões |
-| 5 | Edge Functions | 2 sessões |
-| 6 | Migração de Dados | 1 sessão |
-| 7 | Fluxo de Onboarding | 2 sessões |
-| 8 | Testes e Ajustes | 2 sessões |
+### Dependencias Existentes (ja instaladas)
+- vitest ^3.2.4
+- @testing-library/react ^16.3.2
+- @testing-library/jest-dom ^6.9.1
+- @testing-library/user-event ^14.6.1
+- jsdom ^20.0.3
 
-**Total estimado: 14 sessões de desenvolvimento**
+### Configuracao Vitest (ja configurada)
+- Environment: jsdom
+- Globals: true
+- Setup: src/test/setup.ts
+- Include: src/**/*.{test,spec}.{ts,tsx}
 
----
-
-## Riscos e Mitigações
-
-| Risco | Mitigação |
-|-------|-----------|
-| Queries sem filtro de org | RLS garante isolamento mesmo se código falhar |
-| Performance com muitas orgs | Índices + partition por org (futuro) |
-| Migração de dados incorreta | Script de validação pós-migração |
-| Usuário sem organização | Tratamento no AuthCallback + redirect |
-
----
-
-## Detalhes Técnicos
-
-### Arquivos a Criar
-
-```
-src/contexts/OrganizationContext.tsx
-src/hooks/useOrganization.ts
-src/pages/OrganizationSettings.tsx
-src/pages/OrganizationMembers.tsx
-src/components/OrganizationSwitcher.tsx
-src/components/InviteMemberDialog.tsx
-```
-
-### Arquivos a Modificar
-
-```
-src/contexts/AuthContext.tsx
-src/components/ProtectedRoute.tsx
-src/pages/AuthCallback.tsx
-src/pages/Auth.tsx
-src/components/DashboardLayout.tsx
-src/components/GlobalHeader.tsx
-src/hooks/useUserRole.tsx
-src/hooks/usePermissions.ts
-supabase/functions/verificar-alertas/index.ts
-supabase/functions/enviar-notificacao-email/index.ts
-supabase/functions/gdpr-handler/index.ts
-```
-
----
-
-## Próximos Passos
-
-Após aprovação deste plano:
-
-1. Iniciar pela **Fase 1** (Schema) - fundação do multi-tenancy
-2. Implementar **Fase 2** (Funções SQL) - helpers necessários
-3. Seguir sequencialmente até conclusão
-
-Deseja que eu inicie a implementação pela Fase 1?
+### Testes de Edge Functions
+- Framework: Deno.test nativo
+- Execucao via ferramenta supabase--test-edge-functions
+- Ambiente: Deno com dotenv para credenciais
