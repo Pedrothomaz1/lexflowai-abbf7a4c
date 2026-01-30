@@ -353,9 +353,11 @@ const Auth = () => {
                         id="signup-password"
                         name="password"
                         type={showPassword ? "text" : "password"}
-                        placeholder="••••••••"
+                        placeholder="••••••••••••"
                         required
-                        minLength={6}
+                        minLength={12}
+                        pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{12,}$"
+                        title="A senha deve ter pelo menos 12 caracteres, incluindo maiúscula, minúscula, número e caractere especial"
                         className="h-11 pr-10"
                         autoComplete="new-password"
                       />
@@ -373,7 +375,7 @@ const Auth = () => {
                     </div>
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
                       <Lock className="h-3 w-3" />
-                      Mínimo de 6 caracteres
+                      Mínimo 12 caracteres com maiúscula, minúscula, número e especial
                     </p>
                   </div>
                   <Button

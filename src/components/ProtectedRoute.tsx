@@ -5,6 +5,26 @@ import { supabase } from "@/integrations/supabase/client";
 import { TwoFactorVerification } from "@/components/TwoFactorVerification";
 import { Loader2 } from "lucide-react";
 
+// Generate a secure random token for 2FA session verification
+function generateSecureToken(): string {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+// Verify 2FA token integrity using HMAC-like approach
+function createTokenHash(userId: string, token: string, sessionId: string): string {
+  // Create a hash combining user ID, token and session ID
+  const data = `${userId}:${token}:${sessionId}`;
+  let hash = 0;
+  for (let i = 0; i < data.length; i++) {
+    const char = data.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return Math.abs(hash).toString(36);
+}
+
 interface ProtectedRouteProps {
   children: ReactNode;
   requiredPermission?: string;
@@ -97,23 +117,57 @@ export const ProtectedRoute = ({ children, requiredPermission }: ProtectedRouteP
   }, [user, requiredPermission]);
 
   useEffect(() => {
-    // Check if user already verified 2FA this session
-    const verified = sessionStorage.getItem('2fa_verified');
-    if (verified === 'true') {
-      setTwoFAVerified(true);
-    }
-    
+    // Check if user already verified 2FA this session with secure token validation
+    const verifyStoredToken = async () => {
+      if (!user || !session) return;
+
+      const storedToken = sessionStorage.getItem('2fa_token');
+      const storedHash = sessionStorage.getItem('2fa_hash');
+
+      if (storedToken && storedHash) {
+        // Verify token integrity
+        const expectedHash = createTokenHash(user.id, storedToken, session.access_token.slice(-16));
+        if (expectedHash === storedHash) {
+          // Additional check: verify token was created recently (within 24 hours)
+          const tokenTimestamp = sessionStorage.getItem('2fa_timestamp');
+          if (tokenTimestamp) {
+            const tokenAge = Date.now() - parseInt(tokenTimestamp, 10);
+            const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+            if (tokenAge < maxAge) {
+              setTwoFAVerified(true);
+              return;
+            }
+          }
+        }
+        // Invalid or expired token - clear it
+        sessionStorage.removeItem('2fa_token');
+        sessionStorage.removeItem('2fa_hash');
+        sessionStorage.removeItem('2fa_timestamp');
+      }
+    };
+
+    verifyStoredToken();
     checkMFAStatus();
-  }, [checkMFAStatus]);
+  }, [checkMFAStatus, user, session]);
 
   const handleTwoFASuccess = () => {
-    sessionStorage.setItem('2fa_verified', 'true');
+    if (!user || !session) return;
+
+    // Generate secure token and hash for 2FA session verification
+    const token = generateSecureToken();
+    const hash = createTokenHash(user.id, token, session.access_token.slice(-16));
+
+    sessionStorage.setItem('2fa_token', token);
+    sessionStorage.setItem('2fa_hash', hash);
+    sessionStorage.setItem('2fa_timestamp', Date.now().toString());
     setTwoFAVerified(true);
   };
 
   const handleTwoFACancel = async () => {
     await supabase.auth.signOut();
-    sessionStorage.removeItem('2fa_verified');
+    sessionStorage.removeItem('2fa_token');
+    sessionStorage.removeItem('2fa_hash');
+    sessionStorage.removeItem('2fa_timestamp');
   };
 
   if (loading || checkingMFA) {

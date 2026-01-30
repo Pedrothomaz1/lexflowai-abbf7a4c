@@ -4,12 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  Check, 
-  X, 
-  Edit3, 
-  Save, 
-  RotateCcw, 
+import {
+  Check,
+  X,
+  Edit3,
+  Save,
+  RotateCcw,
   Send,
   CheckCheck,
   XCircle,
@@ -22,6 +22,31 @@ import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
+// Sanitize text to prevent XSS - escapes HTML entities
+function escapeHTML(text: string): string {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Sanitize redline HTML to prevent XSS - allows only safe tags
+function sanitizeRedlineHTML(html: string): string {
+  return html
+    // Remove dangerous tags and content
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+    .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '')
+    .replace(/<embed[^>]*>/gi, '')
+    .replace(/<link[^>]*>/gi, '')
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+    .replace(/<img[^>]*>/gi, '')
+    // Remove event handlers and javascript
+    .replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, '')
+    .replace(/\s*on\w+\s*=\s*[^\s>]*/gi, '')
+    .replace(/javascript\s*:/gi, '')
+    .replace(/data\s*:/gi, '');
+}
 
 interface ContractRedlineEditorProps {
   contratoId: string;
@@ -175,33 +200,34 @@ export function ContractRedlineEditor({ contratoId, conteudoOriginal = "" }: Con
     return changes;
   }, []);
 
-  // Generate HTML with visual markers
+  // Generate HTML with visual markers - with XSS protection
   const generateMarkedContent = useCallback((original: string, modified: string): string => {
     const originalWords = original.split(/\s+/);
     const modifiedWords = modified.split(/\s+/);
     const result: string[] = [];
-    
+
     let i = 0, j = 0;
-    
+
     while (i < originalWords.length || j < modifiedWords.length) {
       if (i >= originalWords.length) {
-        result.push(`<ins class="bg-green-100 text-green-800">${modifiedWords[j]}</ins>`);
+        // Escape HTML in user content to prevent XSS
+        result.push(`<ins class="bg-green-100 text-green-800">${escapeHTML(modifiedWords[j])}</ins>`);
         j++;
       } else if (j >= modifiedWords.length) {
-        result.push(`<del class="bg-red-100 text-red-800 line-through">${originalWords[i]}</del>`);
+        result.push(`<del class="bg-red-100 text-red-800 line-through">${escapeHTML(originalWords[i])}</del>`);
         i++;
       } else if (originalWords[i] === modifiedWords[j]) {
-        result.push(originalWords[i]);
+        result.push(escapeHTML(originalWords[i]));
         i++;
         j++;
       } else {
-        result.push(`<del class="bg-red-100 text-red-800 line-through">${originalWords[i]}</del>`);
-        result.push(`<ins class="bg-green-100 text-green-800">${modifiedWords[j]}</ins>`);
+        result.push(`<del class="bg-red-100 text-red-800 line-through">${escapeHTML(originalWords[i])}</del>`);
+        result.push(`<ins class="bg-green-100 text-green-800">${escapeHTML(modifiedWords[j])}</ins>`);
         i++;
         j++;
       }
     }
-    
+
     return result.join(' ');
   }, []);
 
@@ -345,9 +371,9 @@ export function ContractRedlineEditor({ contratoId, conteudoOriginal = "" }: Con
                       </div>
                       
                       {showChanges && (
-                        <div 
+                        <div
                           className="text-sm border rounded p-3 bg-muted/20 mb-3 prose prose-sm max-w-none"
-                          dangerouslySetInnerHTML={{ __html: redline.conteudo_marcado }}
+                          dangerouslySetInnerHTML={{ __html: sanitizeRedlineHTML(redline.conteudo_marcado) }}
                         />
                       )}
 
