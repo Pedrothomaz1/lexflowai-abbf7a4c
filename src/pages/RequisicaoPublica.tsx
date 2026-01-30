@@ -178,26 +178,26 @@ export default function RequisicaoPublica() {
         <div className="text-center mb-10 space-y-6">
           {/* Logo Container with Glassmorphism */}
           <div className="flex justify-center">
-            <div className="h-20 w-20 rounded-2xl bg-[hsl(var(--lexflow-off-white)/0.1)] flex items-center justify-center backdrop-blur-sm border border-[hsl(var(--lexflow-off-white)/0.15)] shadow-lg">
+            <div className="h-20 w-20 rounded-2xl bg-white/15 flex items-center justify-center backdrop-blur-sm border border-white/20 shadow-xl">
               <img src={logoVeridiana} alt="Veridiana" className="h-12 w-12 object-contain" />
             </div>
           </div>
 
           {/* Main Title */}
           <div className="space-y-1">
-            <h1 className="text-4xl md:text-5xl font-bold text-[hsl(var(--lexflow-off-white))] tracking-tight">
+            <h1 className="text-4xl md:text-5xl font-bold text-white tracking-tight drop-shadow-sm">
               LexFlow
             </h1>
-            <p className="text-lg text-[hsl(var(--lexflow-verde-claro))]">
+            <p className="text-lg text-white/80">
               Sistema de Gestão de Contratos
             </p>
           </div>
 
           {/* Department Badge */}
           <div className="flex justify-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[hsl(var(--lexflow-verde-principal)/0.2)] border border-[hsl(var(--lexflow-verde-principal)/0.3)]">
-              <Scale className="h-4 w-4 text-[hsl(var(--lexflow-verde-principal))]" />
-              <span className="text-sm font-medium text-[hsl(var(--lexflow-verde-claro))]">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 border border-white/30 backdrop-blur-sm">
+              <Scale className="h-4 w-4 text-white" />
+              <span className="text-sm font-medium text-white">
                 Departamento Jurídico
               </span>
             </div>
@@ -205,16 +205,16 @@ export default function RequisicaoPublica() {
 
           {/* Subtitle and Description */}
           <div className="space-y-2">
-            <h2 className="text-2xl md:text-3xl font-semibold text-[hsl(var(--lexflow-off-white))]">
+            <h2 className="text-2xl md:text-3xl font-semibold text-white">
               Formulário de Requisição
             </h2>
-            <p className="text-[hsl(var(--lexflow-verde-claro)/0.8)] max-w-2xl mx-auto leading-relaxed">
+            <p className="text-white/70 max-w-2xl mx-auto leading-relaxed">
               Solicite a elaboração ou análise de contratos pela equipe jurídica.
             </p>
           </div>
 
           {/* Decorative Separator */}
-          <div className="w-24 h-1 mx-auto rounded-full bg-gradient-to-r from-transparent via-[hsl(var(--lexflow-verde-principal))] to-transparent" />
+          <div className="w-32 h-1 mx-auto rounded-full bg-gradient-to-r from-transparent via-white/50 to-transparent" />
         </div>
 
         {/* Form Card */}
@@ -506,7 +506,7 @@ export default function RequisicaoPublica() {
         </Card>
 
         {/* Footer */}
-        <div className="text-center mt-8 text-[hsl(var(--lexflow-verde-claro)/0.6)] text-sm">
+        <div className="text-center mt-8 text-white/50 text-sm">
           <p>© 2025 LexFlow - Sistema de Gestão de Contratos</p>
           <p className="mt-1">
             Dúvidas? Entre em contato com o departamento jurídico.
