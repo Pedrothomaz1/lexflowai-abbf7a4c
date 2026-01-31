@@ -145,38 +145,69 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Create user client to get user's organization
+    const token = authHeader.replace('Bearer ', '');
+    const supabaseUser = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: `Bearer ${token}` } }
+    });
+
     const body: EmailRequest = await req.json();
     console.log("Enviando email para alerta:", body.alertaId);
 
+    // Check if this is a test request (IDs starting with 'test-' or UUID zeros)
+    const isTestRequest = body.alertaId?.startsWith('test-') || 
+                          body.contratoId === '00000000-0000-0000-0000-000000000000';
+
     // =========================================================
-    // MULTI-TENANT: Resolve organization from alert/contract
-    // NEVER trust organizationId from request body
+    // MULTI-TENANT: Resolve organization from alert/contract OR user
     // =========================================================
     let organizationId: string | null = null;
 
-    // First, try to get organization from the alert
-    if (body.alertaId) {
-      const { data: alert } = await supabase
-        .from('contract_alerts')
-        .select('organization_id')
-        .eq('id', body.alertaId)
-        .single();
-      
-      if (alert?.organization_id) {
-        organizationId = alert.organization_id;
+    if (!isTestRequest) {
+      // First, try to get organization from the alert
+      if (body.alertaId) {
+        const { data: alert } = await supabase
+          .from('contract_alerts')
+          .select('organization_id')
+          .eq('id', body.alertaId)
+          .single();
+        
+        if (alert?.organization_id) {
+          organizationId = alert.organization_id;
+        }
+      }
+
+      // If not found, try from the contract
+      if (!organizationId && body.contratoId) {
+        const { data: contract } = await supabase
+          .from('contratos')
+          .select('organization_id')
+          .eq('id', body.contratoId)
+          .single();
+        
+        if (contract?.organization_id) {
+          organizationId = contract.organization_id;
+        }
       }
     }
 
-    // If not found, try from the contract
-    if (!organizationId && body.contratoId) {
-      const { data: contract } = await supabase
-        .from('contratos')
-        .select('organization_id')
-        .eq('id', body.contratoId)
-        .single();
+    // For test requests or if organization not found, get from user's membership
+    if (!organizationId) {
+      const { data: { user } } = await supabaseUser.auth.getUser();
       
-      if (contract?.organization_id) {
-        organizationId = contract.organization_id;
+      if (user) {
+        const { data: membership } = await supabase
+          .from('organization_members')
+          .select('organization_id')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .limit(1)
+          .single();
+        
+        if (membership?.organization_id) {
+          organizationId = membership.organization_id;
+          console.log(`Usando organização do usuário: ${organizationId}`);
+        }
       }
     }
 
