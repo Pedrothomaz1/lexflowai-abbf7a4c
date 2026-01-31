@@ -263,24 +263,29 @@ serve(async (req) => {
       if (orgMembers && orgMembers.length > 0) {
         const memberUserIds = orgMembers.map(m => m.user_id);
 
-        const { data: userRoles } = await supabase
+        const { data: userRoles, error: rolesError } = await supabase
           .from("user_roles")
-          .select(`
-            user_id,
-            role,
-            profiles!inner (
-              email,
-              full_name
-            )
-          `)
+          .select("user_id, role")
           .in("role", ["consultoria_juridica", "administrador"])
           .in("user_id", memberUserIds);
 
-        if (userRoles) {
-          usersToNotify = userRoles.map((ur: any) => ({
-            email: ur.profiles.email,
-            name: ur.profiles.full_name || "Usuário",
-          }));
+        console.log(`Usuários com roles apropriados: ${userRoles?.length || 0}`, rolesError);
+
+        if (userRoles && userRoles.length > 0) {
+          const userIds = userRoles.map(ur => ur.user_id);
+          
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("id, email, full_name")
+            .in("id", userIds);
+
+          if (profiles) {
+            usersToNotify = profiles.map((p: any) => ({
+              email: p.email,
+              name: p.full_name || "Usuário",
+            }));
+            console.log(`Usuários encontrados para notificar: ${usersToNotify.length}`, usersToNotify);
+          }
         }
       }
     } else {
