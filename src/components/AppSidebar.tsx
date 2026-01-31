@@ -93,8 +93,8 @@ const contratosMenuSections: MenuSectionType[] = [
     icon: Building,
     defaultOpen: false,
     items: [
-      { title: "Configurações", url: "/organization/settings", icon: Building2, roles: ["org_admin"] },
       { title: "Membros", url: "/organization/members", icon: UserCog, roles: ["org_admin"] },
+      { title: "Configurações", url: "/organization/settings", icon: Building2, roles: ["org_admin"] },
     ],
   },
   {
@@ -183,8 +183,8 @@ const servicosMenuSections: MenuSectionType[] = [
     icon: Building,
     defaultOpen: false,
     items: [
-      { title: "Configurações", url: "/organization/settings", icon: Building2, roles: ["org_admin"] },
       { title: "Membros", url: "/organization/members", icon: UserCog, roles: ["org_admin"] },
+      { title: "Configurações", url: "/organization/settings", icon: Building2, roles: ["org_admin"] },
     ],
   },
   {
