@@ -2,14 +2,16 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mail, LogOut, RefreshCw, Building2 } from "lucide-react";
+import { Mail, LogOut, RefreshCw, Building2, Loader2 } from "lucide-react";
 import logoVeridiana from "@/assets/logo-veridiana.png";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const WaitingForInvite = () => {
   const navigate = useNavigate();
   const { refresh } = useOrganization();
+  const { toast } = useToast();
   const [refreshing, setRefreshing] = useState(false);
 
   const handleLogout = async () => {
@@ -19,8 +21,58 @@ const WaitingForInvite = () => {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await refresh();
-    setRefreshing(false);
+    
+    try {
+      // First, check if there's a pending invite for the user
+      const { data: inviteCheck, error: inviteError } = await supabase.rpc(
+        "check_pending_invite_for_user"
+      );
+
+      if (!inviteError && inviteCheck?.has_invite) {
+        // Auto-accept the invite
+        const { data: acceptResult, error: acceptError } = await supabase.rpc(
+          "accept_organization_invite",
+          { invite_token: inviteCheck.token }
+        );
+
+        if (!acceptError && acceptResult?.success) {
+          toast({
+            title: "Convite aceito!",
+            description: `Você foi adicionado a ${inviteCheck.organization_name}`,
+          });
+          navigate("/dashboard", { replace: true });
+          return;
+        }
+      }
+
+      // Refresh organization context
+      await refresh();
+      
+      // Check if now has an organization
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const { data: membership } = await supabase
+          .from("organization_members")
+          .select("organization_id")
+          .eq("user_id", session.user.id)
+          .eq("is_active", true)
+          .maybeSingle();
+
+        if (membership) {
+          navigate("/dashboard", { replace: true });
+          return;
+        }
+      }
+
+      toast({
+        title: "Nenhum convite encontrado",
+        description: "Você ainda não foi convidado para nenhuma organização.",
+      });
+    } catch (err) {
+      console.error("Error checking invites:", err);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const handleCreateOrg = () => {
@@ -48,7 +100,7 @@ const WaitingForInvite = () => {
               <div>
                 <p className="text-sm font-medium">Aguarde um convite</p>
                 <p className="text-xs text-muted-foreground">
-                  Um administrador da organização pode convidá-lo por e-mail
+                  Um administrador pode convidá-lo por e-mail. Verifique sua caixa de entrada.
                 </p>
               </div>
             </div>
@@ -79,8 +131,12 @@ const WaitingForInvite = () => {
               onClick={handleRefresh}
               disabled={refreshing}
             >
-              <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-              Verificar Novamente
+              {refreshing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              Verificar Convites
             </Button>
           </div>
 
