@@ -88,6 +88,16 @@ const contratosMenuSections: MenuSectionType[] = [
     ],
   },
   {
+    id: "organizacao",
+    title: "Organização",
+    icon: Building,
+    defaultOpen: false,
+    items: [
+      { title: "Configurações", url: "/organization/settings", icon: Building2, roles: ["org_admin"] },
+      { title: "Membros", url: "/organization/members", icon: UserCog, roles: ["org_admin"] },
+    ],
+  },
+  {
     id: "gestao",
     title: "Gestão",
     icon: Briefcase,
@@ -123,17 +133,6 @@ const contratosMenuSections: MenuSectionType[] = [
     ],
   },
   {
-    id: "cadastro",
-    title: "Cadastro",
-    icon: FolderCog,
-    defaultOpen: false,
-    items: [
-      { title: "Templates", url: "/templates", icon: FileStack, roles: ["all"] },
-      { title: "Fornecedores", url: "/fornecedores", icon: Users, roles: ["all"] },
-      { title: "Workflows", url: "/workflows", icon: GitBranch, roles: ["administrador"] },
-    ],
-  },
-  {
     id: "sistema",
     title: "Sistema",
     icon: Monitor,
@@ -144,6 +143,17 @@ const contratosMenuSections: MenuSectionType[] = [
       { title: "Compliance LGPD", url: "/compliance", icon: ShieldCheck, roles: ["administrador"] },
       { title: "Trilha de Auditoria", url: "/audit-logs", icon: Activity, roles: ["administrador"] },
       { 
+        title: "Cadastro", 
+        url: "/templates", 
+        icon: FolderCog, 
+        roles: ["all"],
+        subItems: [
+          { title: "Templates", url: "/templates", icon: FileStack },
+          { title: "Fornecedores", url: "/fornecedores", icon: Users },
+          { title: "Workflows", url: "/workflows", icon: GitBranch },
+        ]
+      },
+      { 
         title: "Configurações", 
         url: "/settings", 
         icon: Settings, 
@@ -152,16 +162,6 @@ const contratosMenuSections: MenuSectionType[] = [
           { title: "Usuários", url: "/usuarios", icon: Shield },
         ]
       },
-    ],
-  },
-  {
-    id: "organizacao",
-    title: "Organização",
-    icon: Building,
-    defaultOpen: false,
-    items: [
-      { title: "Configurações", url: "/organization/settings", icon: Building2, roles: ["org_admin"] },
-      { title: "Membros", url: "/organization/members", icon: UserCog, roles: ["org_admin"] },
     ],
   },
 ];
@@ -178,14 +178,23 @@ const servicosMenuSections: MenuSectionType[] = [
     ],
   },
   {
-    id: "cadastro",
-    title: "Cadastro",
-    icon: FolderCog,
+    id: "organizacao",
+    title: "Organização",
+    icon: Building,
+    defaultOpen: false,
+    items: [
+      { title: "Configurações", url: "/organization/settings", icon: Building2, roles: ["org_admin"] },
+      { title: "Membros", url: "/organization/members", icon: UserCog, roles: ["org_admin"] },
+    ],
+  },
+  {
+    id: "gestao",
+    title: "Gestão",
+    icon: Briefcase,
     defaultOpen: true,
     items: [
       { title: "Fornecedores", url: "/fornecedores", icon: Users, roles: ["all"] },
       { title: "Unidades", url: "/unidades", icon: Building2, roles: ["all"] },
-      { title: "Especificações", url: "/especificacoes", icon: Cog, roles: ["all"] },
     ],
   },
   {
@@ -195,6 +204,15 @@ const servicosMenuSections: MenuSectionType[] = [
     defaultOpen: false,
     items: [
       { 
+        title: "Cadastro", 
+        url: "/especificacoes", 
+        icon: FolderCog, 
+        roles: ["all"],
+        subItems: [
+          { title: "Especificações", url: "/especificacoes", icon: Cog },
+        ]
+      },
+      { 
         title: "Configurações", 
         url: "/settings", 
         icon: Settings, 
@@ -203,16 +221,6 @@ const servicosMenuSections: MenuSectionType[] = [
           { title: "Usuários", url: "/usuarios", icon: Shield },
         ]
       },
-    ],
-  },
-  {
-    id: "organizacao",
-    title: "Organização",
-    icon: Building,
-    defaultOpen: false,
-    items: [
-      { title: "Configurações", url: "/organization/settings", icon: Building2, roles: ["org_admin"] },
-      { title: "Membros", url: "/organization/members", icon: UserCog, roles: ["org_admin"] },
     ],
   },
 ];
