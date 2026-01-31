@@ -104,15 +104,17 @@ const OnboardingOrganization = () => {
         }
       );
 
-      // Create organization
-      const { data: org, error: orgError } = await authedSupabase
+      // Generate org id on client to avoid RETURNING hitting RLS SELECT policy (which fails because membership does not yet exist)
+      const orgId = crypto.randomUUID();
+
+      // Create organization without RETURNING (.select())
+      const { error: orgError } = await authedSupabase
         .from("organizations")
         .insert({
+          id: orgId,
           nome: formData.nome.trim(),
           slug: formData.slug.trim(),
-        })
-        .select()
-        .single();
+        });
 
       if (orgError) {
         if (orgError.code === "23505") {
@@ -131,7 +133,7 @@ const OnboardingOrganization = () => {
       const { error: memberError } = await authedSupabase
         .from("organization_members")
         .insert({
-          organization_id: org.id,
+          organization_id: orgId,
           user_id: user.id,
           role_in_org: "owner",
           is_active: true,
