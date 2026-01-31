@@ -323,7 +323,7 @@ serve(async (req) => {
     console.log(`Enviando emails em batch para ${uniqueEmails.length} destinatários (org: ${organizationId})`);
 
     const emailPayloads = uniqueEmails.map(user => ({
-      from: "LexFlow <alertas@porveri.com.br>",
+      from: "LexFlow <pedro@porveri.com.br>",
       to: [user.email],
       subject,
       html,
