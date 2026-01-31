@@ -54,6 +54,25 @@ const AuthCallback = () => {
 
     const handlePostAuth = async (userId: string) => {
       try {
+        // Check if there's a pending invite for this user
+        const { data: inviteCheck, error: inviteError } = await supabase.rpc(
+          "check_pending_invite_for_user"
+        );
+
+        if (!inviteError && inviteCheck?.has_invite) {
+          // Auto-accept the invite
+          const { data: acceptResult, error: acceptError } = await supabase.rpc(
+            "accept_organization_invite",
+            { invite_token: inviteCheck.token }
+          );
+
+          if (!acceptError && acceptResult?.success) {
+            console.log("Auto-accepted invite for organization:", acceptResult.organization_id);
+            navigate("/dashboard", { replace: true });
+            return;
+          }
+        }
+
         // Check if user has an organization membership
         const { data: membership, error: membershipError } = await supabase
           .from("organization_members")

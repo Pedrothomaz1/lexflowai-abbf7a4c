@@ -53,3 +53,6 @@ verify_jwt = true
 
 [functions.processar-requisicao-contrato]
 verify_jwt = false
+
+[functions.enviar-convite-organizacao]
+verify_jwt = true

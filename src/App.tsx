@@ -48,6 +48,7 @@ import OnboardingOrganization from "./pages/OnboardingOrganization";
 import WaitingForInvite from "./pages/WaitingForInvite";
 import OrganizationSettings from "./pages/OrganizationSettings";
 import OrganizationMembers from "./pages/OrganizationMembers";
+import AcceptInvite from "./pages/AcceptInvite";
 
 const queryClient = new QueryClient();
 
@@ -72,6 +73,7 @@ function App() {
                   {/* Organization onboarding routes */}
                   <Route path="/onboarding" element={<ProtectedRoute requireOrg={false}><OnboardingOrganization /></ProtectedRoute>} />
                   <Route path="/waiting-for-invite" element={<ProtectedRoute requireOrg={false}><WaitingForInvite /></ProtectedRoute>} />
+                  <Route path="/aceitar-convite" element={<AcceptInvite />} />
                   
                   {/* Protected routes requiring organization */}
                   <Route path="/seletor-modulo" element={<ProtectedRoute><SeletorModulo /></ProtectedRoute>} />

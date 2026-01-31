@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Users, UserPlus, Loader2, ArrowLeft, Shield, Crown, User } from "lucide-react";
+import { Users, UserPlus, Loader2, ArrowLeft, Shield, Crown, User, Mail, RefreshCw, X, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -47,6 +47,14 @@ interface Member {
     full_name: string;
     email: string;
   } | null;
+}
+
+interface PendingInvite {
+  id: string;
+  email: string;
+  role_in_org: string;
+  expires_at: string;
+  created_at: string;
 }
 
 const roleLabels: Record<string, string> = {
@@ -67,6 +75,7 @@ const OrganizationMembers = () => {
   const { organization, isOwner, isOrgAdmin } = useOrganization();
   const [loading, setLoading] = useState(true);
   const [members, setMembers] = useState<Member[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
   const [inviting, setInviting] = useState(false);
@@ -123,9 +132,30 @@ const OrganizationMembers = () => {
     }
   };
 
+  const fetchPendingInvites = async () => {
+    if (!organization) return;
+
+    try {
+      const { data, error } = await supabase
+        .from("organization_invites")
+        .select("id, email, role_in_org, expires_at, created_at")
+        .eq("organization_id", organization.id)
+        .is("accepted_at", null)
+        .gt("expires_at", new Date().toISOString())
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      setPendingInvites(data || []);
+    } catch (err) {
+      console.error("Error fetching invites:", err);
+    }
+  };
+
   useEffect(() => {
     if (organization) {
       fetchMembers();
+      fetchPendingInvites();
     }
   }, [organization]);
 
@@ -135,71 +165,134 @@ const OrganizationMembers = () => {
     try {
       setInviting(true);
 
-      // Look up user by email from profiles
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("email", inviteEmail.trim().toLowerCase())
-        .maybeSingle();
-
-      if (profileError) throw profileError;
-
-      if (!profile) {
-        toast({
-          variant: "destructive",
-          title: "Usuário não encontrado",
-          description: "Nenhum usuário cadastrado com este e-mail.",
-        });
-        return;
-      }
+      const emailLower = inviteEmail.trim().toLowerCase();
 
       // Check if already a member
-      const { data: existing } = await supabase
-        .from("organization_members")
+      const { data: profile } = await supabase
+        .from("profiles")
         .select("id")
-        .eq("organization_id", organization.id)
-        .eq("user_id", profile.id)
+        .eq("email", emailLower)
         .maybeSingle();
 
-      if (existing) {
+      if (profile) {
+        // Check if already a member
+        const { data: existing } = await supabase
+          .from("organization_members")
+          .select("id")
+          .eq("organization_id", organization.id)
+          .eq("user_id", profile.id)
+          .maybeSingle();
+
+        if (existing) {
+          toast({
+            variant: "destructive",
+            title: "Membro existente",
+            description: "Este usuário já faz parte da organização.",
+          });
+          return;
+        }
+      }
+
+      // Check if there's already a pending invite
+      const existingInvite = pendingInvites.find(
+        (inv) => inv.email.toLowerCase() === emailLower
+      );
+
+      if (existingInvite) {
         toast({
           variant: "destructive",
-          title: "Membro existente",
-          description: "Este usuário já faz parte da organização.",
+          title: "Convite pendente",
+          description: "Já existe um convite pendente para este email.",
         });
         return;
       }
 
-      // Add member
-      const { error: insertError } = await supabase
-        .from("organization_members")
-        .insert({
+      // Call edge function to send invite email
+      const { data, error } = await supabase.functions.invoke("enviar-convite-organizacao", {
+        body: {
+          email: emailLower,
           organization_id: organization.id,
-          user_id: profile.id,
           role_in_org: inviteRole,
-          is_active: true,
-        });
+        },
+      });
 
-      if (insertError) throw insertError;
+      if (error) throw error;
+
+      if (!data?.success) {
+        throw new Error(data?.error || "Erro ao enviar convite");
+      }
 
       toast({
-        title: "Membro adicionado",
-        description: "O usuário foi adicionado à organização.",
+        title: "Convite enviado!",
+        description: `Um email de convite foi enviado para ${emailLower}`,
       });
 
       setInviteEmail("");
       setInviteRole("member");
       setDialogOpen(false);
-      fetchMembers();
-    } catch (err) {
+      fetchPendingInvites();
+    } catch (err: any) {
       console.error("Error inviting member:", err);
       toast({
         variant: "destructive",
         title: "Erro ao convidar",
-        description: "Não foi possível adicionar o membro.",
+        description: err.message || "Não foi possível enviar o convite.",
       });
     } finally {
       setInviting(false);
+    }
+  };
+
+  const handleResendInvite = async (invite: PendingInvite) => {
+    if (!organization) return;
+
+    try {
+      const { data, error } = await supabase.functions.invoke("enviar-convite-organizacao", {
+        body: {
+          email: invite.email,
+          organization_id: organization.id,
+          role_in_org: invite.role_in_org,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Convite reenviado",
+        description: `Email reenviado para ${invite.email}`,
+      });
+    } catch (err) {
+      console.error("Error resending invite:", err);
+      toast({
+        variant: "destructive",
+        title: "Erro ao reenviar",
+        description: "Não foi possível reenviar o convite.",
+      });
+    }
+  };
+
+  const handleCancelInvite = async (inviteId: string) => {
+    try {
+      const { error } = await supabase
+        .from("organization_invites")
+        .delete()
+        .eq("id", inviteId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Convite cancelado",
+        description: "O convite foi removido.",
+      });
+
+      fetchPendingInvites();
+    } catch (err) {
+      console.error("Error canceling invite:", err);
+      toast({
+        variant: "destructive",
+        title: "Erro ao cancelar",
+        description: "Não foi possível cancelar o convite.",
+      });
     }
   };
 
@@ -261,7 +354,7 @@ const OrganizationMembers = () => {
     <div className="space-y-6">
       <PageHeader
         title="Membros da Organização"
-        description="Gerencie os membros e suas permissões"
+        description="Gerencie os membros e convites pendentes"
         actions={
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => navigate("/settings")}>
@@ -272,19 +365,19 @@ const OrganizationMembers = () => {
               <DialogTrigger asChild>
                 <Button>
                   <UserPlus className="mr-2 h-4 w-4" />
-                  Adicionar Membro
+                  Convidar Membro
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Adicionar Membro</DialogTitle>
+                  <DialogTitle>Convidar Membro</DialogTitle>
                   <DialogDescription>
-                    Adicione um usuário existente à organização
+                    Envie um convite por email para adicionar um novo membro
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email">E-mail do usuário</Label>
+                    <Label htmlFor="email">E-mail</Label>
                     <Input
                       id="email"
                       type="email"
@@ -292,6 +385,9 @@ const OrganizationMembers = () => {
                       value={inviteEmail}
                       onChange={(e) => setInviteEmail(e.target.value)}
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Um email de convite será enviado para este endereço
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="role">Papel na organização</Label>
@@ -311,9 +407,10 @@ const OrganizationMembers = () => {
                   <Button variant="outline" onClick={() => setDialogOpen(false)}>
                     Cancelar
                   </Button>
-                  <Button onClick={handleInvite} disabled={inviting}>
+                  <Button onClick={handleInvite} disabled={inviting || !inviteEmail.trim()}>
                     {inviting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Adicionar
+                    <Mail className="mr-2 h-4 w-4" />
+                    Enviar Convite
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -322,6 +419,72 @@ const OrganizationMembers = () => {
         }
       />
 
+      {/* Pending Invites */}
+      {pendingInvites.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Convites Pendentes ({pendingInvites.length})
+            </CardTitle>
+            <CardDescription>
+              Convites enviados aguardando aceitação
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Papel</TableHead>
+                  <TableHead>Expira em</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pendingInvites.map((invite) => (
+                  <TableRow key={invite.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        {invite.email}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {roleLabels[invite.role_in_org] || invite.role_in_org}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {format(new Date(invite.expires_at), "dd/MM/yyyy", { locale: ptBR })}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleResendInvite(invite)}
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleCancelInvite(invite.id)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Members List */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

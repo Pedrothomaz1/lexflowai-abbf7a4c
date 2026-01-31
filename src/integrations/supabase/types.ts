@@ -2696,6 +2696,7 @@ export type Database = {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
       }
+      check_pending_invite_for_user: { Args: never; Returns: Json }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
       count_active_sessions: { Args: { _user_id: string }; Returns: number }
       current_user_org: { Args: never; Returns: string }
