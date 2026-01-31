@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { createClient } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -68,8 +69,43 @@ const OnboardingOrganization = () => {
     try {
       setLoading(true);
 
+      // Garantir que a sessão atual existe e que o access_token será enviado no request.
+      // (Sem o Authorization, auth.uid() pode ficar nulo no banco e disparar RLS.)
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError || !session?.access_token) {
+        toast({
+          variant: "destructive",
+          title: "Sessão expirada",
+          description: "Faça login novamente para criar sua organização.",
+        });
+        navigate("/auth", { replace: true });
+        return;
+      }
+
+      // Cliente efêmero com header Authorization explícito (evita inconsistências de sessão em iframe).
+      const authedSupabase = createClient(
+        import.meta.env.VITE_SUPABASE_URL,
+        import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        {
+          global: {
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+            },
+          },
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+            detectSessionInUrl: false,
+          },
+        }
+      );
+
       // Create organization
-      const { data: org, error: orgError } = await supabase
+      const { data: org, error: orgError } = await authedSupabase
         .from("organizations")
         .insert({
           nome: formData.nome.trim(),
@@ -92,7 +128,7 @@ const OnboardingOrganization = () => {
       }
 
       // Add current user as owner
-      const { error: memberError } = await supabase
+      const { error: memberError } = await authedSupabase
         .from("organization_members")
         .insert({
           organization_id: org.id,
