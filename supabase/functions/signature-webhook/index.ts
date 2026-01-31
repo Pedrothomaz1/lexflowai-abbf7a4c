@@ -10,9 +10,14 @@ const ALLOWED_ORIGINS = [
 ].filter(Boolean);
 
 // Get CORS headers based on request origin
-function getCorsHeaders(req: Request): Record<string, string> {
+function getCorsHeaders(req: Request): Record<string, string> | null {
   const origin = req.headers.get('Origin') || '';
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0] || '*';
+  const isAllowedOrigin = ALLOWED_ORIGINS.includes(origin);
+  if (!isAllowedOrigin && origin) {
+    // Reject requests from unknown origins (except empty origin for same-origin requests)
+    return null;
+  }
+  const allowedOrigin = isAllowedOrigin ? origin : (ALLOWED_ORIGINS[0] || 'http://localhost:8080');
 
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
@@ -20,6 +25,23 @@ function getCorsHeaders(req: Request): Record<string, string> {
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Max-Age': '86400',
   };
+}
+
+// Timing-safe string comparison to prevent timing attacks
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) {
+    // Still do comparison to avoid length-based timing attack
+    let result = 0;
+    for (let i = 0; i < a.length; i++) {
+      result |= a.charCodeAt(i) ^ (b.charCodeAt(i % b.length) || 0);
+    }
+    return false;
+  }
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
 }
 
 // Helper function to convert ArrayBuffer to hex string
@@ -88,8 +110,10 @@ async function verifyWebhookSignature(
           return { valid: false, error: 'Missing ClickSign API key header' };
         }
         
-        // ClickSign uses API key validation
-        if (apiKey !== webhookSecret && apiKey !== `Bearer ${webhookSecret}`) {
+        // ClickSign uses API key validation (timing-safe comparison)
+        const isValidKey = timingSafeEqual(apiKey, webhookSecret) ||
+                          timingSafeEqual(apiKey, `Bearer ${webhookSecret}`);
+        if (!isValidKey) {
           return { valid: false, error: 'Invalid ClickSign API key' };
         }
         return { valid: true };
@@ -139,6 +163,14 @@ async function verifyWebhookSignature(
 
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
+
+  // Reject requests from unauthorized origins
+  if (!corsHeaders) {
+    return new Response(
+      JSON.stringify({ error: 'Origin not allowed' }),
+      { status: 403, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
 
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });

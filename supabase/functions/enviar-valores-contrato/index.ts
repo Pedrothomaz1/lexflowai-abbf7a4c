@@ -11,9 +11,14 @@ const ALLOWED_ORIGINS = [
 ].filter(Boolean);
 
 // Get CORS headers based on request origin
-function getCorsHeaders(req: Request): Record<string, string> {
+function getCorsHeaders(req: Request): Record<string, string> | null {
   const origin = req.headers.get('Origin') || '';
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0] || '*';
+  const isAllowedOrigin = ALLOWED_ORIGINS.includes(origin);
+  if (!isAllowedOrigin && origin) {
+    // Reject requests from unknown origins (except empty origin for same-origin requests)
+    return null;
+  }
+  const allowedOrigin = isAllowedOrigin ? origin : (ALLOWED_ORIGINS[0] || 'http://localhost:8080');
 
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
@@ -32,6 +37,14 @@ interface ValoresContratoRequest {
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
 
+  // Reject requests from unauthorized origins
+  if (!corsHeaders) {
+    return new Response(
+      JSON.stringify({ error: 'Origin not allowed' }),
+      { status: 403, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -41,6 +54,24 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
+    // SECURITY: Validate authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Não autorizado' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Token inválido ou expirado' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
     if (!resendApiKey) {
       throw new Error("RESEND_API_KEY não configurada");
@@ -236,6 +267,7 @@ serve(async (req) => {
       quantidade: emailsEnviados,
       custo_unitario: 0.001,
       custo_total: emailsEnviados * 0.001,
+      user_id: user.id,
       contrato_id: contratoId,
       metadata: { tipo_email: `valores_${tipo}`, destinatarios: destinatarios.length },
     });

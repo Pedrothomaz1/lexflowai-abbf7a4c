@@ -9,9 +9,14 @@ const ALLOWED_ORIGINS = [
 ].filter(Boolean);
 
 // Get CORS headers based on request origin
-function getCorsHeaders(req: Request): Record<string, string> {
+function getCorsHeaders(req: Request): Record<string, string> | null {
   const origin = req.headers.get('Origin') || '';
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0] || '*';
+  const isAllowedOrigin = ALLOWED_ORIGINS.includes(origin);
+  if (!isAllowedOrigin && origin) {
+    // Reject requests from unknown origins (except empty origin for same-origin requests)
+    return null;
+  }
+  const allowedOrigin = isAllowedOrigin ? origin : (ALLOWED_ORIGINS[0] || 'http://localhost:8080');
 
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
@@ -140,6 +145,14 @@ function validatePassword(password: string, email?: string): ValidationResult {
 
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
+
+  // Reject requests from unauthorized origins
+  if (!corsHeaders) {
+    return new Response(
+      JSON.stringify({ error: 'Origin not allowed' }),
+      { status: 403, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
 
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {

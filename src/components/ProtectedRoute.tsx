@@ -5,6 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { TwoFactorVerification } from "@/components/TwoFactorVerification";
 import { Loader2 } from "lucide-react";
 
+// 2FA session token expiration (15 minutes for security)
+const TWO_FA_TOKEN_EXPIRY_MS = 15 * 60 * 1000;
+
 // Generate a secure random token for 2FA session verification
 function generateSecureToken(): string {
   const array = new Uint8Array(32);
@@ -12,17 +15,14 @@ function generateSecureToken(): string {
   return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
-// Verify 2FA token integrity using HMAC-like approach
-function createTokenHash(userId: string, token: string, sessionId: string): string {
-  // Create a hash combining user ID, token and session ID
+// Create cryptographic hash using SHA-256 via Web Crypto API
+async function createTokenHash(userId: string, token: string, sessionId: string): Promise<string> {
   const data = `${userId}:${token}:${sessionId}`;
-  let hash = 0;
-  for (let i = 0; i < data.length; i++) {
-    const char = data.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
-  return Math.abs(hash).toString(36);
+  const encoder = new TextEncoder();
+  const dataBuffer = encoder.encode(data);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
 interface ProtectedRouteProps {
@@ -125,15 +125,14 @@ export const ProtectedRoute = ({ children, requiredPermission }: ProtectedRouteP
       const storedHash = sessionStorage.getItem('2fa_hash');
 
       if (storedToken && storedHash) {
-        // Verify token integrity
-        const expectedHash = createTokenHash(user.id, storedToken, session.access_token.slice(-16));
+        // Verify token integrity using SHA-256
+        const expectedHash = await createTokenHash(user.id, storedToken, session.access_token.slice(-16));
         if (expectedHash === storedHash) {
-          // Additional check: verify token was created recently (within 24 hours)
+          // Additional check: verify token was created recently (within 15 minutes)
           const tokenTimestamp = sessionStorage.getItem('2fa_timestamp');
           if (tokenTimestamp) {
             const tokenAge = Date.now() - parseInt(tokenTimestamp, 10);
-            const maxAge = 24 * 60 * 60 * 1000; // 24 hours
-            if (tokenAge < maxAge) {
+            if (tokenAge < TWO_FA_TOKEN_EXPIRY_MS) {
               setTwoFAVerified(true);
               return;
             }
@@ -150,12 +149,12 @@ export const ProtectedRoute = ({ children, requiredPermission }: ProtectedRouteP
     checkMFAStatus();
   }, [checkMFAStatus, user, session]);
 
-  const handleTwoFASuccess = () => {
+  const handleTwoFASuccess = async () => {
     if (!user || !session) return;
 
-    // Generate secure token and hash for 2FA session verification
+    // Generate secure token and SHA-256 hash for 2FA session verification
     const token = generateSecureToken();
-    const hash = createTokenHash(user.id, token, session.access_token.slice(-16));
+    const hash = await createTokenHash(user.id, token, session.access_token.slice(-16));
 
     sessionStorage.setItem('2fa_token', token);
     sessionStorage.setItem('2fa_hash', hash);

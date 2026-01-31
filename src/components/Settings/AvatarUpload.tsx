@@ -99,20 +99,20 @@ export function AvatarUpload({
     setUploading(true);
 
     try {
-      // Gera nome único para o arquivo
+      // Gera nome único para o arquivo (bucket 'avatars' é público)
       const fileExt = selectedFile.name.split(".").pop();
-      const fileName = `${userId}/avatars/avatar-${Date.now()}.${fileExt}`;
+      const fileName = `${userId}/avatar-${Date.now()}.${fileExt}`;
 
-      // Upload para o storage
+      // Upload para o bucket público de avatares
       const { error: uploadError } = await supabase.storage
-        .from("contratos-documentos")
+        .from("avatars")
         .upload(fileName, selectedFile, { upsert: true });
 
       if (uploadError) throw uploadError;
 
-      // Obtém URL pública
+      // Obtém URL pública (funciona porque o bucket 'avatars' é público)
       const { data: urlData } = supabase.storage
-        .from("contratos-documentos")
+        .from("avatars")
         .getPublicUrl(fileName);
 
       // Add cache-buster to force browser to reload the image

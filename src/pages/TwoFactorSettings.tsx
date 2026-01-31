@@ -38,6 +38,16 @@ const TwoFactorSettings = () => {
   const [copiedBackupCodes, setCopiedBackupCodes] = useState(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const copySecretTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const copyBackupTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup timeouts on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (copySecretTimeoutRef.current) clearTimeout(copySecretTimeoutRef.current);
+      if (copyBackupTimeoutRef.current) clearTimeout(copyBackupTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -74,7 +84,9 @@ const TwoFactorSettings = () => {
     if (setupData?.secret) {
       await navigator.clipboard.writeText(setupData.secret);
       setCopiedSecret(true);
-      setTimeout(() => setCopiedSecret(false), 2000);
+      // Clear any existing timeout before setting a new one
+      if (copySecretTimeoutRef.current) clearTimeout(copySecretTimeoutRef.current);
+      copySecretTimeoutRef.current = setTimeout(() => setCopiedSecret(false), 2000);
       toast({ title: "Chave copiada!" });
     }
   };
@@ -83,7 +95,9 @@ const TwoFactorSettings = () => {
     if (setupData?.backupCodes) {
       await navigator.clipboard.writeText(setupData.backupCodes.join("\n"));
       setCopiedBackupCodes(true);
-      setTimeout(() => setCopiedBackupCodes(false), 2000);
+      // Clear any existing timeout before setting a new one
+      if (copyBackupTimeoutRef.current) clearTimeout(copyBackupTimeoutRef.current);
+      copyBackupTimeoutRef.current = setTimeout(() => setCopiedBackupCodes(false), 2000);
       toast({ title: "Códigos de backup copiados!" });
     }
   };

@@ -10,9 +10,14 @@ const ALLOWED_ORIGINS = [
 ].filter(Boolean);
 
 // Get CORS headers based on request origin
-function getCorsHeaders(req: Request): Record<string, string> {
+function getCorsHeaders(req: Request): Record<string, string> | null {
   const origin = req.headers.get('Origin') || '';
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0] || '*';
+  const isAllowedOrigin = ALLOWED_ORIGINS.includes(origin);
+  if (!isAllowedOrigin && origin) {
+    // Reject requests from unknown origins (except empty origin for same-origin requests)
+    return null;
+  }
+  const allowedOrigin = isAllowedOrigin ? origin : (ALLOWED_ORIGINS[0] || 'http://localhost:8080');
 
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
@@ -25,13 +30,44 @@ function getCorsHeaders(req: Request): Record<string, string> {
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
 
+  // Reject requests from unauthorized origins
+  if (!corsHeaders) {
+    return new Response(
+      JSON.stringify({ error: 'Origin not allowed' }),
+      { status: 403, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // SECURITY: Validate authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Não autorizado' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Token inválido ou expirado' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { fileUrl } = await req.json();
-    
+
     if (!fileUrl) {
       return new Response(
         JSON.stringify({ error: 'URL do arquivo não fornecida' }),
@@ -47,10 +83,6 @@ serve(async (req) => {
     }
 
     // Obter URL pública do arquivo
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
     const { data: urlData } = await supabase
       .storage
       .from('contratos-documentos')
@@ -151,35 +183,28 @@ serve(async (req) => {
 
     console.log(`Tokens utilizados: ${tokensUsados} (prompt: ${promptTokens}, completion: ${completionTokens})`);
 
-    // Registrar uso de tokens
-    const authHeader = req.headers.get('Authorization');
-    const token = authHeader?.replace('Bearer ', '');
+    // Registrar uso de tokens (user já validado no início)
+    if (tokensUsados > 0) {
+      const { error: usageError } = await supabase
+        .from('uso_sistema')
+        .insert({
+          tipo: 'ai_tokens',
+          recurso: 'analisar-contrato',
+          quantidade: tokensUsados,
+          custo_unitario: 0.00001,
+          custo_total: tokensUsados * 0.00001,
+          user_id: user.id,
+          metadata: {
+            modelo: 'google/gemini-2.5-flash',
+            prompt_tokens: promptTokens,
+            completion_tokens: completionTokens
+          }
+        });
 
-    if (token && tokensUsados > 0) {
-      const { data: { user } } = await supabase.auth.getUser(token);
-      
-      if (user) {
-        const { error: usageError } = await supabase
-          .from('uso_sistema')
-          .insert({
-            tipo: 'ai_tokens',
-            recurso: 'analisar-contrato',
-            quantidade: tokensUsados,
-            custo_unitario: 0.00001,
-            custo_total: tokensUsados * 0.00001,
-            user_id: user.id,
-            metadata: {
-              modelo: 'google/gemini-2.5-flash',
-              prompt_tokens: promptTokens,
-              completion_tokens: completionTokens
-            }
-          });
-
-        if (usageError) {
-          console.error('Erro ao registrar uso de tokens:', usageError);
-        } else {
-          console.log('Uso de tokens registrado com sucesso');
-        }
+      if (usageError) {
+        console.error('Erro ao registrar uso de tokens:', usageError);
+      } else {
+        console.log('Uso de tokens registrado com sucesso');
       }
     }
 

@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import DOMPurify from "dompurify";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,22 +31,18 @@ function escapeHTML(text: string): string {
   return div.innerHTML;
 }
 
-// Sanitize redline HTML to prevent XSS - allows only safe tags
+// Configure DOMPurify to allow only safe tags for redline display
+const REDLINE_PURIFY_CONFIG: DOMPurify.Config = {
+  ALLOWED_TAGS: ['span', 'ins', 'del', 'mark', 'b', 'i', 'strong', 'em', 'br', 'p', 'div'],
+  ALLOWED_ATTR: ['class', 'style', 'data-change-id'],
+  ALLOW_DATA_ATTR: false,
+  FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'link', 'style', 'img', 'svg', 'math'],
+  FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'onblur'],
+};
+
+// Sanitize redline HTML using DOMPurify (secure against XSS)
 function sanitizeRedlineHTML(html: string): string {
-  return html
-    // Remove dangerous tags and content
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
-    .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '')
-    .replace(/<embed[^>]*>/gi, '')
-    .replace(/<link[^>]*>/gi, '')
-    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
-    .replace(/<img[^>]*>/gi, '')
-    // Remove event handlers and javascript
-    .replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, '')
-    .replace(/\s*on\w+\s*=\s*[^\s>]*/gi, '')
-    .replace(/javascript\s*:/gi, '')
-    .replace(/data\s*:/gi, '');
+  return DOMPurify.sanitize(html, REDLINE_PURIFY_CONFIG);
 }
 
 interface ContractRedlineEditorProps {
