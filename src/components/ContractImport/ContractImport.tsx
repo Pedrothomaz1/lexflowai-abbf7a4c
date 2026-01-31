@@ -240,8 +240,8 @@ export function ContractImport({
     setSelectedRows(new Set());
   };
 
-  const downloadTemplate = () => {
-    const blob = generateExampleTemplate();
+  const downloadTemplate = async () => {
+    const blob = await generateExampleTemplate();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;

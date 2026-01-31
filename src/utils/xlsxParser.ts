@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { validateCNPJ, validateCPF, cleanDocument, detectDocumentType, formatCNPJ, formatCPF } from './documentValidation';
 
 export interface ImportedContractRow {
@@ -78,34 +78,62 @@ const STATUS_MAP: Record<string, string> = {
 export function parseExcelFile(file: File): Promise<ImportedContractRow[]> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    
-    reader.onload = (e) => {
+
+    reader.onload = async (e) => {
       try {
-        const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
-        
+        const buffer = e.target?.result as ArrayBuffer;
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(buffer);
+
         // Pega a primeira planilha
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        
-        // Converte para JSON
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
-          header: 1,
-          raw: false,
-          dateNF: 'yyyy-mm-dd'
-        }) as string[][];
-        
-        if (!jsonData || jsonData.length < 2) {
+        const worksheet = workbook.worksheets[0];
+
+        if (!worksheet || worksheet.rowCount < 2) {
           reject(new Error('Arquivo vazio ou sem dados'));
           return;
         }
-        
+
+        // Converte para array de arrays
+        const jsonData: string[][] = [];
+        worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+          const rowValues: string[] = [];
+          row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+            // Pad array to include empty cells
+            while (rowValues.length < colNumber - 1) {
+              rowValues.push('');
+            }
+
+            let cellValue = '';
+            if (cell.value !== null && cell.value !== undefined) {
+              if (cell.value instanceof Date) {
+                // Format date as YYYY-MM-DD
+                cellValue = cell.value.toISOString().split('T')[0];
+              } else if (typeof cell.value === 'object' && 'result' in cell.value) {
+                // Formula cell - use the result
+                cellValue = String(cell.value.result ?? '');
+              } else if (typeof cell.value === 'object' && 'richText' in cell.value) {
+                // Rich text - concatenate text parts
+                cellValue = (cell.value.richText as Array<{text: string}>).map(rt => rt.text).join('');
+              } else {
+                cellValue = String(cell.value);
+              }
+            }
+            rowValues.push(cellValue);
+          });
+          jsonData.push(rowValues);
+        });
+
+        if (jsonData.length < 2) {
+          reject(new Error('Arquivo vazio ou sem dados'));
+          return;
+        }
+
         // Encontra os índices das colunas baseado no header
         const headerRow = jsonData[0] || [];
-        const headers = headerRow.map(h => 
+        const headers = headerRow.map(h =>
           h !== undefined && h !== null ? String(h).toLowerCase().trim() : ''
         );
-        
+
         const columnMap = {
           objeto: findColumnIndex(headers, ['objeto contratado', 'objeto', 'titulo', 'título']),
           contratada: findColumnIndex(headers, ['contratada', 'fornecedor', 'razão social', 'razao social', 'empresa']),
@@ -120,7 +148,7 @@ export function parseExcelFile(file: File): Promise<ImportedContractRow[]> {
           observacoes: findColumnIndex(headers, ['observações', 'observacoes', 'obs', 'notas']),
           unidade: findColumnIndex(headers, ['unidade', 'departamento', 'setor']),
         };
-        
+
         // Processa as linhas de dados
         const rows: ImportedContractRow[] = [];
         for (let i = 1; i < jsonData.length; i++) {
@@ -128,7 +156,7 @@ export function parseExcelFile(file: File): Promise<ImportedContractRow[]> {
           if (!row || row.length === 0 || !row.some(cell => cell && String(cell).trim())) {
             continue; // Pula linhas vazias
           }
-          
+
           rows.push({
             rowIndex: i + 1, // +1 para ser 1-indexed como no Excel
             objeto: getCellValue(row, columnMap.objeto),
@@ -145,13 +173,13 @@ export function parseExcelFile(file: File): Promise<ImportedContractRow[]> {
             unidade: getCellValue(row, columnMap.unidade),
           });
         }
-        
+
         resolve(rows);
       } catch (error) {
         reject(error);
       }
     };
-    
+
     reader.onerror = () => reject(new Error('Erro ao ler o arquivo'));
     reader.readAsArrayBuffer(file);
   });
@@ -175,19 +203,19 @@ function getCellValue(row: string[], index: number): string {
  */
 export function parseMonetaryValue(value: string): number | null {
   if (!value) return null;
-  
+
   // Remove R$, espaços e pontos de milhar
   let cleaned = value
     .replace(/R\$\s*/gi, '')
     .replace(/\s/g, '')
     .trim();
-  
+
   // Verifica se usa vírgula como decimal (formato BR)
   if (cleaned.includes(',')) {
     // Remove pontos de milhar e troca vírgula por ponto
     cleaned = cleaned.replace(/\./g, '').replace(',', '.');
   }
-  
+
   const num = parseFloat(cleaned);
   return isNaN(num) ? null : num;
 }
@@ -197,19 +225,19 @@ export function parseMonetaryValue(value: string): number | null {
  */
 export function parseDate(value: string): string | null {
   if (!value) return null;
-  
+
   const trimmed = value.trim().toLowerCase();
-  
+
   // Verifica se é "indeterminado" ou similar
   if (trimmed === 'indeterminado' || trimmed === 'sem prazo' || trimmed === '-' || trimmed === 'n/a') {
     return null;
   }
-  
+
   // Se já está no formato ISO (YYYY-MM-DD)
   if (/^\d{4}-\d{2}-\d{2}/.test(value)) {
     return value.substring(0, 10);
   }
-  
+
   // Formato DD/MM/YYYY
   const brMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
   if (brMatch) {
@@ -217,7 +245,7 @@ export function parseDate(value: string): string | null {
     const fullYear = year.length === 2 ? `20${year}` : year;
     return `${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
   }
-  
+
   // Formato MM/DD/YYYY (Excel americano)
   const usMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
   if (usMatch) {
@@ -228,7 +256,7 @@ export function parseDate(value: string): string | null {
       return `${fullYear}-${day.padStart(2, '0')}-${month.padStart(2, '0')}`;
     }
   }
-  
+
   // Tenta parse nativo
   try {
     const date = new Date(value);
@@ -238,7 +266,7 @@ export function parseDate(value: string): string | null {
   } catch {
     // Ignora erro
   }
-  
+
   return null;
 }
 
@@ -247,16 +275,16 @@ export function parseDate(value: string): string | null {
  */
 export function mapStatus(excelStatus: string): string {
   if (!excelStatus) return 'rascunho';
-  
+
   const normalized = excelStatus.toLowerCase().trim();
-  
+
   // Busca match parcial
   for (const [key, value] of Object.entries(STATUS_MAP)) {
     if (normalized.includes(key) || key.includes(normalized)) {
       return value;
     }
   }
-  
+
   return 'rascunho';
 }
 
@@ -266,22 +294,22 @@ export function mapStatus(excelStatus: string): string {
 export function processImportedRow(row: ImportedContractRow): ProcessedContract {
   const errors: string[] = [];
   const warnings: string[] = [];
-  
+
   // Validação do título/objeto (obrigatório)
   const titulo = row.objeto.trim();
   if (!titulo) {
     errors.push('Objeto/Título do contrato é obrigatório');
   }
-  
+
   // Validação do documento
   let documentoFormatado = '';
   let documentoTipo: 'cpf' | 'cnpj' | 'invalid' | null = null;
   let documentoValido = false;
-  
+
   if (row.documento) {
     const cleaned = cleanDocument(row.documento);
     documentoTipo = detectDocumentType(cleaned);
-    
+
     if (documentoTipo === 'cpf') {
       documentoValido = validateCPF(cleaned);
       documentoFormatado = formatCPF(cleaned);
@@ -303,43 +331,43 @@ export function processImportedRow(row: ImportedContractRow): ProcessedContract 
       warnings.push('Documento (CNPJ/CPF) não informado para o fornecedor');
     }
   }
-  
+
   // Parse do valor
   const valor = parseMonetaryValue(row.valor);
   if (row.valor && valor === null) {
     errors.push(`Valor "${row.valor}" não pôde ser convertido`);
   }
-  
+
   // Parse das datas
   const dataAssinatura = parseDate(row.dataAssinatura);
   const dataInicio = parseDate(row.dataInicio);
   const dataFim = parseDate(row.dataTermino);
-  
+
   if (row.dataInicio && !dataInicio) {
     warnings.push(`Data de início "${row.dataInicio}" não reconhecida`);
   }
-  
+
   if (row.dataTermino && !dataFim && row.dataTermino.toLowerCase() !== 'indeterminado') {
     warnings.push(`Data de término "${row.dataTermino}" não reconhecida`);
   }
-  
+
   // Mapeamento de status
   const status = mapStatus(row.status);
-  
+
   // Renovação automática
   const renovacaoAutomatica = ['sim', 's', 'yes', 'y', 'true', '1', 'x'].includes(
     row.renovacaoAutomatica.toLowerCase().trim()
   );
-  
+
   // Tags a partir da unidade
   const tags = row.unidade ? [row.unidade.trim()] : [];
-  
+
   // Contratada
   const contratada = row.contratada.trim();
   if (!contratada) {
     warnings.push('Contratada/Fornecedor não informado');
   }
-  
+
   return {
     rowIndex: row.rowIndex,
     raw: row,
@@ -378,7 +406,13 @@ export function processImportedRow(row: ImportedContractRow): ProcessedContract 
 /**
  * Gera template de exemplo para download
  */
-export function generateExampleTemplate(): Blob {
+export async function generateExampleTemplate(): Promise<Blob> {
+  const workbook = new ExcelJS.Workbook();
+
+  // Planilha principal
+  const worksheet = workbook.addWorksheet('Contratos');
+
+  // Headers
   const headers = [
     'OBJETO CONTRATADO',
     'CONTRATADA',
@@ -393,7 +427,19 @@ export function generateExampleTemplate(): Blob {
     'OBSERVAÇÕES',
     'UNIDADE',
   ];
-  
+
+  worksheet.addRow(headers);
+
+  // Style header row
+  const headerRow = worksheet.getRow(1);
+  headerRow.font = { bold: true };
+  headerRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFE0E0E0' }
+  };
+
+  // Example data
   const exampleData = [
     [
       'Prestação de serviços de TI',
@@ -438,29 +484,28 @@ export function generateExampleTemplate(): Blob {
       'Operações',
     ],
   ];
-  
-  const worksheet = XLSX.utils.aoa_to_sheet([headers, ...exampleData]);
-  
-  // Define largura das colunas
-  worksheet['!cols'] = [
-    { wch: 35 }, // OBJETO CONTRATADO
-    { wch: 25 }, // CONTRATADA
-    { wch: 20 }, // CNPJ/CPF
-    { wch: 15 }, // VALOR
-    { wch: 18 }, // DATA DA ASSINATURA
-    { wch: 15 }, // DATA DE INICIO
-    { wch: 15 }, // DATA TÉRMINO
-    { wch: 15 }, // STATUS
-    { wch: 20 }, // RENOVAÇÃO AUTOMÁTICA
-    { wch: 15 }, // RENOVAR EM
-    { wch: 30 }, // OBSERVAÇÕES
-    { wch: 15 }, // UNIDADE
+
+  exampleData.forEach(row => worksheet.addRow(row));
+
+  // Set column widths
+  worksheet.columns = [
+    { width: 35 }, // OBJETO CONTRATADO
+    { width: 25 }, // CONTRATADA
+    { width: 20 }, // CNPJ/CPF
+    { width: 15 }, // VALOR
+    { width: 18 }, // DATA DA ASSINATURA
+    { width: 15 }, // DATA DE INICIO
+    { width: 15 }, // DATA TÉRMINO
+    { width: 15 }, // STATUS
+    { width: 20 }, // RENOVAÇÃO AUTOMÁTICA
+    { width: 15 }, // RENOVAR EM
+    { width: 30 }, // OBSERVAÇÕES
+    { width: 15 }, // UNIDADE
   ];
-  
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Contratos');
-  
+
   // Adiciona aba de instruções
+  const instructionsSheet = workbook.addWorksheet('Instruções');
+
   const instructionsData = [
     ['INSTRUÇÕES DE PREENCHIMENTO'],
     [''],
@@ -488,11 +533,15 @@ export function generateExampleTemplate(): Blob {
     ['- parceria'],
     ['- outro'],
   ];
-  
-  const instructionsSheet = XLSX.utils.aoa_to_sheet(instructionsData);
-  instructionsSheet['!cols'] = [{ wch: 60 }];
-  XLSX.utils.book_append_sheet(workbook, instructionsSheet, 'Instruções');
-  
-  const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-  return new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+  instructionsData.forEach(row => instructionsSheet.addRow(row));
+
+  // Style first row
+  const instructionHeader = instructionsSheet.getRow(1);
+  instructionHeader.font = { bold: true, size: 14 };
+
+  instructionsSheet.columns = [{ width: 60 }];
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  return new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 }
