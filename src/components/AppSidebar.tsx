@@ -20,6 +20,9 @@ import {
   Activity,
   BarChart3,
   ShieldCheck,
+  FileInput,
+  UserCog,
+  Building,
 } from "lucide-react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
@@ -34,7 +37,7 @@ import {
   SidebarHeader,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,6 +54,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useModulo, ModuloAtivo } from "@/contexts/ModuloContext";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { cn } from "@/lib/utils";
 import logoVeridiana from "@/assets/logo-veridiana.png";
 import { Badge } from "@/components/ui/badge";
@@ -98,6 +102,24 @@ const contratosMenuSections: MenuSectionType[] = [
           { title: "Novo Contrato", url: "/contratos?novo=true", icon: Plus },
         ]
       },
+      { 
+        title: "Franquias", 
+        url: "/franquias", 
+        icon: Building2, 
+        roles: ["all"],
+        subItems: [
+          { title: "Nova Franquia", url: "/franquias?nova=true", icon: Plus },
+        ]
+      },
+      { 
+        title: "Requisições", 
+        url: "/requisicoes", 
+        icon: FileInput, 
+        roles: ["all"],
+        subItems: [
+          { title: "Nova Requisição", url: "/requisicoes?nova=true", icon: Plus },
+        ]
+      },
     ],
   },
   {
@@ -109,7 +131,6 @@ const contratosMenuSections: MenuSectionType[] = [
       { title: "Templates", url: "/templates", icon: FileStack, roles: ["all"] },
       { title: "Fornecedores", url: "/fornecedores", icon: Users, roles: ["all"] },
       { title: "Workflows", url: "/workflows", icon: GitBranch, roles: ["administrador"] },
-      { title: "Usuários", url: "/usuarios", icon: Shield, roles: ["administrador"] },
     ],
   },
   {
@@ -119,9 +140,28 @@ const contratosMenuSections: MenuSectionType[] = [
     defaultOpen: false,
     items: [
       { title: "Relatórios", url: "/relatorios", icon: BarChart3, roles: ["all"] },
+      { title: "Segurança", url: "/security", icon: Shield, roles: ["administrador"] },
       { title: "Compliance LGPD", url: "/compliance", icon: ShieldCheck, roles: ["administrador"] },
       { title: "Trilha de Auditoria", url: "/audit-logs", icon: Activity, roles: ["administrador"] },
-      { title: "Configurações", url: "/settings", icon: Settings, roles: ["all"] },
+      { 
+        title: "Configurações", 
+        url: "/settings", 
+        icon: Settings, 
+        roles: ["all"],
+        subItems: [
+          { title: "Usuários", url: "/usuarios", icon: Shield },
+        ]
+      },
+    ],
+  },
+  {
+    id: "organizacao",
+    title: "Organização",
+    icon: Building,
+    defaultOpen: false,
+    items: [
+      { title: "Configurações", url: "/organization/settings", icon: Building2, roles: ["org_admin"] },
+      { title: "Membros", url: "/organization/members", icon: UserCog, roles: ["org_admin"] },
     ],
   },
 ];
@@ -146,7 +186,6 @@ const servicosMenuSections: MenuSectionType[] = [
       { title: "Fornecedores", url: "/fornecedores", icon: Users, roles: ["all"] },
       { title: "Unidades", url: "/unidades", icon: Building2, roles: ["all"] },
       { title: "Especificações", url: "/especificacoes", icon: Cog, roles: ["all"] },
-      { title: "Usuários", url: "/usuarios", icon: Shield, roles: ["administrador"] },
     ],
   },
   {
@@ -155,7 +194,25 @@ const servicosMenuSections: MenuSectionType[] = [
     icon: Monitor,
     defaultOpen: false,
     items: [
-      { title: "Configurações", url: "/settings", icon: Settings, roles: ["all"] },
+      { 
+        title: "Configurações", 
+        url: "/settings", 
+        icon: Settings, 
+        roles: ["all"],
+        subItems: [
+          { title: "Usuários", url: "/usuarios", icon: Shield },
+        ]
+      },
+    ],
+  },
+  {
+    id: "organizacao",
+    title: "Organização",
+    icon: Building,
+    defaultOpen: false,
+    items: [
+      { title: "Configurações", url: "/organization/settings", icon: Building2, roles: ["org_admin"] },
+      { title: "Membros", url: "/organization/members", icon: UserCog, roles: ["org_admin"] },
     ],
   },
 ];
@@ -173,9 +230,11 @@ export function AppSidebar() {
   const { toast } = useToast();
   const { userRole } = useUserRole();
   const { moduloAtivo, moduloPadrao, setModuloAtivo } = useModulo();
+  const { organization, isOrgAdmin } = useOrganization();
   const collapsed = state === "collapsed";
   const [userEmail, setUserEmail] = useState<string>("");
   const [userName, setUserName] = useState<string>("");
+  const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
   
   const menuSections = moduloAtivo === "contratos" ? contratosMenuSections : servicosMenuSections;
   
@@ -198,10 +257,12 @@ export function AppSidebar() {
         setUserEmail(data.user.email || "");
         const { data: profile } = await supabase
           .from("profiles")
-          .select("full_name")
+          .select("full_name, avatar_url")
           .eq("id", data.user.id)
-          .single();
+          .maybeSingle();
+
         setUserName(profile?.full_name || data.user.email?.split("@")[0] || "");
+        setUserAvatarUrl(profile?.avatar_url || null);
       }
     };
     getUser();
@@ -243,7 +304,13 @@ export function AppSidebar() {
   };
 
   const filterByRole = (items: MenuItemType[]) =>
-    items.filter((item) => item.roles.includes("all") || (userRole && item.roles.includes(userRole)));
+    items.filter((item) => {
+      // Handle org_admin role check
+      if (item.roles.includes("org_admin")) {
+        return isOrgAdmin;
+      }
+      return item.roles.includes("all") || (userRole && item.roles.includes(userRole));
+    });
 
   const getInitials = (name: string) => {
     return name
@@ -410,6 +477,7 @@ export function AppSidebar() {
               )}
             >
               <Avatar className="h-8 w-8 shrink-0">
+                 <AvatarImage src={userAvatarUrl || undefined} alt={userName || "Usuário"} />
                 <AvatarFallback 
                   className="text-xs font-medium"
                   style={{ 

@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { ChevronRight, Home } from "lucide-react";
 import { Link } from "react-router-dom";
+import { HelpTooltip } from "@/components/ui/help-tooltip";
 
 interface BreadcrumbItem {
   label: string;
@@ -13,6 +14,7 @@ interface PageHeaderProps {
   breadcrumbs?: BreadcrumbItem[];
   actions?: React.ReactNode;
   className?: string;
+  helpText?: string;
 }
 
 export function PageHeader({
@@ -21,6 +23,7 @@ export function PageHeader({
   breadcrumbs,
   actions,
   className,
+  helpText,
 }: PageHeaderProps) {
   return (
     <div className={cn("space-y-1", className)}>
@@ -51,8 +54,9 @@ export function PageHeader({
       )}
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1 min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground truncate">
-            {title}
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground truncate flex items-center gap-2">
+            <span>{title}</span>
+            {helpText && <HelpTooltip text={helpText} iconClassName="h-4 w-4" />}
           </h1>
           {description && (
             <p className="text-sm text-muted-foreground">{description}</p>

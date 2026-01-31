@@ -29,6 +29,7 @@ function getCorsHeaders(req: Request): Record<string, string> | null {
 
 interface ServicoData {
   id: string;
+  organization_id: string;
   itens_detalhados: string | null;
   quantidade: number;
   localizacao_fisica: string | null;
@@ -118,7 +119,10 @@ serve(async (req) => {
 
     console.log(`Processando solicitação de compras para serviço: ${servicoId}`);
 
-    // Buscar dados completos do serviço
+    // =========================================================
+    // MULTI-TENANT: Fetch service with organization_id
+    // The organization is resolved from the service itself
+    // =========================================================
     const { data: servico, error: servicoError } = await supabase
       .from("servicos_periodicos")
       .select(`
@@ -135,7 +139,14 @@ serve(async (req) => {
       throw new Error(`Serviço não encontrado: ${servicoError?.message}`);
     }
 
-    // Buscar histórico para estimativas
+    const organizationId = servico.organization_id;
+    if (!organizationId) {
+      throw new Error("Serviço não possui organization_id válido");
+    }
+
+    console.log(`[Org ${organizationId}] Processando serviço: ${servico.id}`);
+
+    // Buscar histórico para estimativas - SCOPED BY ORGANIZATION
     const { data: historico } = await supabase
       .from("servico_historico")
       .select(`
@@ -144,21 +155,23 @@ serve(async (req) => {
         observacoes,
         fornecedores:fornecedor_id(nome)
       `)
+      .eq("organization_id", organizationId)
       .eq("servico_id", servicoId)
       .order("data_execucao", { ascending: false })
       .limit(5);
 
-    // Verificar se já existe solicitação pendente/enviada
+    // Verificar se já existe solicitação pendente/enviada - SCOPED BY ORGANIZATION
     const { data: existingSolicitacao } = await supabase
       .from("solicitacoes_compras")
       .select("id, status_envio")
+      .eq("organization_id", organizationId)
       .eq("servico_id", servicoId)
       .in("status_envio", ["pendente", "enviado"])
       .order("created_at", { ascending: false })
       .limit(1);
 
     if (existingSolicitacao && existingSolicitacao.length > 0) {
-      console.log(`Já existe solicitação pendente/enviada para este serviço`);
+      console.log(`[Org ${organizationId}] Já existe solicitação pendente/enviada para este serviço`);
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -169,10 +182,11 @@ serve(async (req) => {
       );
     }
 
-    // Buscar configuração de integração
+    // Buscar configuração de integração - SCOPED BY ORGANIZATION
     const { data: config } = await supabase
       .from("integracao_config")
       .select("*")
+      .eq("organization_id", organizationId)
       .eq("tipo", "sistema_compras")
       .eq("is_active", true)
       .single();
@@ -181,6 +195,7 @@ serve(async (req) => {
     const payload = {
       origem: "LEXFLOW",
       tipo: "SERVICO_PERIODICO",
+      organization_id: organizationId,
       data_solicitacao: new Date().toISOString(),
       urgencia: calcularUrgencia(servico.data_validade),
       servico: {
@@ -222,11 +237,12 @@ serve(async (req) => {
 
     // Se não há configuração ativa ou não há URL, apenas registrar como pendente
     if (!config || !config.url_api) {
-      console.log("Integração não configurada - registrando como pendente");
+      console.log(`[Org ${organizationId}] Integração não configurada - registrando como pendente`);
       
       const { data: solicitacao, error: insertError } = await supabase
         .from("solicitacoes_compras")
         .insert({
+          organization_id: organizationId,
           servico_id: servicoId,
           status_envio: "pendente",
           payload_enviado: payload,
@@ -267,7 +283,7 @@ serve(async (req) => {
       headers = { ...headers, ...(config.headers_customizados as Record<string, string>) };
     }
 
-    console.log(`Enviando para API: ${apiUrl}`);
+    console.log(`[Org ${organizationId}] Enviando para API: ${apiUrl}`);
 
     try {
       const response = await fetch(apiUrl, {
@@ -282,10 +298,11 @@ serve(async (req) => {
         throw new Error(`API retornou status ${response.status}: ${JSON.stringify(resultado)}`);
       }
 
-      // Registrar sucesso
+      // Registrar sucesso - SCOPED BY ORGANIZATION
       const { data: solicitacao, error: insertError } = await supabase
         .from("solicitacoes_compras")
         .insert({
+          organization_id: organizationId,
           servico_id: servicoId,
           status_envio: "enviado",
           payload_enviado: payload,
@@ -298,7 +315,21 @@ serve(async (req) => {
 
       if (insertError) throw insertError;
 
-      console.log(`Solicitação enviada com sucesso: ${solicitacao.id}`);
+      console.log(`[Org ${organizationId}] Solicitação enviada com sucesso: ${solicitacao.id}`);
+
+      // Log audit - SCOPED BY ORGANIZATION
+      await supabase.from("audit_logs").insert({
+        organization_id: organizationId,
+        acao: 'PURCHASE_REQUEST_SENT',
+        entidade: 'solicitacoes_compras',
+        entidade_id: solicitacao.id,
+        metadata: {
+          servico_id: servicoId,
+          api_response: resultado,
+        },
+        event_category: 'financial',
+        risk_level: 'medium',
+      });
 
       return new Response(
         JSON.stringify({ 
@@ -311,12 +342,13 @@ serve(async (req) => {
       );
 
     } catch (apiError: any) {
-      console.error(`Erro ao enviar para API: ${apiError.message}`);
+      console.error(`[Org ${organizationId}] Erro ao enviar para API: ${apiError.message}`);
 
-      // Registrar erro
+      // Registrar erro - SCOPED BY ORGANIZATION
       const { data: solicitacao } = await supabase
         .from("solicitacoes_compras")
         .insert({
+          organization_id: organizationId,
           servico_id: servicoId,
           status_envio: "erro",
           payload_enviado: payload,

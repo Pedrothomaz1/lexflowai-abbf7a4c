@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import DOMPurify from "dompurify";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -331,8 +331,8 @@ export function ContractRedlineEditor({ contratoId, conteudoOriginal = "" }: Con
               <h4 className="text-sm font-medium mb-2">Pré-visualização das alterações:</h4>
               <div 
                 className="text-sm prose prose-sm max-w-none"
-                dangerouslySetInnerHTML={{ 
-                  __html: generateMarkedContent(conteudoOriginal, editedContent) 
+                dangerouslySetInnerHTML={{
+                  __html: sanitizeRedlineHTML(generateMarkedContent(conteudoOriginal, editedContent))
                 }}
               />
             </div>

@@ -29,6 +29,7 @@ import { PageSkeleton } from "@/components/ui/skeleton-loaders";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PremiumAreaChart, PremiumBarChart, PremiumDonutChart } from "@/components/charts";
 import { cn } from "@/lib/utils";
+import { helpTexts } from "@/lib/help-texts";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -352,6 +353,7 @@ const Dashboard = () => {
           variant="primary"
           trend={{ value: 12, label: "vs mês anterior" }}
           onClick={() => navigate("/contratos?status=vigente")}
+          helpText={helpTexts.dashboard.contratosAtivos}
         />
         <StatCard
           title="Valor Total"
@@ -360,6 +362,7 @@ const Dashboard = () => {
           variant="success"
           trend={{ value: 8, label: "vs mês anterior" }}
           onClick={() => navigate("/contratos")}
+          helpText={helpTexts.dashboard.valorTotal}
         />
         <StatCard
           title="Vencendo em 30 dias"
@@ -367,6 +370,7 @@ const Dashboard = () => {
           icon={Clock}
           variant="critical"
           onClick={() => navigate("/alertas")}
+          helpText={helpTexts.dashboard.vencendo30Dias}
         />
         <StatCard
           title="Riscos Altos"
@@ -374,6 +378,7 @@ const Dashboard = () => {
           icon={AlertTriangle}
           variant="critical"
           onClick={() => navigate("/contratos")}
+          helpText={helpTexts.dashboard.riscosAltos}
         />
       </StatCardGrid>
 
@@ -385,6 +390,7 @@ const Dashboard = () => {
           icon={Users}
           subtitle="Cadastrados"
           onClick={() => navigate("/fornecedores")}
+          helpText={helpTexts.dashboard.fornecedores}
         />
         <StatCard
           title="Valor Médio"
@@ -392,6 +398,7 @@ const Dashboard = () => {
           icon={Activity}
           subtitle="Por contrato"
           onClick={() => navigate("/contratos")}
+          helpText={helpTexts.dashboard.valorMedio}
         />
         <StatCard
           title="Aprovações Pendentes"
@@ -399,6 +406,7 @@ const Dashboard = () => {
           icon={Timer}
           subtitle="Aguardando ação"
           onClick={() => navigate("/workflows")}
+          helpText={helpTexts.dashboard.aprovacoesPendentes}
         />
         <StatCard
           title="Tempo Médio Aprovação"
@@ -406,6 +414,7 @@ const Dashboard = () => {
           icon={Target}
           subtitle={stats.tempoMedioAprovacao <= 5 ? "✓ Dentro da meta" : "⚠ Acima da meta"}
           onClick={() => navigate("/workflows")}
+          helpText={helpTexts.dashboard.tempoMedioAprovacao}
         />
       </div>
 

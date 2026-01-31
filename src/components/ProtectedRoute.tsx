@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useState, useCallback } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { supabase } from "@/integrations/supabase/client";
 import { TwoFactorVerification } from "@/components/TwoFactorVerification";
 import { Loader2 } from "lucide-react";
@@ -28,6 +29,7 @@ async function createTokenHash(userId: string, token: string, sessionId: string)
 interface ProtectedRouteProps {
   children: ReactNode;
   requiredPermission?: string;
+  requireOrg?: boolean;
 }
 
 interface MFAStatus {
@@ -36,8 +38,13 @@ interface MFAStatus {
   mfaRequiredByRole: boolean;
 }
 
-export const ProtectedRoute = ({ children, requiredPermission }: ProtectedRouteProps) => {
-  const { session, user, loading } = useAuth();
+export const ProtectedRoute = ({ 
+  children, 
+  requiredPermission,
+  requireOrg = true 
+}: ProtectedRouteProps) => {
+  const { session, user, loading: authLoading } = useAuth();
+  const { hasOrganization, loading: orgLoading } = useOrganization();
   const location = useLocation();
   const [mfaStatus, setMfaStatus] = useState<MFAStatus | null>(null);
   const [twoFAVerified, setTwoFAVerified] = useState(false);
@@ -105,12 +112,13 @@ export const ProtectedRoute = ({ children, requiredPermission }: ProtectedRouteP
       }
     } catch (err) {
       console.error('[ProtectedRoute] MFA check failed:', err);
+      // SECURITY: Fail closed - deny access on error rather than fail open
       setMfaStatus({
-        twoFARequired: false,
+        twoFARequired: true, // Require 2FA on error for safety
         twoFAEnabled: false,
-        mfaRequiredByRole: false,
+        mfaRequiredByRole: true,
       });
-      setHasPermission(true);
+      setHasPermission(false); // Deny permission on error - fail closed
     } finally {
       setCheckingMFA(false);
     }
@@ -169,7 +177,8 @@ export const ProtectedRoute = ({ children, requiredPermission }: ProtectedRouteP
     sessionStorage.removeItem('2fa_timestamp');
   };
 
-  if (loading || checkingMFA) {
+  // Show loading while checking auth and MFA
+  if (authLoading || checkingMFA) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center space-y-4">
@@ -180,6 +189,7 @@ export const ProtectedRoute = ({ children, requiredPermission }: ProtectedRouteP
     );
   }
 
+  // Redirect to auth if not logged in
   if (!session) {
     return <Navigate to="/auth" replace />;
   }
@@ -200,6 +210,30 @@ export const ProtectedRoute = ({ children, requiredPermission }: ProtectedRouteP
         onCancel={handleTwoFACancel}
       />
     );
+  }
+
+  // Check organization requirement (only after auth and MFA checks)
+  if (requireOrg) {
+    // Still loading organization data
+    if (orgLoading) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <div className="text-center space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+            <p className="text-muted-foreground text-sm">Verificando organização...</p>
+          </div>
+        </div>
+      );
+    }
+
+    // User has no organization - redirect to waiting page
+    if (!hasOrganization) {
+      // Avoid redirect loops for onboarding pages
+      const onboardingPaths = ['/onboarding', '/waiting-for-invite'];
+      if (!onboardingPaths.includes(location.pathname)) {
+        return <Navigate to="/waiting-for-invite" replace />;
+      }
+    }
   }
 
   // Check permission

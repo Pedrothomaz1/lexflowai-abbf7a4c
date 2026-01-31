@@ -11,10 +11,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bell, Search, Moon, Sun, X, Calendar, Settings, LogOut, User } from "lucide-react";
+import { Bell, Search, Moon, Sun, X, Calendar, Settings, LogOut, User, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useOrganization } from "@/contexts/OrganizationContext";
 
 const routeTitles: Record<string, { title: string; description?: string }> = {
   "/dashboard": { title: "Dashboard", description: "Visão geral do sistema" },
@@ -27,11 +28,14 @@ const routeTitles: Record<string, { title: string; description?: string }> = {
   "/fornecedores": { title: "Fornecedores", description: "Cadastro de parceiros" },
   "/usuarios": { title: "Usuários", description: "Gestão de acessos" },
   "/settings": { title: "Configurações", description: "Preferências do sistema" },
+  "/organization/settings": { title: "Configurações da Organização", description: "Dados da organização" },
+  "/organization/members": { title: "Membros", description: "Gestão de membros" },
 };
 
 export function GlobalHeader() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { organization } = useOrganization();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [pendingAlerts, setPendingAlerts] = useState(0);
@@ -124,6 +128,16 @@ export function GlobalHeader() {
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 px-4 lg:px-6">
       <SidebarTrigger className="shrink-0" />
+
+      {/* Organization Badge */}
+      {organization && (
+        <div className="hidden md:flex items-center gap-2 px-2 py-1 rounded-md bg-muted/50">
+          <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="text-xs font-medium text-muted-foreground truncate max-w-32">
+            {organization.nome}
+          </span>
+        </div>
+      )}
 
       {/* Page Title - Hidden on Mobile */}
       <div className="hidden md:flex flex-col min-w-0">
