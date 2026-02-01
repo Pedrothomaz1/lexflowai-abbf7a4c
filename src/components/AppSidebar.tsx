@@ -88,16 +88,15 @@ const contratosMenuSections: MenuSectionType[] = [
     items: [
       { title: "Visão Geral", url: "/dashboard", icon: LayoutDashboard, roles: ["all"] },
       { 
-        title: "Contratos", 
+        title: "Contratos de Serviço", 
         url: "/contratos", 
         icon: FileText, 
         roles: ["all"],
         subItems: [
           { title: "Novo Contrato", url: "/contratos?novo=true", icon: Plus },
-          { title: "Franquias", url: "/franquias", icon: Building2 },
         ]
       },
-      { title: "Alertas e Prazos", url: "/alertas", icon: Bell, roles: ["all"] },
+      { title: "Franquias", url: "/franquias", icon: Building2, roles: ["all"] },
       { 
         title: "Requisições", 
         url: "/requisicoes", 
@@ -107,6 +106,7 @@ const contratosMenuSections: MenuSectionType[] = [
           { title: "Nova Requisição", url: "/requisicoes?nova=true", icon: Plus },
         ]
       },
+      { title: "Alertas e Prazos", url: "/alertas", icon: Bell, roles: ["all"] },
     ],
   },
   {

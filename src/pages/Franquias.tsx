@@ -35,7 +35,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { FranquiaForm, FranquiaImport, FranquiaRenovacaoWorkflow } from "@/components/Franquias";
+import { FranquiaForm, FranquiaImport, FranquiaRenovacaoWorkflow, FranquiaQuickStats } from "@/components/Franquias";
 import { FranquiaImportResult } from "@/utils/franquiaXlsxParser";
 import { cn } from "@/lib/utils";
 
@@ -211,14 +211,19 @@ export default function Franquias() {
     });
   }, [franquias, activeTab, searchTerm]);
 
-  // Stats for tabs
+  // Stats for tabs and quick stats
   const stats = useMemo(() => {
-    if (!franquias) return { ativo: 0, proximo_vencer: 0, vencido: 0 };
+    if (!franquias) return { ativo: 0, proximo_vencer: 0, vencido: 0, emRenovacao: 0 };
+
+    const emRenovacao = franquias.filter((f) => 
+      f.consultora_informada && !f.contrato_novo_assinado
+    ).length;
 
     return {
       ativo: franquias.filter((f) => f.status_vigencia === "ativo").length,
       proximo_vencer: franquias.filter((f) => f.status_vigencia === "proximo_vencer").length,
       vencido: franquias.filter((f) => f.status_vigencia === "vencido").length,
+      emRenovacao,
     };
   }, [franquias]);
 
@@ -232,7 +237,7 @@ export default function Franquias() {
     <div className="space-y-6">
       <PageHeader
         title="Franquias"
-        description={`${franquias?.length || 0} franquias cadastradas`}
+        description={`Contratos de franqueados do grupo · ${franquias?.length || 0} cadastrada(s)`}
         actions={
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setShowImport(true)}>
@@ -245,6 +250,15 @@ export default function Franquias() {
             </Button>
           </div>
         }
+      />
+
+      {/* Quick Stats */}
+      <FranquiaQuickStats 
+        stats={{
+          ativas: stats.ativo,
+          proximoVencer: stats.proximo_vencer,
+          emRenovacao: stats.emRenovacao,
+        }}
       />
 
       {/* Filters */}

@@ -440,8 +440,8 @@ const Contratos = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="Contratos"
-        description={`${contratos.length} contrato(s) cadastrado(s)`}
+        title="Contratos de Serviço"
+        description={`Gestão de contratos com fornecedores e terceiros · ${contratos.length} cadastrado(s)`}
         actions={
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => setImportDialogOpen(true)}>
@@ -456,7 +456,7 @@ const Contratos = () => {
               <DialogTrigger asChild>
                 <Button size="sm" className="btn-cta">
                   <Plus className="h-4 w-4 mr-1.5" />
-                  Novo Contrato
+                  Novo Contrato de Serviço
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
