@@ -1,250 +1,402 @@
 
-# LexFlow Advanced UX Enhancements Plan
+# Plano: LexFlow Final Product & UX Strategy
 
-## Overview
+## Visao Geral
 
-This plan implements enterprise-grade UX improvements across four key areas: Onboarding Tour, KPI Microcopy, Design Token refinements, and an Executive Dashboard variant. All changes are purely UX/UI-focused with no modifications to business logic or architecture.
-
----
-
-## 1. Onboarding Tour (3-Step Guided Introduction)
-
-### Goal
-Create a non-intrusive, progressive onboarding experience that guides new users through the core features of LexFlow.
-
-### Implementation
-
-**New Files:**
-- `src/components/Onboarding/OnboardingTour.tsx` - Main tour component
-- `src/components/Onboarding/TourStep.tsx` - Individual step spotlight component
-- `src/components/Onboarding/TourProgress.tsx` - Progress indicator (3 dots)
-- `src/hooks/useOnboardingTour.ts` - Tour state management with localStorage persistence
-
-**Tour Steps Configuration:**
-
-| Step | Focus | Message | CTA |
-|------|-------|---------|-----|
-| 1 | Dashboard geral | "Bem-vindo ao LexFlow! Aqui voce acompanha todos os indicadores da sua gestao de contratos em tempo real." | Proximo |
-| 2 | Criacao de contratos ou servicos | "Crie novos contratos ou servicos com poucos cliques. Use os templates prontos para agilizar o processo." | Proximo |
-| 3 | Alertas e indicadores | "Receba alertas automaticos sobre vencimentos, riscos e aprovacoes pendentes. Nunca perca um prazo importante." | Finalizar |
-
-**Behavior:**
-- Shows only on first visit (stored in localStorage: `lexflow_onboarding_completed`)
-- Can be skipped at any moment via X button
-- Spotlight effect with overlay on target element
-- Smooth transitions between steps using framer-motion
-- Mobile-responsive positioning
-
-**Integration Points:**
-- Inject `<OnboardingTour />` in `DashboardLayout.tsx`
-- Target elements:
-  - Step 1: Dashboard KPI grid area
-  - Step 2: "Novo Contrato" button or sidebar menu
-  - Step 3: Alert banner or Sidebar "Alertas" menu item
+Este plano implementa a estrategia completa de UX e posicionamento do LexFlow como "SaaS de Gestao Preventiva de Contratos", focado em gestores (nao juristas). As mudancas abrangem navegacao, landing page, dashboard, onboarding e microcopy, mantendo a arquitetura tecnica existente.
 
 ---
 
-## 2. KPI Microcopy Refinement
+## 1. Reestruturacao da Navegacao (Sidebar)
 
-### Goal
-Make all KPI help texts decision-oriented, clear, and accessible to non-technical users.
+### Objetivo
+Reorganizar o menu lateral seguindo a logica "gestor-first", agrupando por objetivo ao inves de funcionalidade tecnica.
 
-### Style Guidelines
-- Explain what the KPI measures
-- Explain business impact
-- Avoid technical jargon
-- Use short, direct sentences
+### Estrutura Proposta
 
-### Changes to `src/lib/help-texts.ts`
+| Grupo | Objetivo | Itens |
+|-------|----------|-------|
+| **Principal** | Mostrar o que exige atencao agora | Visao Geral (Dashboard), Contratos, Alertas e Prazos, Requisicoes |
+| **Base** | Organizar dados fundamentais | Fornecedores, Unidades, Modelos de Contrato |
+| **Automacao** | Evitar trabalho manual | Fluxos de Aprovacao |
+| **Governanca** | Seguranca e controle avancado | Relatorios, Historico de Acoes, Seguranca, Protecao de Dados |
+| **Configuracoes** | Controle do sistema | Usuarios e Permissoes, Notificacoes, Preferencias do Sistema |
 
-**Dashboard KPIs (revised):**
+### Mudancas Especificas
+
+**Arquivo: `src/components/AppSidebar.tsx`**
 
 ```text
-contratosAtivos: 
-  "Contratos em vigor que geram obrigacoes e custos. 
-   Monitore para controlar exposicao financeira."
-
-valorTotal: 
-  "Valor acumulado de todos os contratos ativos. 
-   Ajuda a dimensionar o impacto no orcamento."
-
-vencendo30Dias: 
-  "Contratos proximos do vencimento. 
-   Acao recomendada: revisar e decidir sobre renovacao."
-
-riscosAltos: 
-  "Contratos com clausulas de alto risco identificadas por IA. 
-   Priorize a revisao juridica destes itens."
-
-fornecedores: 
-  "Total de parceiros comerciais cadastrados. 
-   Base para analises de concentracao de fornecimento."
-
-valorMedio: 
-  "Valor medio por contrato ativo. 
-   Indica o porte tipico das negociacoes."
-
-aprovacoesPendentes: 
-  "Contratos aguardando decisao. 
-   Atrasos podem impactar prazos de projetos."
-
-tempoMedioAprovacao: 
-  "Dias para aprovar um contrato. 
-   Meta: ate 5 dias. Acima disso, revise o fluxo de aprovacao."
+Antes                          ->  Depois
+----------------------------------------------------------
+Principal                      ->  Principal
+  - Dashboard                      - Visao Geral
+                                   - Contratos
+Organizacao                       - Alertas e Prazos
+  - Membros                        - Requisicoes
+  - Configuracoes              
+                               ->  Base
+Gestao                             - Fornecedores
+  - Contratos                      - Unidades
+  - Franquias                      - Modelos de Contrato
+  - Requisicoes                
+                               ->  Automacao
+Sistema                            - Fluxos de Aprovacao
+  - Relatorios                 
+  - Seguranca                  ->  Governanca
+  - Compliance LGPD                - Relatorios
+  - Trilha de Auditoria            - Historico de Acoes
+  - Cadastro (submenu)             - Seguranca
+  - Configuracoes (submenu)        - Protecao de Dados
+                               
+                               ->  Configuracoes
+                                   - Usuarios e Permissoes
+                                   - Notificacoes
+                                   - Preferencias
 ```
 
-**Additional KPIs to add:**
-- `conformidadeGeral`: "Percentual de contratos em conformidade com politicas internas. Abaixo de 90% requer atencao."
+### Novas Labels (Sem Juridiques)
+
+| Antes | Depois |
+|-------|--------|
+| Dashboard | Visao Geral |
+| Compliance LGPD | Protecao de Dados |
+| Trilha de Auditoria | Historico de Acoes |
+| Workflows | Fluxos de Aprovacao |
+| Templates | Modelos de Contrato |
+| Alertas | Alertas e Prazos |
 
 ---
 
-## 3. Design Tokens Adjustments
+## 2. Landing Page (Hero Section)
 
-### Goal
-Fine-tune visual states (hover, active, disabled) for better clarity and WCAG AA contrast compliance.
+### Objetivo
+Reposicionar a comunicacao para gestores, focando em "nao perder prazos" ao inves de "gestao juridica".
 
-### Changes to `src/index.css`
+### Novo Conteudo
 
-**Interactive States Enhancement:**
+**Arquivo: `src/pages/Index.tsx`**
 
-```css
-/* Enhanced hover states - more visible feedback */
-.stat-card:hover {
-  box-shadow: var(--shadow-md);
-  border-color: hsl(var(--primary) / 0.3);
-  transform: translateY(-2px);
-}
+```text
+ANTES:
+Headline: "Gestao de Contratos Inteligente"
+Subheadline: "Automatize todo o ciclo contratual em uma unica plataforma."
 
-/* Active/pressed state - clear feedback */
-.stat-card:active,
-.card-interactive:active {
-  transform: translateY(0);
-  box-shadow: var(--shadow-sm);
-  border-color: hsl(var(--primary) / 0.5);
-}
+DEPOIS:
+Headline: "Controle seus contratos. Nunca mais perca um prazo."
+Subheadline: "Centralize contratos, acompanhe vencimentos e receba alertas antes que vire problema."
+```
 
-/* Disabled state - distinct but not invisible */
-.stat-card-disabled,
-[disabled] {
-  opacity: 0.55;
-  cursor: not-allowed;
-  filter: grayscale(0.3);
-}
+### Novos Highlights (Destaques)
 
-/* Focus visible for keyboard navigation */
-.stat-card:focus-visible,
-.card-interactive:focus-visible {
-  outline: 2px solid hsl(var(--ring));
-  outline-offset: 2px;
+```text
+ANTES:
+- Aprovacoes automatizadas
+- Assinatura eletronica
+- Alertas de vencimento
+
+DEPOIS:
+- Alertas antes do vencimento
+- Dashboard de riscos em tempo real
+- Sem depender do juridico
+```
+
+### Novos Features Cards
+
+```text
+ANTES:
+- Gestao Completa
+- Controle de Fornecedores
+- Dashboards Executivos
+- Seguranca e Compliance
+
+DEPOIS:
+- Nunca perca um prazo (alertas automaticos)
+- Veja os riscos antes (dashboard preventivo)
+- Tudo em um lugar (centralizacao)
+- Controle sem juridico (autonomia para gestores)
+```
+
+### CTAs
+
+| CTA Primario | CTA Secundario |
+|--------------|----------------|
+| Comecar agora | Ver como funciona |
+
+---
+
+## 3. Dashboard Orientado a Gestor
+
+### Objetivo
+Transformar o dashboard para mostrar "riscos e proximas acoes" em segundos, nao metricas tecnicas.
+
+### Novos KPIs Primarios
+
+| KPI Atual | KPI Novo | Significado para Gestor |
+|-----------|----------|-------------------------|
+| Contratos Ativos | Contratos a vencer | Quantos vencem em 30/60/90 dias |
+| Valor Total | Valor em risco | Impacto financeiro de contratos em alerta |
+| Riscos Altos | Servicos em alerta | Servicos que exigem acao imediata |
+| - | Proxima acao recomendada | O que resolver agora |
+
+### Componente: ProximaAcaoCard
+
+Novo card que mostra a acao mais urgente:
+
+```text
++------------------------------------------+
+|  PROXIMA ACAO RECOMENDADA                |
+|                                          |
+|  [!] 3 contratos vencem em 7 dias        |
+|      Revise e decida sobre renovacao     |
+|                                          |
+|  [Botao: Ver contratos]                  |
++------------------------------------------+
+```
+
+### Arquivo: `src/pages/Dashboard.tsx`
+
+**Mudancas:**
+1. Trocar `PageHeader.title` de "Dashboard Executivo" para "Visao Geral"
+2. Adicionar card "Proxima Acao Recomendada"
+3. Reorganizar KPIs primarios para focar em vencimentos
+4. Adicionar badge de urgencia visual (vermelho/amarelo)
+
+---
+
+## 4. Onboarding Atualizado
+
+### Objetivo
+Alinhar mensagens do tour com a nova proposta de valor.
+
+### Novas Mensagens
+
+| Step | Foco | Mensagem Atual | Mensagem Nova |
+|------|------|----------------|---------------|
+| 1 | Dashboard | "Bem-vindo ao LexFlow! Aqui voce acompanha todos os indicadores..." | "Aqui voce ve todos os prazos e alertas importantes." |
+| 2 | Criar | "Crie novos contratos ou servicos com poucos cliques..." | "Cadastre contratos para ativar alertas automaticos." |
+| 3 | Alertas | "Receba alertas automaticos sobre vencimentos..." | "O sistema avisa antes que um prazo vire problema." |
+
+### Mensagem Final
+
+```text
+"Pronto. Agora seus contratos estao sob controle."
+```
+
+### Arquivo: `src/hooks/useOnboardingTour.ts`
+
+Atualizar `tourSteps` com novas mensagens.
+
+---
+
+## 5. Microcopy Orientado a Decisao
+
+### Objetivo
+Todos os textos devem indicar impacto e sugerir proxima acao, evitando jargao juridico.
+
+### Arquivo: `src/lib/help-texts.ts`
+
+**Regras Aplicadas:**
+- Sempre indicar impacto
+- Sempre sugerir proxima acao
+- Evitar termos juridicos complexos
+- Usar frases curtas
+
+### Exemplos de Mudanca
+
+| Campo | Antes | Depois |
+|-------|-------|--------|
+| contratosAtivos | "Contratos em vigor que geram obrigacoes e custos." | "Contratos que precisam de acompanhamento. Veja quais exigem acao." |
+| vencendo30Dias | "Contratos proximos do vencimento." | "Vencem em breve. Revise e decida: renovar, renegociar ou encerrar." |
+| riscosAltos | "Contratos com clausulas de alto risco identificadas por IA." | "Requerem atencao. Revise antes que virem problema." |
+
+---
+
+## 6. Implementacao Tecnica
+
+### Arquivos a Modificar
+
+| Arquivo | Alteracao |
+|---------|-----------|
+| `src/components/AppSidebar.tsx` | Reestruturar menu sections, renomear labels |
+| `src/pages/Index.tsx` | Novo headline, subheadline, features e CTAs |
+| `src/pages/Dashboard.tsx` | Trocar titulo, adicionar ProximaAcaoCard, reorganizar KPIs |
+| `src/hooks/useOnboardingTour.ts` | Atualizar mensagens do tour |
+| `src/lib/help-texts.ts` | Refinar microcopy de todos os campos |
+
+### Arquivos a Criar
+
+| Arquivo | Descricao |
+|---------|-----------|
+| `src/components/Dashboard/ProximaAcaoCard.tsx` | Card de acao recomendada |
+| `src/components/Dashboard/GestorKPIGrid.tsx` | Grid de KPIs focado em gestor |
+
+---
+
+## 7. Detalhes da Navegacao por Grupo
+
+### Grupo: Principal
+
+```javascript
+{
+  id: "principal",
+  title: "Principal",
+  icon: LayoutDashboard,
+  defaultOpen: true,
+  items: [
+    { title: "Visao Geral", url: "/dashboard", icon: LayoutDashboard },
+    { title: "Contratos", url: "/contratos", icon: FileText },
+    { title: "Alertas e Prazos", url: "/alertas", icon: Bell },
+    { title: "Requisicoes", url: "/requisicoes", icon: FileInput },
+  ],
 }
 ```
 
-**Contrast Improvements:**
-- Ensure `--muted-foreground` has minimum 4.5:1 ratio against backgrounds
-- Adjust `--lexflow-verde-claro` for better readability on dark sidebar
+### Grupo: Base
 
-**New CSS utility classes:**
-```css
-.state-hover-visible { /* Applied to interactive elements */ }
-.state-active-clear { /* For pressed/selected states */ }
-.state-disabled-distinct { /* For disabled elements */ }
+```javascript
+{
+  id: "base",
+  title: "Base",
+  icon: Database,
+  defaultOpen: false,
+  items: [
+    { title: "Fornecedores", url: "/fornecedores", icon: Users },
+    { title: "Unidades", url: "/unidades", icon: Building2 },
+    { title: "Modelos de Contrato", url: "/templates", icon: FileStack },
+  ],
+}
+```
+
+### Grupo: Automacao
+
+```javascript
+{
+  id: "automacao",
+  title: "Automacao",
+  icon: Workflow,
+  defaultOpen: false,
+  items: [
+    { title: "Fluxos de Aprovacao", url: "/workflows", icon: GitBranch },
+  ],
+}
+```
+
+### Grupo: Governanca
+
+```javascript
+{
+  id: "governanca",
+  title: "Governanca",
+  icon: Shield,
+  defaultOpen: false,
+  visibility: "advanced", // Colapsar por padrao
+  items: [
+    { title: "Relatorios", url: "/relatorios", icon: BarChart3 },
+    { title: "Historico de Acoes", url: "/audit-logs", icon: Activity },
+    { title: "Seguranca", url: "/security", icon: Shield },
+    { title: "Protecao de Dados", url: "/compliance", icon: ShieldCheck },
+  ],
+}
+```
+
+### Grupo: Configuracoes
+
+```javascript
+{
+  id: "configuracoes",
+  title: "Configuracoes",
+  icon: Settings,
+  defaultOpen: false,
+  items: [
+    { title: "Usuarios e Permissoes", url: "/usuarios", icon: UserCog },
+    { title: "Notificacoes", url: "/notification-settings", icon: Bell },
+    { title: "Preferencias", url: "/settings", icon: Settings },
+  ],
+}
 ```
 
 ---
 
-## 4. Executive Dashboard Variant
+## 8. Ordem de Execucao
 
-### Goal
-Create a high-level, scannable dashboard optimized for C-Level executives with minimal visual noise.
+1. **Fase 1: Navegacao**
+   - Reestruturar AppSidebar.tsx com nova hierarquia
+   - Renomear labels para linguagem de gestor
+   - Mover "Franquias" para dentro de "Contratos" como submenu
 
-### Metrics Displayed
-1. Contratos ativos (count + trend)
-2. Valor total (formatted compactly)
-3. Riscos altos (count with critical badge)
-4. Vencimentos proximos (30 days)
-5. Conformidade geral (percentage with progress ring)
+2. **Fase 2: Landing Page**
+   - Atualizar Index.tsx com novo headline e features
+   - Trocar CTAs e highlights
 
-### Layout: One-Screen, High-Level, Scannable
+3. **Fase 3: Dashboard**
+   - Criar ProximaAcaoCard.tsx
+   - Reorganizar KPIs primarios
+   - Trocar titulo para "Visao Geral"
 
-**New/Modified Files:**
-- `src/components/Dashboard/ExecutiveSummary.tsx` - Compact KPI row component
-- `src/components/Dashboard/ComplianceRing.tsx` - Circular progress for compliance %
-- `src/pages/Dashboard.tsx` - Add toggle for Executive View vs Detailed View
+4. **Fase 4: Onboarding**
+   - Atualizar mensagens em useOnboardingTour.ts
 
-**Visual Style:**
-- Minimalist design with generous whitespace
-- Insight-oriented: Each metric shows trend arrow and brief insight
-- Low visual noise: Remove decorative elements in exec mode
-- Large, scannable numbers with compact formatting
+5. **Fase 5: Microcopy**
+   - Refinar todos os textos em help-texts.ts
 
-**Structure:**
+---
+
+## 9. Consideracoes de UX
+
+- **Gestor-first**: Toda decisao prioriza a experiencia do gestor
+- **Orientado a acao**: Cada elemento mostra "o que fazer agora"
+- **Sem juridiques**: Evitar termos como "clausulas", "obrigacoes contratuais"
+- **Clareza antes de profundidade**: Informacao essencial primeiro
+- **Problema + proxima acao**: Sempre mostrar o problema e o caminho
+
+---
+
+## 10. Metricas de Sucesso
+
+| Metrica | Definicao |
+|---------|-----------|
+| Ativacao | Primeiro contrato cadastrado |
+| Engajamento | Alertas ativos |
+| Retencao | Uso semanal do dashboard |
+| Valor realizado | Zero contratos vencidos sem aviso |
+
+---
+
+## 11. Componente: ProximaAcaoCard
 
 ```text
 +--------------------------------------------------+
-|  EXECUTIVE SUMMARY                    [Toggle]   |
-+--------------------------------------------------+
-|  [42]        [R$ 12.5M]     [5]      [8]    [92%]|
-|  Ativos      Valor Total   Riscos  Vence   Conf. |
-|  +12%        +8% vs mes    Critico  30d    OK    |
+|  [!] PROXIMA ACAO                     [Vermelho] |
 +--------------------------------------------------+
 |                                                   |
-|  [Quick Insight Card]                            |
-|  "5 contratos com risco alto requerem revisao    |
-|   juridica. 8 vencem em 30 dias."                |
+|  "3 contratos vencem em menos de 7 dias"         |
+|                                                   |
+|  Revise e decida: renovar, renegociar ou         |
+|  encerrar antes do prazo.                        |
+|                                                   |
+|  [Botao: Ver contratos urgentes]                 |
 |                                                   |
 +--------------------------------------------------+
 ```
 
-**Toggle Behavior:**
-- Default: Shows current detailed dashboard
-- Executive: Compact summary mode
-- Persisted in localStorage: `lexflow_dashboard_mode`
+### Logica de Priorizacao
+
+1. Contratos vencendo em < 7 dias (critico)
+2. Contratos vencendo em < 30 dias (alerta)
+3. Aprovacoes pendentes > 5 dias (atencao)
+4. Riscos altos sem revisao (informativo)
+5. "Tudo sob controle" (quando nao ha acoes urgentes)
 
 ---
 
-## Technical Implementation Details
+## 12. Resumo de Impacto
 
-### File Changes Summary
-
-| File | Action | Description |
-|------|--------|-------------|
-| `src/components/Onboarding/OnboardingTour.tsx` | CREATE | Main tour overlay component |
-| `src/components/Onboarding/TourStep.tsx` | CREATE | Individual step with spotlight |
-| `src/components/Onboarding/TourProgress.tsx` | CREATE | 3-dot progress indicator |
-| `src/components/Onboarding/index.ts` | CREATE | Export barrel |
-| `src/hooks/useOnboardingTour.ts` | CREATE | Tour state management hook |
-| `src/components/Dashboard/ExecutiveSummary.tsx` | CREATE | Exec dashboard summary row |
-| `src/components/Dashboard/ComplianceRing.tsx` | CREATE | Circular compliance meter |
-| `src/lib/help-texts.ts` | MODIFY | Update all KPI microcopy |
-| `src/index.css` | MODIFY | Add state classes for hover/active/disabled |
-| `src/pages/Dashboard.tsx` | MODIFY | Add exec mode toggle and ExecutiveSummary |
-| `src/components/DashboardLayout.tsx` | MODIFY | Inject OnboardingTour component |
-| `src/components/ui/stat-card.tsx` | MODIFY | Add focus-visible and state classes |
-
-### Dependencies
-- All existing dependencies (framer-motion, lucide-react, etc.)
-- No new npm packages required
-
-### Accessibility Considerations
-- All tour elements are keyboard navigable
-- Focus trap within tour steps
-- aria-labels for all interactive elements
-- Reduced motion option respected via `prefers-reduced-motion`
-- Contrast ratios verified for WCAG AA compliance
-
-### Mobile Responsiveness
-- Tour adapts to smaller screens with bottom-positioned tooltips
-- Executive summary stacks vertically on mobile
-- Touch-friendly tap targets (min 44x44px)
-
----
-
-## Execution Order
-
-1. **Phase 1: Design Tokens** - CSS state improvements
-2. **Phase 2: KPI Microcopy** - Update help-texts.ts
-3. **Phase 3: Executive Dashboard** - New components + toggle
-4. **Phase 4: Onboarding Tour** - Full tour implementation
-5. **Phase 5: Integration** - Connect all pieces in DashboardLayout
-
-Each phase is independently testable and can be reviewed separately.
+| Area | Antes | Depois |
+|------|-------|--------|
+| Posicionamento | Gestao juridica | Gestao preventiva |
+| Publico | Juridico | Gestores administrativos |
+| Linguagem | Termos juridicos | Linguagem de negocios |
+| Navegacao | Por funcionalidade | Por objetivo |
+| Dashboard | Metricas tecnicas | Acoes e riscos |
+| Onboarding | Apresentacao de features | Valor e resultado |
