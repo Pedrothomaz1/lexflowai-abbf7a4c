@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import {
   Dialog,
   DialogContent,
@@ -51,6 +52,7 @@ export function ContractImport({
   fornecedores,
 }: ContractImportProps) {
   const { toast } = useToast();
+  const { organization } = useOrganization();
   const [step, setStep] = useState<ImportStep>('upload');
   const [file, setFile] = useState<File | null>(null);
   const [contracts, setContracts] = useState<ProcessedContract[]>([]);
@@ -270,6 +272,17 @@ export function ContractImport({
       });
       return;
     }
+
+    if (!organization?.id) {
+      toast({
+        variant: "destructive",
+        title: "Organização não encontrada",
+        description: "Finalize o onboarding ou verifique seu acesso.",
+      });
+      setImporting(false);
+      setStep('preview');
+      return;
+    }
     
     const selectedContracts = contracts.filter(c => selectedRows.has(c.rowIndex));
     const results = { success: 0, failed: 0, errors: [] as string[] };
@@ -291,6 +304,7 @@ export function ContractImport({
               cnpj: contract.parsed.documentoTipo === 'cnpj' ? contract.parsed.documento : null,
               cpf: contract.parsed.documentoTipo === 'cpf' ? contract.parsed.documento : null,
               tipo_pessoa: tipoPessoa,
+              organization_id: organization.id,
               created_by: user.id,
             })
             .select('id')
@@ -324,6 +338,7 @@ export function ContractImport({
             observacoes: contract.parsed.observacoes,
             tags: contract.parsed.tags,
             metadata: contract.parsed.metadata,
+            organization_id: organization.id,
             created_by: user.id,
           });
         

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -86,6 +87,7 @@ const ENTITIES = [
 
 export default function ComplianceLGPD() {
   const { toast } = useToast();
+  const { organization } = useOrganization();
   const [loading, setLoading] = useState(true);
   const [logs, setLogs] = useState<ComplianceLog[]>([]);
   const [policies, setPolicies] = useState<RetentionPolicy[]>([]);
@@ -162,14 +164,29 @@ export default function ComplianceLGPD() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
+      if (!organization?.id) {
+        toast({
+          variant: "destructive",
+          title: "Organização não encontrada",
+          description: "Finalize o onboarding ou verifique seu acesso.",
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from("data_retention_policies")
         .insert({
           ...newPolicy,
+          organization_id: organization.id,
           created_by: user.id,
         });
 
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes("row-level security") || error.code === "42501") {
+          throw new Error("Você não tem permissão para esta ação.");
+        }
+        throw error;
+      }
 
       toast({
         title: "Política criada",
