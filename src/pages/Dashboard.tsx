@@ -522,8 +522,12 @@ const Dashboard = () => {
               </div>
             ) : (
               <EmptyState
-                title="Sem dados"
-                description="Nenhum fornecedor com contratos ainda"
+                title="Adicione seus fornecedores"
+                description="Cadastre fornecedores para acompanhar o valor dos contratos por parceiro."
+                action={{
+                  label: "Ir para Fornecedores",
+                  onClick: () => navigate("/fornecedores"),
+                }}
               />
             )}
           </CardContent>
@@ -560,7 +564,14 @@ const Dashboard = () => {
                 formatter={(v) => `${v} contratos`}
               />
             ) : (
-              <EmptyState title="Sem dados" description="Nenhum contrato registrado" />
+              <EmptyState 
+                title="Comece a acompanhar seus contratos" 
+                description="Cadastre seu primeiro contrato para visualizar a evolução aqui."
+                action={{
+                  label: "Cadastrar Contrato",
+                  onClick: () => navigate("/contratos"),
+                }}
+              />
             )}
           </CardContent>
         </Card>
@@ -583,7 +594,10 @@ const Dashboard = () => {
                 formatter={(v) => `R$ ${v.toFixed(0)}K`}
               />
             ) : (
-              <EmptyState title="Sem dados" description="Nenhum valor registrado" />
+              <EmptyState 
+                title="Acompanhe valores mensais" 
+                description="Seus indicadores de valor aparecerão aqui após cadastrar contratos."
+              />
             )}
           </CardContent>
         </Card>
@@ -606,7 +620,10 @@ const Dashboard = () => {
                 showLabels={false}
               />
             ) : (
-              <EmptyState title="Sem dados" description="Nenhum contrato registrado" />
+              <EmptyState 
+                title="Distribuição por tipo" 
+                description="A distribuição por tipo de contrato aparecerá aqui após cadastrar contratos."
+              />
             )}
           </CardContent>
         </Card>
@@ -633,8 +650,12 @@ const Dashboard = () => {
               />
             ) : (
               <EmptyState
-                title="Sem análises"
-                description="Nenhuma análise de risco disponível"
+                title="Análises de risco"
+                description="Execute análises de IA nos seus contratos para ver a distribuição de riscos."
+                action={{
+                  label: "Ver Contratos",
+                  onClick: () => navigate("/contratos"),
+                }}
               />
             )}
           </CardContent>
@@ -695,7 +716,11 @@ const Dashboard = () => {
           ) : (
             <EmptyState
               title="Nenhum vencimento próximo"
-              description="Não há contratos vencendo nos próximos 90 dias"
+              description="Não há contratos vencendo nos próximos 90 dias. Mantenha seus contratos atualizados para receber alertas."
+              action={{
+                label: "Ver Contratos",
+                onClick: () => navigate("/contratos"),
+              }}
             />
           )}
         </CardContent>

@@ -1,6 +1,6 @@
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Scale, FileText, Users, BarChart3, Shield } from "lucide-react";
+import { Scale, FileText, Users, BarChart3, Shield, CheckCircle, FileSignature, Bell, ArrowRight } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -28,6 +28,21 @@ const Index = () => {
     },
   ];
 
+  const highlights = [
+    {
+      icon: CheckCircle,
+      text: "Aprovações automatizadas",
+    },
+    {
+      icon: FileSignature,
+      text: "Assinatura eletrônica",
+    },
+    {
+      icon: Bell,
+      text: "Alertas de vencimento",
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-background">
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
@@ -46,15 +61,35 @@ const Index = () => {
 
       <main className="container mx-auto px-6">
         <section className="py-20 text-center">
-          <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-glow">
+          <h1 className="text-5xl md:text-6xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-glow">
             Gestão de Contratos Inteligente
           </h1>
-          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Automatize seu ciclo de vida contratual com fluxos de aprovação, assinatura eletrônica e análise jurídica com IA
+          <p className="text-xl text-muted-foreground mb-6 max-w-xl mx-auto">
+            Automatize todo o ciclo contratual em uma única plataforma.
           </p>
+          
+          {/* Feature Highlights */}
+          <div className="flex flex-wrap justify-center gap-6 mb-8">
+            {highlights.map((highlight, index) => {
+              const Icon = highlight.icon;
+              return (
+                <div key={index} className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Icon className="h-5 w-5 text-primary" />
+                  <span>{highlight.text}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* CTAs */}
           <div className="flex gap-4 justify-center">
-            <Button size="lg" onClick={() => navigate("/auth")} className="gap-2">
+            <Button 
+              size="lg" 
+              onClick={() => navigate("/auth")} 
+              className="btn-cta gap-2 shadow-lg hover:shadow-xl transition-all"
+            >
               Começar Agora
+              <ArrowRight className="h-5 w-5" />
             </Button>
             <Button size="lg" variant="outline">
               Saiba Mais

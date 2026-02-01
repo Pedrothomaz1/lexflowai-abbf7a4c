@@ -56,7 +56,7 @@ export function FranquiaImport({ open, onOpenChange, onImport }: FranquiaImportP
 
     try {
       const buffer = await file.arrayBuffer();
-      const results = parseFranquiasXLSX(buffer);
+      const results = await parseFranquiasXLSX(buffer);
       
       if (results.length === 0) {
         setError("Nenhum dado encontrado no arquivo. Verifique se o formato está correto.");
@@ -94,8 +94,8 @@ export function FranquiaImport({ open, onOpenChange, onImport }: FranquiaImportP
     [handleFile]
   );
 
-  const handleDownloadTemplate = () => {
-    const buffer = generateFranquiasTemplate();
+  const handleDownloadTemplate = async () => {
+    const buffer = await generateFranquiasTemplate();
     const blob = new Blob([buffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });

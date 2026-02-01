@@ -32,17 +32,18 @@ function escapeHTML(text: string): string {
 }
 
 // Configure DOMPurify to allow only safe tags for redline display
-const REDLINE_PURIFY_CONFIG: DOMPurify.Config = {
+const REDLINE_PURIFY_CONFIG = {
   ALLOWED_TAGS: ['span', 'ins', 'del', 'mark', 'b', 'i', 'strong', 'em', 'br', 'p', 'div'],
   ALLOWED_ATTR: ['class', 'style', 'data-change-id'],
   ALLOW_DATA_ATTR: false,
   FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'link', 'style', 'img', 'svg', 'math'],
   FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'onblur'],
+  RETURN_TRUSTED_TYPE: false,
 };
 
 // Sanitize redline HTML using DOMPurify (secure against XSS)
 function sanitizeRedlineHTML(html: string): string {
-  return DOMPurify.sanitize(html, REDLINE_PURIFY_CONFIG);
+  return DOMPurify.sanitize(html, REDLINE_PURIFY_CONFIG) as string;
 }
 
 interface ContractRedlineEditorProps {

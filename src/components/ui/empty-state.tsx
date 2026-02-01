@@ -1,6 +1,12 @@
 import { cn } from "@/lib/utils";
 import { LucideIcon, FileX, Search, AlertCircle } from "lucide-react";
 import { Button } from "./button";
+import { Link } from "react-router-dom";
+
+interface SuggestionLink {
+  label: string;
+  href: string;
+}
 
 interface EmptyStateProps {
   icon?: LucideIcon;
@@ -14,6 +20,7 @@ interface EmptyStateProps {
     label: string;
     onClick: () => void;
   };
+  suggestions?: SuggestionLink[];
   variant?: "default" | "search" | "error";
   className?: string;
 }
@@ -24,6 +31,7 @@ export function EmptyState({
   description,
   action,
   secondaryAction,
+  suggestions,
   variant = "default",
   className,
 }: EmptyStateProps) {
@@ -62,14 +70,14 @@ export function EmptyState({
       </div>
       <h3 className="text-lg font-semibold text-foreground mb-1">{title}</h3>
       {description && (
-        <p className="text-sm text-muted-foreground max-w-sm mb-6">
+        <p className="text-sm text-muted-foreground max-w-sm mb-4">
           {description}
         </p>
       )}
       {(action || secondaryAction) && (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 mb-4">
           {action && (
-            <Button onClick={action.onClick} size="sm">
+            <Button onClick={action.onClick} size="sm" className="btn-cta">
               {action.label}
             </Button>
           )}
@@ -78,6 +86,20 @@ export function EmptyState({
               {secondaryAction.label}
             </Button>
           )}
+        </div>
+      )}
+      {suggestions && suggestions.length > 0 && (
+        <div className="flex flex-wrap items-center justify-center gap-2 text-sm">
+          <span className="text-muted-foreground">Links úteis:</span>
+          {suggestions.map((suggestion, index) => (
+            <Link
+              key={index}
+              to={suggestion.href}
+              className="text-primary hover:underline"
+            >
+              {suggestion.label}
+            </Link>
+          ))}
         </div>
       )}
     </div>
