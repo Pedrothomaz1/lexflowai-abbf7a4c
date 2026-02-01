@@ -43,13 +43,37 @@ Deno.serve(async (req) => {
 
     console.log(`Registering LGPD consent for user: ${user_id}, IP: ${ipAddress}`);
 
+    // Resolve organization_id: use provided, fetch from user's membership, or use default
+    let resolvedOrgId = organization_id;
+    
+    if (!resolvedOrgId) {
+      // Try to fetch user's organization from membership
+      const { data: memberData } = await supabaseAdmin
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user_id)
+        .eq("is_active", true)
+        .limit(1)
+        .single();
+      
+      if (memberData?.organization_id) {
+        resolvedOrgId = memberData.organization_id;
+        console.log(`Resolved organization_id from membership: ${resolvedOrgId}`);
+      } else {
+        // Use default organization for pre-onboarding consent logs
+        // This is the legacy/default org used for users without an org yet
+        resolvedOrgId = "00000000-0000-0000-0000-000000000001";
+        console.log(`Using default organization for consent log: ${resolvedOrgId}`);
+      }
+    }
+
     // Prepare compliance log entry
     const complianceLog = {
       tipo_evento: "consent_given",
       entidade: "termos_e_privacidade",
       user_id: user_id,
       ip_address: ipAddress,
-      organization_id: organization_id || null,
+      organization_id: resolvedOrgId,
       dados_afetados: {
         versao_termos: versao_termos || "1.0",
         versao_privacidade: versao_privacidade || "1.0",
