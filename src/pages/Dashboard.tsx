@@ -30,7 +30,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { PageSkeleton } from "@/components/ui/skeleton-loaders";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PremiumAreaChart, PremiumBarChart, PremiumDonutChart } from "@/components/charts";
-import { ExecutiveSummary, ProximaAcaoCard } from "@/components/Dashboard";
+import { ExecutiveSummary, ProximaAcaoCard, FranquiasKPIGrid } from "@/components/Dashboard";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { helpTexts } from "@/lib/help-texts";
@@ -67,6 +67,11 @@ const Dashboard = () => {
   const [valorMensalData, setValorMensalData] = useState<any[]>([]);
   const [timelineVencimentos, setTimelineVencimentos] = useState<any[]>([]);
   const [topFornecedores, setTopFornecedores] = useState<any[]>([]);
+  const [franquiasStats, setFranquiasStats] = useState({
+    ativas: 0,
+    proximoVencer: 0,
+    emRenovacao: 0,
+  });
 
   const toggleDashboardMode = () => {
     const newMode = !isExecutiveMode;
@@ -288,6 +293,21 @@ const Dashboard = () => {
           .map(([name, value]) => ({ name, value }))
       );
     }
+
+    // Fetch franquias stats
+    const { data: franquias } = await supabase
+      .from("franquias")
+      .select("status_vigencia, consultora_informada, contrato_novo_assinado");
+
+    if (franquias) {
+      const ativas = franquias.filter(f => f.status_vigencia === "ativo").length;
+      const proximoVencer = franquias.filter(f => f.status_vigencia === "proximo_vencer").length;
+      const emRenovacao = franquias.filter(f => 
+        f.consultora_informada && !f.contrato_novo_assinado
+      ).length;
+
+      setFranquiasStats({ ativas, proximoVencer, emRenovacao });
+    }
   };
 
   if (loading) {
@@ -505,6 +525,9 @@ const Dashboard = () => {
               onClick={() => navigate("/workflows")}
               helpText={helpTexts.dashboard.tempoMedioAprovacao}
             />
+
+          {/* Franquias KPIs Section */}
+          <FranquiasKPIGrid stats={franquiasStats} />
 
           {/* Main Charts Grid */}
           <div className="grid gap-6 lg:grid-cols-3">
