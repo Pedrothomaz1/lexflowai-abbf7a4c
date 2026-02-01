@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, differenceInDays, isPast, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -87,6 +88,7 @@ const OBLIGATION_TYPES = [
 
 export function ContractObligations({ contratoId }: ContractObligationsProps) {
   const { toast } = useToast();
+  const { organization } = useOrganization();
   const [obligations, setObligations] = useState<Obligation[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -176,10 +178,20 @@ export function ContractObligations({ contratoId }: ContractObligationsProps) {
       return;
     }
 
+    if (!organization?.id) {
+      toast({
+        variant: "destructive",
+        title: "Organização não encontrada",
+        description: "Finalize o onboarding ou verifique seu acesso.",
+      });
+      return;
+    }
+
     setSubmitting(true);
     try {
       const obligationData = {
         contrato_id: contratoId,
+        organization_id: organization.id,
         titulo: formData.titulo,
         descricao: formData.descricao || null,
         tipo: formData.tipo,
@@ -202,7 +214,12 @@ export function ContractObligations({ contratoId }: ContractObligationsProps) {
           .from("contract_obligations")
           .insert([obligationData]);
 
-        if (error) throw error;
+        if (error) {
+          if (error.message.includes("row-level security") || error.code === "42501") {
+            throw new Error("Sem permissão para criar obrigação. Verifique seu acesso.");
+          }
+          throw error;
+        }
         toast({ title: "Obrigação criada!" });
       }
 

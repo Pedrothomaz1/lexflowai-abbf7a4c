@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { motion } from "framer-motion";
 import { 
   Copy, 
@@ -53,6 +54,7 @@ export function ContractQuickActions({
 }: ContractQuickActionsProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { organization } = useOrganization();
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
@@ -60,6 +62,10 @@ export function ContractQuickActions({
   const handleDuplicate = async () => {
     setIsDuplicating(true);
     try {
+      if (!organization?.id) {
+        throw new Error("Organização não encontrada. Finalize o onboarding.");
+      }
+
       // Fetch the current contract
       const { data: original, error: fetchError } = await supabase
         .from("contratos")
@@ -73,6 +79,7 @@ export function ContractQuickActions({
       const { data: newContract, error: insertError } = await supabase
         .from("contratos")
         .insert([{
+          organization_id: organization.id,
           numero_contrato: `${original.numero_contrato}-COPIA`,
           titulo: `${original.titulo} (Cópia)`,
           descricao: original.descricao,
@@ -87,7 +94,12 @@ export function ContractQuickActions({
         .select()
         .single();
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        if (insertError.message.includes("row-level security") || insertError.code === "42501") {
+          throw new Error("Sem permissão para duplicar contrato. Verifique seu acesso.");
+        }
+        throw insertError;
+      }
 
       toast({
         title: "Contrato duplicado!",
@@ -139,11 +151,16 @@ export function ContractQuickActions({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
+      if (!organization?.id) {
+        throw new Error("Organização não encontrada. Finalize o onboarding.");
+      }
+
       // Create an alert for 30 days from now
       const alertDate = new Date();
       alertDate.setDate(alertDate.getDate() + 30);
 
       const { error } = await supabase.from("contract_alerts").insert([{
+        organization_id: organization.id,
         contrato_id: contratoId,
         titulo: `Lembrete: ${contratoTitulo}`,
         mensagem: `Revisar contrato ${contratoNumero}`,
@@ -152,7 +169,12 @@ export function ContractQuickActions({
         dias_antecedencia: 30,
       }]);
 
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes("row-level security") || error.code === "42501") {
+          throw new Error("Sem permissão para criar alerta. Verifique seu acesso.");
+        }
+        throw error;
+      }
 
       toast({
         title: "Alerta criado!",

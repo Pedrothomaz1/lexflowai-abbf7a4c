@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -53,6 +54,7 @@ interface ContractCommentsProps {
 
 export function ContractComments({ contratoId, secao }: ContractCommentsProps) {
   const { toast } = useToast();
+  const { organization } = useOrganization();
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [newComment, setNewComment] = useState("");
@@ -140,6 +142,15 @@ export function ContractComments({ contratoId, secao }: ContractCommentsProps) {
       return;
     }
 
+    if (!organization?.id) {
+      toast({
+        variant: "destructive",
+        title: "Organização não encontrada",
+        description: "Finalize o onboarding ou verifique seu acesso.",
+      });
+      return;
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
@@ -164,6 +175,7 @@ export function ContractComments({ contratoId, secao }: ContractCommentsProps) {
         const { error } = await supabase
           .from("contract_comments")
           .insert([{
+            organization_id: organization.id,
             contrato_id: contratoId,
             user_id: user.id,
             parent_id: replyingTo,
@@ -173,7 +185,12 @@ export function ContractComments({ contratoId, secao }: ContractCommentsProps) {
             status: 'aberto',
           }]);
 
-        if (error) throw error;
+        if (error) {
+          if (error.message.includes("row-level security") || error.code === "42501") {
+            throw new Error("Sem permissão para adicionar comentário. Verifique seu acesso.");
+          }
+          throw error;
+        }
 
         toast({
           title: "Comentário adicionado!",

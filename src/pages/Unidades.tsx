@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { PageHeader } from "@/components/ui/page-header";
 import { DataTable, DataTableColumn } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
@@ -83,6 +84,7 @@ const tipoConfig: Record<string, { label: string; color: string }> = {
 
 export default function Unidades() {
   const { toast } = useToast();
+  const { organization } = useOrganization();
   const [unidades, setUnidades] = useState<Unidade[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -168,6 +170,15 @@ export default function Unidades() {
       return;
     }
 
+    if (!organization?.id) {
+      toast({
+        title: "Organização não encontrada",
+        description: "Finalize o onboarding ou verifique seu acesso.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     const payload = {
       nome: formData.nome.trim(),
@@ -182,6 +193,8 @@ export default function Unidades() {
     };
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+
       if (editingUnidade) {
         const { error } = await supabase
           .from("unidades")
@@ -190,8 +203,17 @@ export default function Unidades() {
         if (error) throw error;
         toast({ title: "Unidade atualizada com sucesso!" });
       } else {
-        const { error } = await supabase.from("unidades").insert(payload);
-        if (error) throw error;
+        const { error } = await supabase.from("unidades").insert({
+          ...payload,
+          organization_id: organization.id,
+          created_by: user?.id,
+        });
+        if (error) {
+          if (error.message.includes("row-level security") || error.code === "42501") {
+            throw new Error("Sem permissão para criar unidade. Verifique seu acesso.");
+          }
+          throw error;
+        }
         toast({ title: "Unidade cadastrada com sucesso!" });
       }
       setIsDialogOpen(false);

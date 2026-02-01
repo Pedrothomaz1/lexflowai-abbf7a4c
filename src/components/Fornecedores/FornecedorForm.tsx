@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -71,6 +72,7 @@ interface FornecedorFormProps {
 
 export function FornecedorForm({ onSuccess, onCancel }: FornecedorFormProps) {
   const { toast } = useToast();
+  const { organization } = useOrganization();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("basico");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -117,6 +119,15 @@ export function FornecedorForm({ onSuccess, onCancel }: FornecedorFormProps) {
         variant: "destructive",
         title: "Erro de autenticação",
         description: "Você precisa estar logado para criar um fornecedor.",
+      });
+      return;
+    }
+
+    if (!organization?.id) {
+      toast({
+        variant: "destructive",
+        title: "Organização não encontrada",
+        description: "Finalize o onboarding ou verifique seu acesso.",
       });
       return;
     }
@@ -171,13 +182,14 @@ export function FornecedorForm({ onSuccess, onCancel }: FornecedorFormProps) {
       const { data: fornecedor, error } = await supabase
         .from("fornecedores")
         .insert({
+          organization_id: organization.id,
           nome: formData.nome,
           tipo_pessoa: formData.tipo_pessoa,
           cnpj: formData.tipo_pessoa === "juridica" ? cleanDocument(formData.cnpj) : null,
           cpf: formData.tipo_pessoa === "fisica" ? cleanDocument(formData.cpf) : null,
           inscricao_estadual: formData.inscricao_estadual || null,
           inscricao_municipal: formData.inscricao_municipal || null,
-          porte_empresa: formData.porte_empresa || null,
+          porte_empresa: formData.tipo_pessoa === "juridica" ? (formData.porte_empresa || null) : null,
           website: formData.website || null,
           is_active: formData.is_active,
           email: formData.email || null,
@@ -201,11 +213,16 @@ export function FornecedorForm({ onSuccess, onCancel }: FornecedorFormProps) {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes("row-level security") || error.code === "42501") {
+          throw new Error("Sem permissão para criar fornecedor. Verifique seu acesso.");
+        }
+        throw error;
+      }
 
       // Salva as categorias
       if (fornecedor && selectedCategories.length > 0) {
-        const result = await saveFornecedorCategorias(fornecedor.id, selectedCategories);
+        const result = await saveFornecedorCategorias(fornecedor.id, selectedCategories, organization.id);
         if (!result.success) {
           console.error("Error saving categories:", result.error);
         }
@@ -315,34 +332,47 @@ export function FornecedorForm({ onSuccess, onCancel }: FornecedorFormProps) {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Porte da Empresa</Label>
-              <Select
-                value={formData.porte_empresa}
-                onValueChange={(value) => handleChange("porte_empresa", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {PORTES_EMPRESA.map((porte) => (
-                    <SelectItem key={porte.value} value={porte.value}>
-                      {porte.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {formData.tipo_pessoa === "juridica" && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Porte da Empresa</Label>
+                <Select
+                  value={formData.porte_empresa}
+                  onValueChange={(value) => handleChange("porte_empresa", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PORTES_EMPRESA.map((porte) => (
+                      <SelectItem key={porte.value} value={porte.value}>
+                        {porte.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Website</Label>
+                <Input
+                  value={formData.website}
+                  onChange={(e) => handleChange("website", e.target.value)}
+                  placeholder="https://..."
+                />
+              </div>
             </div>
+          )}
+
+          {formData.tipo_pessoa === "fisica" && (
             <div className="space-y-2">
-              <Label>Website</Label>
+              <Label>Website / Redes Sociais</Label>
               <Input
                 value={formData.website}
                 onChange={(e) => handleChange("website", e.target.value)}
                 placeholder="https://..."
               />
             </div>
-          </div>
+          )}
 
           <div className="flex items-center space-x-2">
             <Switch

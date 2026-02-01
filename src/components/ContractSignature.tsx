@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,6 +54,7 @@ interface ContractSignatureProps {
 
 export function ContractSignature({ contratoId, contratoTitulo, arquivoUrl }: ContractSignatureProps) {
   const { toast } = useToast();
+  const { organization } = useOrganization();
   const [signatures, setSignatures] = useState<Signature[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -159,6 +161,15 @@ export function ContractSignature({ contratoId, contratoTitulo, arquivoUrl }: Co
       return;
     }
 
+    if (!organization?.id) {
+      toast({
+        variant: "destructive",
+        title: "Organização não encontrada",
+        description: "Finalize o onboarding ou verifique seu acesso.",
+      });
+      return;
+    }
+
     setSending(true);
 
     try {
@@ -169,6 +180,7 @@ export function ContractSignature({ contratoId, contratoTitulo, arquivoUrl }: Co
       const { data: signature, error } = await supabase
         .from("contract_signatures")
         .insert([{
+          organization_id: organization.id,
           contrato_id: contratoId,
           provider: formData.provider,
           external_id: `temp-${Date.now()}`, // Será atualizado pelo webhook
@@ -185,7 +197,12 @@ export function ContractSignature({ contratoId, contratoTitulo, arquivoUrl }: Co
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes("row-level security") || error.code === "42501") {
+          throw new Error("Sem permissão para criar assinatura. Verifique seu acesso.");
+        }
+        throw error;
+      }
 
       toast({
         title: "Solicitação criada!",

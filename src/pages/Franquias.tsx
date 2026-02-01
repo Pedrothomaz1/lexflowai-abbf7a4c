@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,6 +78,7 @@ const statusVigenciaLabels: Record<string, { label: string; variant: "default" |
 export default function Franquias() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { organization } = useOrganization();
   const queryClient = useQueryClient();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -101,12 +103,21 @@ export default function Franquias() {
   // Create mutation
   const createMutation = useMutation({
     mutationFn: async (data: Partial<Franquia>) => {
+      if (!organization?.id) {
+        throw new Error("Organização não encontrada. Finalize o onboarding.");
+      }
       const { data: userData } = await supabase.auth.getUser();
       const { error } = await supabase.from("franquias").insert({
         ...data,
+        organization_id: organization.id,
         created_by: userData.user?.id,
       });
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes("row-level security") || error.code === "42501") {
+          throw new Error("Sem permissão para criar franquia. Verifique seu acesso.");
+        }
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["franquias"] });
@@ -124,14 +135,23 @@ export default function Franquias() {
   // Bulk import mutation
   const importMutation = useMutation({
     mutationFn: async (results: FranquiaImportResult[]) => {
+      if (!organization?.id) {
+        throw new Error("Organização não encontrada. Finalize o onboarding.");
+      }
       const { data: userData } = await supabase.auth.getUser();
       const records = results.map((r) => ({
         ...r.data,
+        organization_id: organization.id,
         created_by: userData.user?.id,
       }));
       
       const { error } = await supabase.from("franquias").insert(records);
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes("row-level security") || error.code === "42501") {
+          throw new Error("Sem permissão para importar franquias. Verifique seu acesso.");
+        }
+        throw error;
+      }
       
       return records.length;
     },

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -62,6 +63,7 @@ const Contratos = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const { organization } = useOrganization();
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -275,6 +277,15 @@ const Contratos = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    if (!organization?.id) {
+      toast({
+        variant: "destructive",
+        title: "Organização não encontrada",
+        description: "Finalize o onboarding ou verifique seu acesso.",
+      });
+      return;
+    }
+
     if (!formData.fornecedor_id || !formData.data_inicio || !formData.data_fim) {
       toast({
         variant: "destructive",
@@ -287,6 +298,7 @@ const Contratos = () => {
     const { error } = await supabase.from("contratos").insert([
       {
         ...formData,
+        organization_id: organization.id,
         valor_total: formData.valor_total ? parseFloat(formData.valor_total) : null,
         fornecedor_id: formData.fornecedor_id,
         created_by: user.id,
@@ -294,11 +306,19 @@ const Contratos = () => {
     ]);
 
     if (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao criar contrato",
-        description: error.message,
-      });
+      if (error.message.includes("row-level security") || error.code === "42501") {
+        toast({
+          variant: "destructive",
+          title: "Sem permissão",
+          description: "Você não tem permissão para criar contratos. Verifique seu acesso.",
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Erro ao criar contrato",
+          description: error.message,
+        });
+      }
     } else {
       toast({
         title: "Contrato criado com sucesso!",
