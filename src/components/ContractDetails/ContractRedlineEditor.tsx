@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -74,6 +75,7 @@ interface Change {
 
 export function ContractRedlineEditor({ contratoId, conteudoOriginal = "" }: ContractRedlineEditorProps) {
   const { user } = useAuth();
+  const { organization } = useOrganization();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(conteudoOriginal);
@@ -97,12 +99,17 @@ export function ContractRedlineEditor({ contratoId, conteudoOriginal = "" }: Con
   // Create redline mutation
   const createRedline = useMutation({
     mutationFn: async (content: string) => {
+      if (!organization?.id) {
+        throw new Error("Organização não encontrada. Finalize o onboarding.");
+      }
+
       const changes = computeChanges(conteudoOriginal, content);
       const markedContent = generateMarkedContent(conteudoOriginal, content);
       
       const { data, error } = await supabase
         .from('contract_redlines')
         .insert({
+          organization_id: organization.id,
           contrato_id: contratoId,
           versao: (redlines?.length || 0) + 1,
           conteudo_original: conteudoOriginal,
@@ -114,7 +121,12 @@ export function ContractRedlineEditor({ contratoId, conteudoOriginal = "" }: Con
         .select()
         .single();
       
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes("row-level security") || error.code === "42501") {
+          throw new Error("Sem permissão para criar redline. Verifique seu acesso.");
+        }
+        throw error;
+      }
       return data;
     },
     onSuccess: () => {
@@ -124,7 +136,7 @@ export function ContractRedlineEditor({ contratoId, conteudoOriginal = "" }: Con
     },
     onError: (error) => {
       console.error('Error creating redline:', error);
-      toast.error("Erro ao salvar marcações");
+      toast.error(`Erro ao salvar marcações: ${error.message}`);
     }
   });
 

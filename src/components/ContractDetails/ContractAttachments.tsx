@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -34,6 +35,7 @@ interface ContractAttachmentsProps {
 
 export function ContractAttachments({ contratoId }: ContractAttachmentsProps) {
   const { toast } = useToast();
+  const { organization } = useOrganization();
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -69,6 +71,10 @@ export function ContractAttachments({ contratoId }: ContractAttachmentsProps) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
+      if (!organization?.id) {
+        throw new Error("Organização não encontrada. Finalize o onboarding.");
+      }
+
       const fileExt = file.name.split(".").pop();
       // Use user.id as folder to comply with storage RLS policies
       const fileName = `${user.id}/${Date.now()}-${file.name}`;
@@ -86,6 +92,7 @@ export function ContractAttachments({ contratoId }: ContractAttachmentsProps) {
       const { error: insertError } = await supabase
         .from("contract_attachments")
         .insert([{
+          organization_id: organization.id,
           contrato_id: contratoId,
           nome_arquivo: file.name,
           arquivo_url: publicUrl,
@@ -94,7 +101,12 @@ export function ContractAttachments({ contratoId }: ContractAttachmentsProps) {
           uploaded_by: user.id,
         }]);
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        if (insertError.message.includes("row-level security") || insertError.code === "42501") {
+          throw new Error("Sem permissão para fazer upload de anexos. Verifique seu acesso.");
+        }
+        throw insertError;
+      }
 
       toast({
         title: "Arquivo enviado!",

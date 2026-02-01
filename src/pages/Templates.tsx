@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,11 +42,12 @@ const Templates = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<ContractTemplate | null>(null);
   const { toast } = useToast();
+  const { organization } = useOrganization();
 
   const [formData, setFormData] = useState({
     nome: "",
     descricao: "",
-    tipo: "servico",
+    tipo: "prestacao_servicos",
     conteudo_template: "",
   });
 
@@ -76,6 +78,15 @@ const Templates = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!organization?.id) {
+      toast({
+        title: "Organização não encontrada",
+        description: "Finalize o onboarding ou verifique seu acesso.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const { data: userData } = await supabase.auth.getUser();
 
@@ -98,6 +109,7 @@ const Templates = () => {
         });
       } else {
         const { error } = await supabase.from("contract_templates").insert({
+          organization_id: organization.id,
           nome: formData.nome,
           descricao: formData.descricao,
           tipo: formData.tipo,
@@ -105,7 +117,12 @@ const Templates = () => {
           created_by: userData.user?.id,
         });
 
-        if (error) throw error;
+        if (error) {
+          if (error.message.includes("row-level security") || error.code === "42501") {
+            throw new Error("Sem permissão para criar template. Verifique seu acesso.");
+          }
+          throw error;
+        }
 
         toast({
           title: "Template criado",
@@ -118,7 +135,7 @@ const Templates = () => {
       setFormData({
         nome: "",
         descricao: "",
-        tipo: "servico",
+        tipo: "prestacao_servicos",
         conteudo_template: "",
       });
       fetchTemplates();
@@ -170,9 +187,11 @@ const Templates = () => {
 
   const getTipoBadge = (tipo: string) => {
     const tipos: { [key: string]: { label: string; variant: any } } = {
-      servico: { label: "Serviço", variant: "default" },
-      compra: { label: "Compra", variant: "secondary" },
+      prestacao_servicos: { label: "Prestação de Serviços", variant: "default" },
+      fornecimento: { label: "Fornecimento", variant: "secondary" },
       locacao: { label: "Locação", variant: "outline" },
+      confidencialidade: { label: "Confidencialidade", variant: "default" },
+      parceria: { label: "Parceria", variant: "secondary" },
       outro: { label: "Outro", variant: "outline" },
     };
     const config = tipos[tipo] || tipos.outro;
@@ -203,7 +222,7 @@ const Templates = () => {
               setFormData({
                 nome: "",
                 descricao: "",
-                tipo: "servico",
+                tipo: "prestacao_servicos",
                 conteudo_template: "",
               });
             }}>
@@ -248,9 +267,11 @@ const Templates = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="servico">Serviço</SelectItem>
-                    <SelectItem value="compra">Compra</SelectItem>
+                    <SelectItem value="prestacao_servicos">Prestação de Serviços</SelectItem>
+                    <SelectItem value="fornecimento">Fornecimento</SelectItem>
                     <SelectItem value="locacao">Locação</SelectItem>
+                    <SelectItem value="confidencialidade">Confidencialidade (NDA)</SelectItem>
+                    <SelectItem value="parceria">Parceria</SelectItem>
                     <SelectItem value="outro">Outro</SelectItem>
                   </SelectContent>
                 </Select>

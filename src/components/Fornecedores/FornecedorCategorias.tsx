@@ -128,7 +128,8 @@ export function FornecedorCategorias({
 // Helper para salvar categorias
 export async function saveFornecedorCategorias(
   fornecedorId: string,
-  categories: string[]
+  categories: string[],
+  organizationId?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // Remove todas as categorias existentes
@@ -145,6 +146,7 @@ export async function saveFornecedorCategorias(
           categories.map((categoria) => ({
             fornecedor_id: fornecedorId,
             categoria,
+            ...(organizationId && { organization_id: organizationId }),
           }))
         );
 
