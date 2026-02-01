@@ -1,6 +1,7 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { GlobalHeader } from "./GlobalHeader";
+import { OnboardingTour } from "./Onboarding";
 import { useModulo } from "@/contexts/ModuloContext";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { cn } from "@/lib/utils";
@@ -34,6 +35,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           <main className="flex-1 p-6 overflow-auto">{children}</main>
         </div>
       </div>
+      {/* Onboarding Tour - renders on first visit */}
+      <OnboardingTour />
     </SidebarProvider>
   );
 }
