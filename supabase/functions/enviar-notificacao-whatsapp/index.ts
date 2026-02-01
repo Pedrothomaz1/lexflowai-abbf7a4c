@@ -239,7 +239,7 @@ Deno.serve(async (req) => {
       `📋 *Título:* ${contratoTitulo}\n` +
       `📊 *Status:* ${novoStatus.replace(/_/g, ' ')}\n\n` +
       `Por favor, acesse o sistema LexFlow para revisar e aprovar este contrato.\n\n` +
-      `_VERI - Por Veridiana Quirino_`
+      `_LexFlowAI_`
 
     const notificacoesEnviadas = []
 

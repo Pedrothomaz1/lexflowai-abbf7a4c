@@ -154,7 +154,7 @@ const SeletorModulo = () => {
           {/* Footer */}
           <div className="text-center pt-6">
             <p className="text-sm text-[hsl(var(--lexflow-verde-claro)/0.5)]">
-              © {new Date().getFullYear()} Veridiana Quirino • LexFlow v1.1.0
+              © {new Date().getFullYear()} LexFlowAI • LexFlow v1.1.0
             </p>
           </div>
         </div>

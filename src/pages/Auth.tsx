@@ -246,7 +246,7 @@ const Auth = () => {
 
           {/* Footer */}
           <div className="text-sm text-white/50">
-            © 2024 Veridiana Quirino. Todos os direitos reservados.
+            © {new Date().getFullYear()} LexFlowAI. Todos os direitos reservados.
           </div>
         </div>
       </div>
