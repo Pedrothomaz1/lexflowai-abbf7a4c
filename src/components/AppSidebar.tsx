@@ -497,7 +497,7 @@ export function AppSidebar() {
               <Settings className="mr-2 h-4 w-4" />
               Preferências
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => window.open("https://docs.lexflow.com.br", "_blank")}>
+            <DropdownMenuItem onClick={() => navigate("/ajuda")}>
               <HelpCircle className="mr-2 h-4 w-4" />
               Central de Ajuda
             </DropdownMenuItem>

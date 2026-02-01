@@ -50,6 +50,7 @@ import OrganizationSettings from "./pages/OrganizationSettings";
 import OrganizationMembers from "./pages/OrganizationMembers";
 import AcceptInvite from "./pages/AcceptInvite";
 import TermosDeUso from "./pages/TermosDeUso";
+import CentralAjuda from "./pages/CentralAjuda";
 
 const queryClient = new QueryClient();
 
@@ -110,6 +111,9 @@ function App() {
                   {/* Organization management routes */}
                   <Route path="/organization/settings" element={<ProtectedRoute><DashboardLayout><OrganizationSettings /></DashboardLayout></ProtectedRoute>} />
                   <Route path="/organization/members" element={<ProtectedRoute><DashboardLayout><OrganizationMembers /></DashboardLayout></ProtectedRoute>} />
+                  
+                  {/* Help Center */}
+                  <Route path="/ajuda" element={<ProtectedRoute><DashboardLayout><CentralAjuda /></DashboardLayout></ProtectedRoute>} />
                   
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
