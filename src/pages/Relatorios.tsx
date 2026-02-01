@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,6 +78,7 @@ const VISUALIZATION_OPTIONS = [
 
 export default function Relatorios() {
   const { toast } = useToast();
+  const { organization } = useOrganization();
   const [loading, setLoading] = useState(true);
   const [reports, setReports] = useState<ReportConfig[]>([]);
   const [isCreating, setIsCreating] = useState(false);
@@ -131,6 +133,15 @@ export default function Relatorios() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
+      if (!organization?.id) {
+        toast({
+          variant: "destructive",
+          title: "Organização não encontrada",
+          description: "Finalize o onboarding ou verifique seu acesso.",
+        });
+        return;
+      }
+
       const filtros = {
         status: filterStatus || undefined,
         tipo: filterTipo || undefined,
@@ -144,10 +155,16 @@ export default function Relatorios() {
           ...newReport,
           filtros,
           colunas: newReport.colunas,
+          organization_id: organization.id,
           created_by: user.id,
         });
 
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes("row-level security") || error.code === "42501") {
+          throw new Error("Você não tem permissão para esta ação.");
+        }
+        throw error;
+      }
 
       toast({
         title: "Relatório criado",
@@ -209,7 +226,7 @@ export default function Relatorios() {
       
       // Log compliance event
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
+      if (user && organization?.id) {
         await supabase.from("compliance_logs").insert({
           tipo_evento: "exportacao",
           entidade: "relatorio",
@@ -218,6 +235,7 @@ export default function Relatorios() {
           justificativa: `Execução do relatório: ${report.nome}`,
           base_legal: "interesse_legitimo",
           user_id: user.id,
+          organization_id: organization.id,
         });
       }
     } catch (error: any) {

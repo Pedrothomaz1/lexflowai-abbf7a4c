@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -36,6 +37,7 @@ type Profile = {
 
 export default function WorkflowAprovacoes() {
   const { toast } = useToast();
+  const { organization } = useOrganization();
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -104,10 +106,20 @@ export default function WorkflowAprovacoes() {
       return;
     }
 
+    if (!organization?.id) {
+      toast({
+        variant: "destructive",
+        title: "Organização não encontrada",
+        description: "Finalize o onboarding ou verifique seu acesso.",
+      });
+      return;
+    }
+
     try {
       const workflow = {
         ...formData,
         niveis: niveis,
+        organization_id: organization.id,
       };
 
       if (editingWorkflow) {
@@ -116,14 +128,24 @@ export default function WorkflowAprovacoes() {
           .update(workflow)
           .eq("id", editingWorkflow.id);
 
-        if (error) throw error;
+        if (error) {
+          if (error.message.includes("row-level security") || error.code === "42501") {
+            throw new Error("Você não tem permissão para esta ação.");
+          }
+          throw error;
+        }
         toast({ title: "Workflow atualizado com sucesso!" });
       } else {
         const { error } = await supabase
           .from("approval_workflows")
           .insert([workflow]);
 
-        if (error) throw error;
+        if (error) {
+          if (error.message.includes("row-level security") || error.code === "42501") {
+            throw new Error("Você não tem permissão para criar workflows.");
+          }
+          throw error;
+        }
         toast({ title: "Workflow criado com sucesso!" });
       }
 

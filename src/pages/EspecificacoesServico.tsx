@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { PageHeader } from "@/components/ui/page-header";
 import { DataTable, DataTableColumn } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
@@ -81,6 +82,7 @@ const categoriaConfig: Record<string, { label: string; color: string; icon: type
 
 export default function EspecificacoesServico() {
   const { toast } = useToast();
+  const { organization } = useOrganization();
   const [especificacoes, setEspecificacoes] = useState<Especificacao[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -153,6 +155,15 @@ export default function EspecificacoesServico() {
       return;
     }
 
+    if (!organization?.id) {
+      toast({
+        variant: "destructive",
+        title: "Organização não encontrada",
+        description: "Finalize o onboarding ou verifique seu acesso.",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     const payload = {
       nome: formData.nome.trim(),
@@ -162,6 +173,7 @@ export default function EspecificacoesServico() {
       dias_alerta_padrao: formData.dias_alerta_padrao,
       requer_certificado: formData.requer_certificado,
       orgao_regulador: formData.orgao_regulador || null,
+      organization_id: organization.id,
     };
 
     try {
@@ -170,11 +182,21 @@ export default function EspecificacoesServico() {
           .from("especificacoes_servico")
           .update(payload)
           .eq("id", editingEspec.id);
-        if (error) throw error;
+        if (error) {
+          if (error.message.includes("row-level security") || error.code === "42501") {
+            throw new Error("Você não tem permissão para esta ação.");
+          }
+          throw error;
+        }
         toast({ title: "Especificação atualizada com sucesso!" });
       } else {
         const { error } = await supabase.from("especificacoes_servico").insert(payload);
-        if (error) throw error;
+        if (error) {
+          if (error.message.includes("row-level security") || error.code === "42501") {
+            throw new Error("Você não tem permissão para criar especificações.");
+          }
+          throw error;
+        }
         toast({ title: "Especificação cadastrada com sucesso!" });
       }
       setIsDialogOpen(false);

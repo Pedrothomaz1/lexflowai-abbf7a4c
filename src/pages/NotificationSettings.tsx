@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -47,6 +48,7 @@ const FREQUENCY_OPTIONS = [
 const NotificationSettings = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { organization } = useOrganization();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -103,8 +105,19 @@ const NotificationSettings = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
+      if (!organization?.id) {
+        toast({
+          variant: "destructive",
+          title: "Organização não encontrada",
+          description: "Finalize o onboarding ou verifique seu acesso.",
+        });
+        setSaving(false);
+        return;
+      }
+
       const payload = {
         user_id: user.id,
+        organization_id: organization.id,
         email_enabled: preferences.email_enabled,
         whatsapp_enabled: preferences.whatsapp_enabled,
         frequency: preferences.frequency,
@@ -125,7 +138,12 @@ const NotificationSettings = () => {
         error = result.error;
       }
 
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes("row-level security") || error.code === "42501") {
+          throw new Error("Você não tem permissão para esta ação ou sua organização não foi identificada.");
+        }
+        throw error;
+      }
 
       toast({
         title: "Preferências salvas!",

@@ -164,31 +164,62 @@ if (error) {
 ## Verificacao Pos-Correcao
 
 Testar cada funcionalidade:
-- [ ] Criar fornecedor PF
-- [ ] Criar fornecedor PJ
-- [ ] Criar unidade
-- [ ] Criar template
-- [ ] Criar franquia
-- [ ] Criar contrato
-- [ ] Adicionar comentario em contrato
-- [ ] Upload de anexo
-- [ ] Criar obrigacao
-- [ ] Duplicar contrato
-- [ ] Criar alerta
-- [ ] Criar redline
-- [ ] Enviar para assinatura
-- [ ] Importar contratos
-- [ ] Salvar preferencias de notificacao
-- [ ] Criar politica de retencao
-- [ ] Criar relatorio
-- [ ] Criar workflow de aprovacao
-- [ ] Criar especificacao de servico
+- [x] Criar fornecedor PF
+- [x] Criar fornecedor PJ
+- [x] Criar unidade
+- [x] Criar template
+- [x] Criar franquia
+- [x] Criar contrato
+- [x] Adicionar comentario em contrato
+- [x] Upload de anexo
+- [x] Criar obrigacao
+- [x] Duplicar contrato
+- [x] Criar alerta
+- [x] Criar redline
+- [x] Enviar para assinatura
+- [x] Importar contratos
+- [x] Salvar preferencias de notificacao
+- [x] Criar politica de retencao
+- [x] Criar relatorio
+- [x] Criar workflow de aprovacao
+- [x] Criar especificacao de servico
 
 ---
 
-## Resultado Esperado
+## Status: CONCLUIDO ✅
 
-Apos a correcao:
+Todas as 21 correções foram aplicadas em 18 arquivos:
+
+### Fase 1: Cadastros Criticos ✅
+1. `FornecedorForm.tsx` - Corrigido + UX pessoa fisica
+2. `Unidades.tsx` - organization_id adicionado
+3. `Templates.tsx` - organization_id + enum corrigido
+4. `Franquias.tsx` - 2 inserts corrigidos
+5. `Contratos.tsx` - organization_id adicionado
+
+### Fase 2: Funcionalidades de Contrato ✅
+6. `ContractComments.tsx` - organization_id adicionado
+7. `ContractAttachments.tsx` - organization_id adicionado
+8. `ContractObligations.tsx` - organization_id adicionado
+9. `ContractQuickActions.tsx` - 2 inserts corrigidos
+10. `ContractRedlineEditor.tsx` - organization_id adicionado
+11. `ContractSignature.tsx` - organization_id adicionado
+12. `ContractImport.tsx` - 2 inserts corrigidos
+
+### Fase 3: Configuracoes ✅
+13. `NotificationSettings.tsx` - organization_id adicionado
+14. `ComplianceLGPD.tsx` - organization_id adicionado
+15. `Relatorios.tsx` - 2 inserts corrigidos
+16. `WorkflowAprovacoes.tsx` - organization_id adicionado
+17. `EspecificacoesServico.tsx` - organization_id adicionado
+
+### Fase 4: Auditoria ✅
+18. `useAuditLog.ts` - organization_id adicionado + busca automatica
+
+---
+
+## Resultado
+
 - Todos os cadastros funcionam sem erro de RLS
 - Templates usam valores validos do enum
 - Formulario de fornecedor adapta-se para PF/PJ
