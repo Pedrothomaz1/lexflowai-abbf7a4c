@@ -1,11 +1,30 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+// Allowed origins for CORS - add your production domain here
+const ALLOWED_ORIGINS = [
+  'http://localhost:8080',
+  'http://localhost:5173',
+  'http://localhost:3000',
+  Deno.env.get('ALLOWED_ORIGIN') || '',
+].filter(Boolean);
+
+// Get CORS headers based on request origin
+function getCorsHeaders(req: Request): Record<string, string> | null {
+  const origin = req.headers.get('Origin') || '';
+  const isAllowedOrigin = ALLOWED_ORIGINS.includes(origin);
+  if (!isAllowedOrigin && origin) {
+    return null;
+  }
+  const allowedOrigin = isAllowedOrigin ? origin : (ALLOWED_ORIGINS[0] || 'http://localhost:8080');
+
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Max-Age': '86400',
+  };
+}
 
 interface MetricResult {
   metric_type: string;
@@ -16,11 +35,40 @@ interface MetricResult {
 }
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
+  // Reject requests from unauthorized origins
+  if (!corsHeaders) {
+    return new Response(
+      JSON.stringify({ error: 'Origin not allowed' }),
+      { status: 403, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
+    // SECURITY: Require CRON_SECRET for scheduled/internal calls
+    const cronSecret = Deno.env.get('CRON_SECRET');
+    const authHeader = req.headers.get('Authorization');
+
+    if (!cronSecret) {
+      console.error('CRON_SECRET environment variable is not configured');
+      return new Response(
+        JSON.stringify({ error: 'Server configuration error' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!authHeader || authHeader.replace('Bearer ', '') !== cronSecret) {
+      console.error('Unauthorized access attempt to security-metrics');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);

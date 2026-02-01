@@ -1,10 +1,48 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// Allowed origins for CORS - add your production domain here
+const ALLOWED_ORIGINS = [
+  'http://localhost:8080',
+  'http://localhost:5173',
+  'http://localhost:3000',
+  Deno.env.get('ALLOWED_ORIGIN') || '',
+].filter(Boolean);
+
+// Get CORS headers based on request origin
+function getCorsHeaders(req: Request): Record<string, string> | null {
+  const origin = req.headers.get('Origin') || '';
+  const isAllowedOrigin = ALLOWED_ORIGINS.includes(origin);
+  if (!isAllowedOrigin && origin) {
+    // Reject requests from unknown origins (except empty origin for same-origin requests)
+    return null;
+  }
+  const allowedOrigin = isAllowedOrigin ? origin : (ALLOWED_ORIGINS[0] || 'http://localhost:8080');
+
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Max-Age': '86400',
+  };
+}
+
+// Timing-safe string comparison to prevent timing attacks
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) {
+    // Still do comparison to avoid length-based timing attack
+    let result = 0;
+    for (let i = 0; i < a.length; i++) {
+      result |= a.charCodeAt(i) ^ (b.charCodeAt(i % b.length) || 0);
+    }
+    return false;
+  }
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
+}
 
 // Helper function to convert ArrayBuffer to hex string
 function arrayBufferToHex(buffer: ArrayBuffer): string {
@@ -72,8 +110,10 @@ async function verifyWebhookSignature(
           return { valid: false, error: 'Missing ClickSign API key header' };
         }
         
-        // ClickSign uses API key validation
-        if (apiKey !== webhookSecret && apiKey !== `Bearer ${webhookSecret}`) {
+        // ClickSign uses API key validation (timing-safe comparison)
+        const isValidKey = timingSafeEqual(apiKey, webhookSecret) ||
+                          timingSafeEqual(apiKey, `Bearer ${webhookSecret}`);
+        if (!isValidKey) {
           return { valid: false, error: 'Invalid ClickSign API key' };
         }
         return { valid: true };
@@ -122,13 +162,23 @@ async function verifyWebhookSignature(
 }
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
+  // Reject requests from unauthorized origins
+  if (!corsHeaders) {
+    return new Response(
+      JSON.stringify({ error: 'Origin not allowed' }),
+      { status: 403, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   // Get client IP for logging
-  const clientIP = req.headers.get('x-forwarded-for') || 
-                   req.headers.get('x-real-ip') || 
+  const clientIP = req.headers.get('x-forwarded-for') ||
+                   req.headers.get('x-real-ip') ||
                    'unknown';
 
   try {

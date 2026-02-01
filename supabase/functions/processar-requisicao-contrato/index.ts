@@ -1,11 +1,28 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+// Allowed origins for CORS - add your production domain here
+const ALLOWED_ORIGINS = [
+  'http://localhost:8080',
+  'http://localhost:5173',
+  'http://localhost:3000',
+  Deno.env.get('ALLOWED_ORIGIN') || '',
+].filter(Boolean);
+
+// Get CORS headers based on request origin - PUBLIC ENDPOINT but still validate origin
+function getCorsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get('Origin') || '';
+  const isAllowedOrigin = ALLOWED_ORIGINS.includes(origin);
+  // For public form, allow all origins but prefer known ones
+  const allowedOrigin = isAllowedOrigin ? origin : '*';
+
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Max-Age': '86400',
+  };
+}
 
 interface ContractRequestInput {
   solicitante_nome: string;
@@ -108,6 +125,8 @@ function sanitize(input: string | undefined | null): string {
 }
 
 serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req);
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });

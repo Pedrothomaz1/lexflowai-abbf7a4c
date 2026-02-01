@@ -1,12 +1,43 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// Allowed origins for CORS - add your production domain here
+const ALLOWED_ORIGINS = [
+  'http://localhost:8080',
+  'http://localhost:5173',
+  'http://localhost:3000',
+  Deno.env.get('ALLOWED_ORIGIN') || '',
+].filter(Boolean);
+
+// Get CORS headers based on request origin
+function getCorsHeaders(req: Request): Record<string, string> | null {
+  const origin = req.headers.get('Origin') || '';
+  const isAllowedOrigin = ALLOWED_ORIGINS.includes(origin);
+  if (!isAllowedOrigin && origin) {
+    // Reject requests from unknown origins (except empty origin for same-origin requests)
+    return null;
+  }
+  const allowedOrigin = isAllowedOrigin ? origin : (ALLOWED_ORIGINS[0] || 'http://localhost:8080');
+
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Max-Age': '86400',
+  };
+}
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
+  // Reject requests from unauthorized origins
+  if (!corsHeaders) {
+    return new Response(
+      JSON.stringify({ error: 'Origin not allowed' }),
+      { status: 403, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -38,7 +69,9 @@ serve(async (req) => {
 
     console.log('Iniciando verificação de alertas automáticos (multi-tenant)...');
 
+    // Use UTC for consistent date comparisons across timezones
     const hoje = new Date();
+    hoje.setUTCHours(0, 0, 0, 0); // Normalize to start of day UTC
     const dataHoje = hoje.toISOString().split('T')[0];
 
     // =========================================================
@@ -99,12 +132,14 @@ serve(async (req) => {
 
       for (const contrato of contratos || []) {
         const dataFim = new Date(contrato.data_fim);
-        const diffDias = Math.ceil((dataFim.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+        dataFim.setUTCHours(0, 0, 0, 0); // Normalize to start of day UTC
+        const diffDias = Math.round((dataFim.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
 
         // Criar alertas em intervalos específicos: 30, 15, 7 e 1 dia antes
         const diasParaAlertar = [30, 15, 7, 1];
 
         for (const dias of diasParaAlertar) {
+          // Check if within the target day (handles edge cases at midnight)
           if (diffDias === dias) {
             // Verificar se já existe alerta para esta data - SCOPED BY ORGANIZATION
             const { data: alertaExistente } = await supabase

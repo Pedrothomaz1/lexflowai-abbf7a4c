@@ -6,6 +6,26 @@ import { supabase } from "@/integrations/supabase/client";
 import { TwoFactorVerification } from "@/components/TwoFactorVerification";
 import { Loader2 } from "lucide-react";
 
+// 2FA session token expiration (15 minutes for security)
+const TWO_FA_TOKEN_EXPIRY_MS = 15 * 60 * 1000;
+
+// Generate a secure random token for 2FA session verification
+function generateSecureToken(): string {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+// Create cryptographic hash using SHA-256 via Web Crypto API
+async function createTokenHash(userId: string, token: string, sessionId: string): Promise<string> {
+  const data = `${userId}:${token}:${sessionId}`;
+  const encoder = new TextEncoder();
+  const dataBuffer = encoder.encode(data);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
 interface ProtectedRouteProps {
   children: ReactNode;
   requiredPermission?: string;
@@ -92,35 +112,69 @@ export const ProtectedRoute = ({
       }
     } catch (err) {
       console.error('[ProtectedRoute] MFA check failed:', err);
+      // SECURITY: Fail closed - deny access on error rather than fail open
       setMfaStatus({
-        twoFARequired: false,
+        twoFARequired: true, // Require 2FA on error for safety
         twoFAEnabled: false,
-        mfaRequiredByRole: false,
+        mfaRequiredByRole: true,
       });
-      setHasPermission(true);
+      setHasPermission(false); // Deny permission on error - fail closed
     } finally {
       setCheckingMFA(false);
     }
   }, [user, requiredPermission]);
 
   useEffect(() => {
-    // Check if user already verified 2FA this session
-    const verified = sessionStorage.getItem('2fa_verified');
-    if (verified === 'true') {
-      setTwoFAVerified(true);
-    }
-    
-    checkMFAStatus();
-  }, [checkMFAStatus]);
+    // Check if user already verified 2FA this session with secure token validation
+    const verifyStoredToken = async () => {
+      if (!user || !session) return;
 
-  const handleTwoFASuccess = () => {
-    sessionStorage.setItem('2fa_verified', 'true');
+      const storedToken = sessionStorage.getItem('2fa_token');
+      const storedHash = sessionStorage.getItem('2fa_hash');
+
+      if (storedToken && storedHash) {
+        // Verify token integrity using SHA-256
+        const expectedHash = await createTokenHash(user.id, storedToken, session.access_token.slice(-16));
+        if (expectedHash === storedHash) {
+          // Additional check: verify token was created recently (within 15 minutes)
+          const tokenTimestamp = sessionStorage.getItem('2fa_timestamp');
+          if (tokenTimestamp) {
+            const tokenAge = Date.now() - parseInt(tokenTimestamp, 10);
+            if (tokenAge < TWO_FA_TOKEN_EXPIRY_MS) {
+              setTwoFAVerified(true);
+              return;
+            }
+          }
+        }
+        // Invalid or expired token - clear it
+        sessionStorage.removeItem('2fa_token');
+        sessionStorage.removeItem('2fa_hash');
+        sessionStorage.removeItem('2fa_timestamp');
+      }
+    };
+
+    verifyStoredToken();
+    checkMFAStatus();
+  }, [checkMFAStatus, user, session]);
+
+  const handleTwoFASuccess = async () => {
+    if (!user || !session) return;
+
+    // Generate secure token and SHA-256 hash for 2FA session verification
+    const token = generateSecureToken();
+    const hash = await createTokenHash(user.id, token, session.access_token.slice(-16));
+
+    sessionStorage.setItem('2fa_token', token);
+    sessionStorage.setItem('2fa_hash', hash);
+    sessionStorage.setItem('2fa_timestamp', Date.now().toString());
     setTwoFAVerified(true);
   };
 
   const handleTwoFACancel = async () => {
     await supabase.auth.signOut();
-    sessionStorage.removeItem('2fa_verified');
+    sessionStorage.removeItem('2fa_token');
+    sessionStorage.removeItem('2fa_hash');
+    sessionStorage.removeItem('2fa_timestamp');
   };
 
   // Show loading while checking auth and MFA

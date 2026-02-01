@@ -1,10 +1,31 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+// Allowed origins for CORS - add your production domain here
+const ALLOWED_ORIGINS = [
+  'http://localhost:8080',
+  'http://localhost:5173',
+  'http://localhost:3000',
+  Deno.env.get('ALLOWED_ORIGIN') || '',
+].filter(Boolean);
+
+// Get CORS headers based on request origin
+function getCorsHeaders(req: Request): Record<string, string> | null {
+  const origin = req.headers.get('Origin') || '';
+  const isAllowedOrigin = ALLOWED_ORIGINS.includes(origin);
+  if (!isAllowedOrigin && origin) {
+    // Reject requests from unknown origins (except empty origin for same-origin requests)
+    return null;
+  }
+  const allowedOrigin = isAllowedOrigin ? origin : (ALLOWED_ORIGINS[0] || 'http://localhost:8080');
+
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Max-Age': '86400',
+  };
+}
 
 interface ServicoData {
   id: string;
@@ -50,6 +71,16 @@ function calcularUrgencia(dataValidade: string): string {
 }
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
+  // Reject requests from unauthorized origins
+  if (!corsHeaders) {
+    return new Response(
+      JSON.stringify({ error: 'Origin not allowed' }),
+      { status: 403, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });

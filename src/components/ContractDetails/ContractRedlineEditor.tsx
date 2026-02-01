@@ -1,15 +1,16 @@
 import { useState, useCallback, useMemo } from "react";
+import DOMPurify from "dompurify";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  Check, 
-  X, 
-  Edit3, 
-  Save, 
-  RotateCcw, 
+import {
+  Check,
+  X,
+  Edit3,
+  Save,
+  RotateCcw,
   Send,
   CheckCheck,
   XCircle,
@@ -22,16 +23,27 @@ import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import DOMPurify from "dompurify";
 
-// Configure DOMPurify to only allow safe tags for redlining
-const sanitizeHTML = (html: string): string => {
-  return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ['ins', 'del', 'span'],
-    ALLOWED_ATTR: ['class'],
-    KEEP_CONTENT: true
-  });
+// Sanitize text to prevent XSS - escapes HTML entities
+function escapeHTML(text: string): string {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Configure DOMPurify to allow only safe tags for redline display
+const REDLINE_PURIFY_CONFIG: DOMPurify.Config = {
+  ALLOWED_TAGS: ['span', 'ins', 'del', 'mark', 'b', 'i', 'strong', 'em', 'br', 'p', 'div'],
+  ALLOWED_ATTR: ['class', 'style', 'data-change-id'],
+  ALLOW_DATA_ATTR: false,
+  FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'link', 'style', 'img', 'svg', 'math'],
+  FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'onblur'],
 };
+
+// Sanitize redline HTML using DOMPurify (secure against XSS)
+function sanitizeRedlineHTML(html: string): string {
+  return DOMPurify.sanitize(html, REDLINE_PURIFY_CONFIG);
+}
 
 interface ContractRedlineEditorProps {
   contratoId: string;
@@ -185,33 +197,34 @@ export function ContractRedlineEditor({ contratoId, conteudoOriginal = "" }: Con
     return changes;
   }, []);
 
-  // Generate HTML with visual markers
+  // Generate HTML with visual markers - with XSS protection
   const generateMarkedContent = useCallback((original: string, modified: string): string => {
     const originalWords = original.split(/\s+/);
     const modifiedWords = modified.split(/\s+/);
     const result: string[] = [];
-    
+
     let i = 0, j = 0;
-    
+
     while (i < originalWords.length || j < modifiedWords.length) {
       if (i >= originalWords.length) {
-        result.push(`<ins class="bg-green-100 text-green-800">${modifiedWords[j]}</ins>`);
+        // Escape HTML in user content to prevent XSS
+        result.push(`<ins class="bg-green-100 text-green-800">${escapeHTML(modifiedWords[j])}</ins>`);
         j++;
       } else if (j >= modifiedWords.length) {
-        result.push(`<del class="bg-red-100 text-red-800 line-through">${originalWords[i]}</del>`);
+        result.push(`<del class="bg-red-100 text-red-800 line-through">${escapeHTML(originalWords[i])}</del>`);
         i++;
       } else if (originalWords[i] === modifiedWords[j]) {
-        result.push(originalWords[i]);
+        result.push(escapeHTML(originalWords[i]));
         i++;
         j++;
       } else {
-        result.push(`<del class="bg-red-100 text-red-800 line-through">${originalWords[i]}</del>`);
-        result.push(`<ins class="bg-green-100 text-green-800">${modifiedWords[j]}</ins>`);
+        result.push(`<del class="bg-red-100 text-red-800 line-through">${escapeHTML(originalWords[i])}</del>`);
+        result.push(`<ins class="bg-green-100 text-green-800">${escapeHTML(modifiedWords[j])}</ins>`);
         i++;
         j++;
       }
     }
-    
+
     return result.join(' ');
   }, []);
 
@@ -318,8 +331,8 @@ export function ContractRedlineEditor({ contratoId, conteudoOriginal = "" }: Con
               <h4 className="text-sm font-medium mb-2">Pré-visualização das alterações:</h4>
               <div 
                 className="text-sm prose prose-sm max-w-none"
-                dangerouslySetInnerHTML={{ 
-                  __html: sanitizeHTML(generateMarkedContent(conteudoOriginal, editedContent))
+                dangerouslySetInnerHTML={{
+                  __html: sanitizeRedlineHTML(generateMarkedContent(conteudoOriginal, editedContent))
                 }}
               />
             </div>
@@ -355,9 +368,9 @@ export function ContractRedlineEditor({ contratoId, conteudoOriginal = "" }: Con
                       </div>
                       
                       {showChanges && (
-                        <div 
+                        <div
                           className="text-sm border rounded p-3 bg-muted/20 mb-3 prose prose-sm max-w-none"
-                          dangerouslySetInnerHTML={{ __html: sanitizeHTML(redline.conteudo_marcado) }}
+                          dangerouslySetInnerHTML={{ __html: sanitizeRedlineHTML(redline.conteudo_marcado) }}
                         />
                       )}
 
