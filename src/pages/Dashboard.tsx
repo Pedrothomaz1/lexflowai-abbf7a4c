@@ -18,6 +18,8 @@ import {
   RefreshCcw,
   Building2,
   ArrowUpRight,
+  LayoutDashboard,
+  Sparkles,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -28,13 +30,23 @@ import { PageHeader } from "@/components/ui/page-header";
 import { PageSkeleton } from "@/components/ui/skeleton-loaders";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PremiumAreaChart, PremiumBarChart, PremiumDonutChart } from "@/components/charts";
+import { ExecutiveSummary } from "@/components/Dashboard";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { helpTexts } from "@/lib/help-texts";
+
+const DASHBOARD_MODE_KEY = 'lexflow_dashboard_mode';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isExecutiveMode, setIsExecutiveMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(DASHBOARD_MODE_KEY) === 'executive';
+    }
+    return false;
+  });
   const [stats, setStats] = useState({
     contratosAtivos: 0,
     fornecedores: 0,
@@ -55,6 +67,12 @@ const Dashboard = () => {
   const [valorMensalData, setValorMensalData] = useState<any[]>([]);
   const [timelineVencimentos, setTimelineVencimentos] = useState<any[]>([]);
   const [topFornecedores, setTopFornecedores] = useState<any[]>([]);
+
+  const toggleDashboardMode = () => {
+    const newMode = !isExecutiveMode;
+    setIsExecutiveMode(newMode);
+    localStorage.setItem(DASHBOARD_MODE_KEY, newMode ? 'executive' : 'detailed');
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -319,16 +337,44 @@ const Dashboard = () => {
         title="Dashboard Executivo"
         description="Visão geral e análise de contratos"
         actions={
-          <Button onClick={() => navigate("/contratos")} size="sm" className="btn-cta">
-            Ver Todos os Contratos
-            <ArrowUpRight className="ml-1.5 h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <LayoutDashboard className="h-4 w-4 text-muted-foreground" />
+              <Switch 
+                checked={isExecutiveMode} 
+                onCheckedChange={toggleDashboardMode}
+                aria-label="Alternar modo executivo"
+              />
+              <Sparkles className={cn(
+                "h-4 w-4 transition-colors",
+                isExecutiveMode ? "text-primary" : "text-muted-foreground"
+              )} />
+            </div>
+            <Button onClick={() => navigate("/contratos")} size="sm" className="btn-cta" data-tour="novo-contrato">
+              Ver Todos os Contratos
+              <ArrowUpRight className="ml-1.5 h-4 w-4" />
+            </Button>
+          </div>
         }
       />
 
+      {/* Executive Summary Mode */}
+      {isExecutiveMode && (
+        <ExecutiveSummary
+          stats={{
+            contratosAtivos: stats.contratosAtivos,
+            valorTotal: stats.valorTotal,
+            riscosAltos: stats.riscosAltos,
+            vencendo30Dias: stats.vencendo30Dias,
+          }}
+          conformidade={Math.round(stats.taxaAprovacaoNoPrazo)}
+          onToggleView={toggleDashboardMode}
+        />
+      )}
+
       {/* Alert */}
       {contratosVencendo.length > 0 && (
-        <Alert variant="destructive" className="animate-slide-up">
+        <Alert variant="destructive" className="animate-slide-up" data-tour="alertas">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Atenção: Contratos Vencendo!</AlertTitle>
           <AlertDescription>
@@ -344,387 +390,392 @@ const Dashboard = () => {
         </Alert>
       )}
 
-      {/* KPI Cards */}
-      <StatCardGrid columns={4}>
-        <StatCard
-          title="Contratos Ativos"
-          value={stats.contratosAtivos}
-          icon={FileText}
-          variant="primary"
-          trend={{ value: 12, label: "vs mês anterior" }}
-          onClick={() => navigate("/contratos?status=vigente")}
-          helpText={helpTexts.dashboard.contratosAtivos}
-        />
-        <StatCard
-          title="Valor Total"
-          value={formatCompactCurrency(stats.valorTotal)}
-          icon={DollarSign}
-          variant="success"
-          trend={{ value: 8, label: "vs mês anterior" }}
-          onClick={() => navigate("/contratos")}
-          helpText={helpTexts.dashboard.valorTotal}
-        />
-        <StatCard
-          title="Vencendo em 30 dias"
-          value={stats.vencendo30Dias}
-          icon={Clock}
-          variant="critical"
-          onClick={() => navigate("/alertas")}
-          helpText={helpTexts.dashboard.vencendo30Dias}
-        />
-        <StatCard
-          title="Riscos Altos"
-          value={stats.riscosAltos}
-          icon={AlertTriangle}
-          variant="critical"
-          onClick={() => navigate("/contratos")}
-          helpText={helpTexts.dashboard.riscosAltos}
-        />
-      </StatCardGrid>
+      {/* Detailed View - Only show when not in Executive Mode */}
+      {!isExecutiveMode && (
+        <>
+          {/* KPI Cards */}
+          <StatCardGrid columns={4} data-tour="kpi-grid">
+            <StatCard
+              title="Contratos Ativos"
+              value={stats.contratosAtivos}
+              icon={FileText}
+              variant="primary"
+              trend={{ value: 12, label: "vs mês anterior" }}
+              onClick={() => navigate("/contratos?status=vigente")}
+              helpText={helpTexts.dashboard.contratosAtivos}
+            />
+            <StatCard
+              title="Valor Total"
+              value={formatCompactCurrency(stats.valorTotal)}
+              icon={DollarSign}
+              variant="success"
+              trend={{ value: 8, label: "vs mês anterior" }}
+              onClick={() => navigate("/contratos")}
+              helpText={helpTexts.dashboard.valorTotal}
+            />
+            <StatCard
+              title="Vencendo em 30 dias"
+              value={stats.vencendo30Dias}
+              icon={Clock}
+              variant="critical"
+              onClick={() => navigate("/alertas")}
+              helpText={helpTexts.dashboard.vencendo30Dias}
+            />
+            <StatCard
+              title="Riscos Altos"
+              value={stats.riscosAltos}
+              icon={AlertTriangle}
+              variant="critical"
+              onClick={() => navigate("/contratos")}
+              helpText={helpTexts.dashboard.riscosAltos}
+            />
+          </StatCardGrid>
 
-      {/* Secondary Stats */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Fornecedores"
-          value={stats.fornecedores}
-          icon={Users}
-          subtitle="Cadastrados"
-          onClick={() => navigate("/fornecedores")}
-          helpText={helpTexts.dashboard.fornecedores}
-        />
-        <StatCard
-          title="Valor Médio"
-          value={formatCompactCurrency(stats.valorMedio)}
-          icon={Activity}
-          subtitle="Por contrato"
-          onClick={() => navigate("/contratos")}
-          helpText={helpTexts.dashboard.valorMedio}
-        />
-        <StatCard
-          title="Aprovações Pendentes"
-          value={stats.aprovacoesPendentes}
-          icon={Timer}
-          subtitle="Aguardando ação"
-          onClick={() => navigate("/workflows")}
-          helpText={helpTexts.dashboard.aprovacoesPendentes}
-        />
-        <StatCard
-          title="Tempo Médio Aprovação"
-          value={`${stats.tempoMedioAprovacao.toFixed(1)}d`}
-          icon={Target}
-          subtitle={stats.tempoMedioAprovacao <= 5 ? "✓ Dentro da meta" : "⚠ Acima da meta"}
-          onClick={() => navigate("/workflows")}
-          helpText={helpTexts.dashboard.tempoMedioAprovacao}
-        />
-      </div>
+          {/* Secondary Stats */}
+          <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              title="Fornecedores"
+              value={stats.fornecedores}
+              icon={Users}
+              subtitle="Cadastrados"
+              onClick={() => navigate("/fornecedores")}
+              helpText={helpTexts.dashboard.fornecedores}
+            />
+            <StatCard
+              title="Valor Médio"
+              value={formatCompactCurrency(stats.valorMedio)}
+              icon={Activity}
+              subtitle="Por contrato"
+              onClick={() => navigate("/contratos")}
+              helpText={helpTexts.dashboard.valorMedio}
+            />
+            <StatCard
+              title="Aprovações Pendentes"
+              value={stats.aprovacoesPendentes}
+              icon={Timer}
+              subtitle="Aguardando ação"
+              onClick={() => navigate("/workflows")}
+              helpText={helpTexts.dashboard.aprovacoesPendentes}
+            />
+            <StatCard
+              title="Tempo Médio Aprovação"
+              value={`${stats.tempoMedioAprovacao.toFixed(1)}d`}
+              icon={Target}
+              subtitle={stats.tempoMedioAprovacao <= 5 ? "✓ Dentro da meta" : "⚠ Acima da meta"}
+              onClick={() => navigate("/workflows")}
+              helpText={helpTexts.dashboard.tempoMedioAprovacao}
+            />
+          </div>
 
-      {/* Main Charts Grid */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* SLA Card */}
-        <Card className="card-elevated">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Target className="h-4 w-4 text-primary" />
-              Indicadores de SLA
-            </CardTitle>
-            <CardDescription className="text-xs">Performance vs Metas</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Aprovações no prazo</span>
-                <span className={cn(
-                  "font-medium",
-                  stats.taxaAprovacaoNoPrazo >= 80 ? "text-emerald-600" : "text-amber-600"
-                )}>
-                  {stats.taxaAprovacaoNoPrazo.toFixed(0)}%
-                </span>
-              </div>
-              <Progress value={stats.taxaAprovacaoNoPrazo} className="h-2" />
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Meta: 80%</span>
-                <span>{stats.taxaAprovacaoNoPrazo >= 80 ? "✓ Atingida" : "⚠ Abaixo"}</span>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Taxa de Renovação</span>
-                <span className={cn(
-                  "font-medium",
-                  stats.taxaRenovacao >= 70 ? "text-emerald-600" : "text-amber-600"
-                )}>
-                  {stats.taxaRenovacao.toFixed(0)}%
-                </span>
-              </div>
-              <Progress value={stats.taxaRenovacao} className="h-2" />
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Meta: 70%</span>
-                <span>{stats.taxaRenovacao >= 70 ? "✓ Atingida" : "⚠ Abaixo"}</span>
-              </div>
-            </div>
-
-            <div className="pt-3 border-t border-border space-y-2.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <RefreshCcw className="h-3.5 w-3.5" />
-                  <span>Contratos renovados</span>
-                </div>
-                <Badge variant="secondary" className="text-xs">{stats.contratosRenovados}</Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Top Fornecedores */}
-        <Card className="card-elevated lg:col-span-2">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Building2 className="h-4 w-4 text-primary" />
-              Top Fornecedores
-            </CardTitle>
-            <CardDescription className="text-xs">Por valor de contratos</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {topFornecedores.length > 0 ? (
-              <div className="space-y-3">
-                {topFornecedores.map((fornecedor, index) => {
-                  const maxValor = topFornecedores[0]?.valor || 1;
-                  const percentual = (fornecedor.valor / maxValor) * 100;
-                  
-                  return (
-                    <div key={index} className="space-y-1.5">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div className={cn(
-                            "h-7 w-7 rounded-full flex items-center justify-center text-xs font-semibold shrink-0",
-                            index === 0 ? "bg-amber-500/20 text-amber-600" :
-                            index === 1 ? "bg-muted text-muted-foreground" :
-                            "bg-muted/50 text-muted-foreground"
-                          )}>
-                            {index + 1}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">{fornecedor.nome}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {fornecedor.count} contrato{fornecedor.count > 1 ? "s" : ""}
-                            </p>
-                          </div>
-                        </div>
-                        <span className="text-sm font-semibold shrink-0">
-                          {formatCompactCurrency(fornecedor.valor)}
-                        </span>
-                      </div>
-                      <Progress value={percentual} className="h-1" />
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <EmptyState
-                title="Adicione seus fornecedores"
-                description="Cadastre fornecedores para acompanhar o valor dos contratos por parceiro."
-                action={{
-                  label: "Ir para Fornecedores",
-                  onClick: () => navigate("/fornecedores"),
-                }}
-              />
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Charts Row - Premium Style */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="card-elevated">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div>
+          {/* Main Charts Grid */}
+          <div className="grid gap-6 lg:grid-cols-3">
+            {/* SLA Card */}
+            <Card className="card-elevated">
+              <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                  Evolução de Contratos
+                  <Target className="h-4 w-4 text-primary" />
+                  Indicadores de SLA
                 </CardTitle>
-                <CardDescription className="text-xs">Últimos 6 meses</CardDescription>
-              </div>
-              {chartData.length > 1 && (
-                <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
-                  <TrendingUp className="h-3 w-3 mr-1" />
-                  Ativo
-                </Badge>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            {chartData.length > 0 ? (
-              <PremiumAreaChart
-                data={chartData}
-                dataKey="contratos"
-                xAxisKey="mes"
-                height={260}
-                formatter={(v) => `${v} contratos`}
-              />
-            ) : (
-              <EmptyState 
-                title="Comece a acompanhar seus contratos" 
-                description="Cadastre seu primeiro contrato para visualizar a evolução aqui."
-                action={{
-                  label: "Cadastrar Contrato",
-                  onClick: () => navigate("/contratos"),
-                }}
-              />
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="card-elevated">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <CardTitle className="text-base">Valor por Mês</CardTitle>
-            </div>
-            <CardDescription className="text-xs">Em milhares (R$)</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {valorMensalData.length > 0 ? (
-              <PremiumBarChart
-                data={valorMensalData}
-                dataKey="valor"
-                xAxisKey="mes"
-                height={260}
-                formatter={(v) => `R$ ${v.toFixed(0)}K`}
-              />
-            ) : (
-              <EmptyState 
-                title="Acompanhe valores mensais" 
-                description="Seus indicadores de valor aparecerão aqui após cadastrar contratos."
-              />
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="card-elevated">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
-              <CardTitle className="text-base">Contratos por Tipo</CardTitle>
-            </div>
-            <CardDescription className="text-xs">Distribuição atual</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {tipoContratoData.length > 0 ? (
-              <PremiumDonutChart
-                data={tipoContratoData}
-                height={260}
-                colors={CHART_COLORS}
-                formatter={(v) => `${v} contratos`}
-                showLabels={false}
-              />
-            ) : (
-              <EmptyState 
-                title="Distribuição por tipo" 
-                description="A distribuição por tipo de contrato aparecerá aqui após cadastrar contratos."
-              />
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="card-elevated">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <AlertTriangle className="h-4 w-4 text-primary" />
-              Análise de Riscos
-            </CardTitle>
-            <CardDescription className="text-xs">Por nível de risco</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {riskData.length > 0 ? (
-              <PremiumBarChart
-                data={riskData}
-                dataKey="value"
-                yAxisKey="name"
-                layout="vertical"
-                height={260}
-                gradient={false}
-                colors={riskData.map(r => RISK_COLORS[r.name] || "hsl(var(--primary))")}
-                formatter={(v) => `${v} contratos`}
-              />
-            ) : (
-              <EmptyState
-                title="Análises de risco"
-                description="Execute análises de IA nos seus contratos para ver a distribuição de riscos."
-                action={{
-                  label: "Ver Contratos",
-                  onClick: () => navigate("/contratos"),
-                }}
-              />
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Timeline */}
-      <Card className="card-elevated">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <CalendarIcon className="h-4 w-4 text-primary" />
-            Próximos Vencimentos
-          </CardTitle>
-          <CardDescription className="text-xs">Contratos nos próximos 90 dias</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {timelineVencimentos.length > 0 ? (
-            <div className="space-y-3">
-              {timelineVencimentos.slice(0, 8).map((contrato) => {
-                const dias = getDaysUntil(contrato.data_fim);
-                const urgencia = dias <= 7 ? "destructive" : dias <= 30 ? "warning" : "default";
-                
-                return (
-                  <div 
-                    key={contrato.id} 
-                    className="flex items-center gap-4 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer"
-                    onClick={() => navigate(`/contratos/${contrato.id}`)}
-                  >
-                    <Badge 
-                      variant={urgencia === "destructive" ? "destructive" : urgencia === "warning" ? "default" : "secondary"}
-                      className="w-14 justify-center shrink-0"
-                    >
-                      {dias}d
-                    </Badge>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{contrato.titulo}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Vence em {new Date(contrato.data_fim).toLocaleDateString("pt-BR")}
-                      </p>
-                    </div>
-                    <span className="text-sm font-semibold shrink-0">
-                      {formatCurrency(contrato.valor_total || 0)}
+                <CardDescription className="text-xs">Performance vs Metas</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Aprovações no prazo</span>
+                    <span className={cn(
+                      "font-medium",
+                      stats.taxaAprovacaoNoPrazo >= 80 ? "text-emerald-600" : "text-amber-600"
+                    )}>
+                      {stats.taxaAprovacaoNoPrazo.toFixed(0)}%
                     </span>
                   </div>
-                );
-              })}
-              {timelineVencimentos.length > 8 && (
-                <Button 
-                  variant="ghost" 
-                  className="w-full text-sm" 
-                  onClick={() => navigate("/calendario")}
-                >
-                  Ver todos os {timelineVencimentos.length} vencimentos
-                  <ArrowUpRight className="ml-1.5 h-4 w-4" />
-                </Button>
+                  <Progress value={stats.taxaAprovacaoNoPrazo} className="h-2" />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Meta: 80%</span>
+                    <span>{stats.taxaAprovacaoNoPrazo >= 80 ? "✓ Atingida" : "⚠ Abaixo"}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Taxa de Renovação</span>
+                    <span className={cn(
+                      "font-medium",
+                      stats.taxaRenovacao >= 70 ? "text-emerald-600" : "text-amber-600"
+                    )}>
+                      {stats.taxaRenovacao.toFixed(0)}%
+                    </span>
+                  </div>
+                  <Progress value={stats.taxaRenovacao} className="h-2" />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Meta: 70%</span>
+                    <span>{stats.taxaRenovacao >= 70 ? "✓ Atingida" : "⚠ Abaixo"}</span>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-border space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <RefreshCcw className="h-3.5 w-3.5" />
+                      <span>Contratos renovados</span>
+                    </div>
+                    <Badge variant="secondary" className="text-xs">{stats.contratosRenovados}</Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Top Fornecedores */}
+            <Card className="card-elevated lg:col-span-2">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Building2 className="h-4 w-4 text-primary" />
+                  Top Fornecedores
+                </CardTitle>
+                <CardDescription className="text-xs">Por valor de contratos</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {topFornecedores.length > 0 ? (
+                  <div className="space-y-3">
+                    {topFornecedores.map((fornecedor, index) => {
+                      const maxValor = topFornecedores[0]?.valor || 1;
+                      const percentual = (fornecedor.valor / maxValor) * 100;
+                      
+                      return (
+                        <div key={index} className="space-y-1.5">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className={cn(
+                                "h-7 w-7 rounded-full flex items-center justify-center text-xs font-semibold shrink-0",
+                                index === 0 ? "bg-warning/20 text-warning" :
+                                index === 1 ? "bg-muted text-muted-foreground" :
+                                "bg-muted/50 text-muted-foreground"
+                              )}>
+                                {index + 1}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium truncate">{fornecedor.nome}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {fornecedor.count} contrato{fornecedor.count > 1 ? "s" : ""}
+                                </p>
+                              </div>
+                            </div>
+                            <span className="text-sm font-semibold shrink-0">
+                              {formatCompactCurrency(fornecedor.valor)}
+                            </span>
+                          </div>
+                          <Progress value={percentual} className="h-1" />
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <EmptyState
+                    title="Adicione seus fornecedores"
+                    description="Cadastre fornecedores para acompanhar o valor dos contratos por parceiro."
+                    action={{
+                      label: "Ir para Fornecedores",
+                      onClick: () => navigate("/fornecedores"),
+                    }}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Charts Row - Premium Style */}
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card className="card-elevated">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                      Evolução de Contratos
+                    </CardTitle>
+                    <CardDescription className="text-xs">Últimos 6 meses</CardDescription>
+                  </div>
+                  {chartData.length > 1 && (
+                    <Badge className="bg-success/10 text-success border-success/20">
+                      <TrendingUp className="h-3 w-3 mr-1" />
+                      Ativo
+                    </Badge>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {chartData.length > 0 ? (
+                  <PremiumAreaChart
+                    data={chartData}
+                    dataKey="contratos"
+                    xAxisKey="mes"
+                    height={260}
+                    formatter={(v) => `${v} contratos`}
+                  />
+                ) : (
+                  <EmptyState 
+                    title="Comece a acompanhar seus contratos" 
+                    description="Cadastre seu primeiro contrato para visualizar a evolução aqui."
+                    action={{
+                      label: "Cadastrar Contrato",
+                      onClick: () => navigate("/contratos"),
+                    }}
+                  />
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="card-elevated">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
+                  <CardTitle className="text-base">Valor por Mês</CardTitle>
+                </div>
+                <CardDescription className="text-xs">Em milhares (R$)</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {valorMensalData.length > 0 ? (
+                  <PremiumBarChart
+                    data={valorMensalData}
+                    dataKey="valor"
+                    xAxisKey="mes"
+                    height={260}
+                    formatter={(v) => `R$ ${v.toFixed(0)}K`}
+                  />
+                ) : (
+                  <EmptyState 
+                    title="Acompanhe valores mensais" 
+                    description="Seus indicadores de valor aparecerão aqui após cadastrar contratos."
+                  />
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="card-elevated">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-info animate-pulse" />
+                  <CardTitle className="text-base">Contratos por Tipo</CardTitle>
+                </div>
+                <CardDescription className="text-xs">Distribuição atual</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {tipoContratoData.length > 0 ? (
+                  <PremiumDonutChart
+                    data={tipoContratoData}
+                    height={260}
+                    colors={CHART_COLORS}
+                    formatter={(v) => `${v} contratos`}
+                    showLabels={false}
+                  />
+                ) : (
+                  <EmptyState 
+                    title="Distribuição por tipo" 
+                    description="A distribuição por tipo de contrato aparecerá aqui após cadastrar contratos."
+                  />
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="card-elevated">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <AlertTriangle className="h-4 w-4 text-primary" />
+                  Análise de Riscos
+                </CardTitle>
+                <CardDescription className="text-xs">Por nível de risco</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {riskData.length > 0 ? (
+                  <PremiumBarChart
+                    data={riskData}
+                    dataKey="value"
+                    yAxisKey="name"
+                    layout="vertical"
+                    height={260}
+                    gradient={false}
+                    colors={riskData.map(r => RISK_COLORS[r.name] || "hsl(var(--primary))")}
+                    formatter={(v) => `${v} contratos`}
+                  />
+                ) : (
+                  <EmptyState
+                    title="Análises de risco"
+                    description="Execute análises de IA nos seus contratos para ver a distribuição de riscos."
+                    action={{
+                      label: "Ver Contratos",
+                      onClick: () => navigate("/contratos"),
+                    }}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Timeline */}
+          <Card className="card-elevated">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <CalendarIcon className="h-4 w-4 text-primary" />
+                Próximos Vencimentos
+              </CardTitle>
+              <CardDescription className="text-xs">Contratos nos próximos 90 dias</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {timelineVencimentos.length > 0 ? (
+                <div className="space-y-3">
+                  {timelineVencimentos.slice(0, 8).map((contrato) => {
+                    const dias = getDaysUntil(contrato.data_fim);
+                    const urgencia = dias <= 7 ? "destructive" : dias <= 30 ? "warning" : "default";
+                    
+                    return (
+                      <div 
+                        key={contrato.id} 
+                        className="flex items-center gap-4 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer"
+                        onClick={() => navigate(`/contratos/${contrato.id}`)}
+                      >
+                        <Badge 
+                          variant={urgencia === "destructive" ? "destructive" : urgencia === "warning" ? "default" : "secondary"}
+                          className="w-14 justify-center shrink-0"
+                        >
+                          {dias}d
+                        </Badge>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{contrato.titulo}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Vence em {new Date(contrato.data_fim).toLocaleDateString("pt-BR")}
+                          </p>
+                        </div>
+                        <span className="text-sm font-semibold shrink-0">
+                          {formatCurrency(contrato.valor_total || 0)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                  {timelineVencimentos.length > 8 && (
+                    <Button 
+                      variant="ghost" 
+                      className="w-full text-sm" 
+                      onClick={() => navigate("/calendario")}
+                    >
+                      Ver todos os {timelineVencimentos.length} vencimentos
+                      <ArrowUpRight className="ml-1.5 h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <EmptyState
+                  title="Nenhum vencimento próximo"
+                  description="Não há contratos vencendo nos próximos 90 dias. Mantenha seus contratos atualizados para receber alertas."
+                  action={{
+                    label: "Ver Contratos",
+                    onClick: () => navigate("/contratos"),
+                  }}
+                />
               )}
-            </div>
-          ) : (
-            <EmptyState
-              title="Nenhum vencimento próximo"
-              description="Não há contratos vencendo nos próximos 90 dias. Mantenha seus contratos atualizados para receber alertas."
-              action={{
-                label: "Ver Contratos",
-                onClick: () => navigate("/contratos"),
-              }}
-            />
-          )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 };

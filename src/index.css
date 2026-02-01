@@ -222,6 +222,24 @@
   .stat-card {
     @apply relative overflow-hidden rounded-xl border border-border bg-card p-5;
     box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
+  }
+  
+  .stat-card:hover {
+    box-shadow: var(--shadow-md);
+    border-color: hsl(var(--primary) / 0.3);
+    transform: translateY(-2px);
+  }
+  
+  .stat-card:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+    border-color: hsl(var(--primary) / 0.5);
+  }
+  
+  .stat-card:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
   }
   
   .stat-card-primary {
@@ -251,6 +269,32 @@
     @apply stat-card;
     background: linear-gradient(135deg, hsl(var(--critical) / 0.12), hsl(var(--critical) / 0.05));
     border-color: hsl(var(--critical) / 0.3);
+  }
+  
+  /* Disabled state - distinct but not invisible */
+  .stat-card-disabled,
+  .stat-card[disabled] {
+    opacity: 0.55;
+    cursor: not-allowed;
+    filter: grayscale(0.3);
+    pointer-events: none;
+  }
+  
+  /* Interactive state utilities */
+  .state-hover-visible:hover {
+    box-shadow: var(--shadow-md);
+    border-color: hsl(var(--primary) / 0.3);
+  }
+  
+  .state-active-clear:active {
+    transform: scale(0.98);
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .state-disabled-distinct {
+    opacity: 0.55;
+    cursor: not-allowed;
+    filter: grayscale(0.3);
   }
   
   /* Badge variants */
