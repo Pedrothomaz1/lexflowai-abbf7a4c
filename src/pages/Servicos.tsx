@@ -662,7 +662,14 @@ export default function Servicos() {
       <DataTable
         columns={columns}
         data={filteredServicos}
-        emptyState={{ title: "Nenhum serviço cadastrado", description: "Cadastre um serviço periódico para começar." }}
+        emptyState={{ 
+          title: "Comece a gerenciar seus serviços", 
+          description: "Cadastre serviços periódicos para receber alertas automáticos de vencimento e manter a conformidade operacional.",
+          action: {
+            label: "Cadastrar Primeiro Serviço",
+            onClick: () => setIsDialogOpen(true),
+          },
+        }}
       />
 
       {/* Dialog for Create/Edit */}
