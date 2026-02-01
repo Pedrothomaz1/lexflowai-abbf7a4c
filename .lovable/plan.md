@@ -1,222 +1,197 @@
 
-# Plano: Central de Ajuda Completa
 
-## Visão Geral
+# Plano: Correcao em Massa - organization_id em Todo o Sistema
 
-Criar uma Central de Ajuda profissional e funcional em `/ajuda` que centralize FAQs pesquisáveis, guias rápidos organizados por módulo, e seção de suporte/contato. A página será acessível via sidebar e seguirá o design system existente.
+## Problema Identificado
 
----
-
-## 1. Estrutura da Página
-
-### Layout Proposto
-
-```text
-+------------------------------------------------------------------+
-|  CENTRAL DE AJUDA                              [Campo de Busca]  |
-|  Encontre respostas e aprenda a usar o sistema                   |
-+------------------------------------------------------------------+
-|                                                                   |
-|  [Card: Primeiros Passos]  [Card: FAQ]  [Card: Fale Conosco]    |
-|   Icone: Rocket             Icone: HelpCircle  Icone: MessageCircle
-|   "Comece por aqui"         "Perguntas frequentes" "Precisa de ajuda?"
-+------------------------------------------------------------------+
-|                                                                   |
-|  GUIAS RÁPIDOS                                                   |
-|  [Tab: Todos] [Tab: Contratos] [Tab: Alertas] [Tab: Administração]
-|  +------------------------------------------------------------+  |
-|  | [Card] Criar primeiro contrato        [5 min]              |  |
-|  | [Card] Configurar alertas             [3 min]              |  |
-|  | [Card] Adicionar fornecedor           [2 min]              |  |
-|  | [Card] Configurar fluxo de aprovação  [4 min]              |  |
-|  +------------------------------------------------------------+  |
-|                                                                   |
-|  PERGUNTAS FREQUENTES                                            |
-|  [Busca: Filtrar perguntas...]                                   |
-|  +------------------------------------------------------------+  |
-|  | Como criar meu primeiro contrato?                     [v]  |  |
-|  |   Resposta expandida com passos...                         |  |
-|  +------------------------------------------------------------+  |
-|  | Como configurar alertas de vencimento?                [v]  |  |
-|  +------------------------------------------------------------+  |
-|  | Como funciona o fluxo de aprovação?                   [v]  |  |
-|  +------------------------------------------------------------+  |
-|  | ... mais perguntas                                         |  |
-|  +------------------------------------------------------------+  |
-|                                                                   |
-|  PRECISA DE MAIS AJUDA?                                          |
-|  +------------------------------------------------------------+  |
-|  | Email: suporte@lexflow.com.br                              |  |
-|  | Horário: Seg-Sex, 9h-18h                                   |  |
-|  | [Botão: Enviar Mensagem]                                   |  |
-|  +------------------------------------------------------------+  |
-+------------------------------------------------------------------+
-```
+Foram encontrados **21 pontos de INSERT** em **17 arquivos** que estao **sem `organization_id`**, causando falha de RLS (Row-Level Security) em todas essas operacoes. Alem disso, ha problemas de enum invalido em Templates.
 
 ---
 
-## 2. Conteúdo do FAQ
+## Arquivos a Corrigir (Ordem de Prioridade)
 
-### Categorias e Perguntas
+### Prioridade 1: Cadastros Basicos (Mais Usados)
 
-| Categoria | Pergunta | Resposta (resumo) |
-|-----------|----------|-------------------|
-| **Primeiros Passos** | Como criar meu primeiro contrato? | Acesse Contratos > Novo Contrato. Preencha dados básicos e salve. |
-| **Primeiros Passos** | Como adicionar um fornecedor? | Vá em Fornecedores > Novo. Informe CNPJ/CPF e dados de contato. |
-| **Primeiros Passos** | Como configurar meu perfil? | Acesse Preferências no menu. Atualize nome, foto e telefone. |
-| **Contratos** | Como funciona o fluxo de aprovação? | Contratos passam por níveis configuráveis. Cada nível aprova em sequência. |
-| **Contratos** | Como anexar documentos a um contrato? | Na página do contrato, clique em "Anexos" e arraste os arquivos. |
-| **Contratos** | Como usar modelos de contrato? | Ao criar, selecione um modelo. Os campos serão preenchidos automaticamente. |
-| **Alertas** | Como configurar alertas de vencimento? | Em Alertas e Prazos, defina dias de antecedência e canais de notificação. |
-| **Alertas** | Quais canais de notificação posso usar? | E-mail, notificação no sistema e WhatsApp (se configurado). |
-| **Relatórios** | Como exportar relatórios em PDF? | Em Relatórios, aplique filtros e clique em "Exportar PDF". |
-| **Segurança** | Como ativar autenticação de dois fatores? | Acesse Preferências > 2FA. Escaneie o QR code com seu app autenticador. |
-| **Segurança** | Como gerenciar sessões ativas? | Em Preferências > Sessões, veja dispositivos conectados e encerre se necessário. |
-| **Administração** | Como convidar novos usuários? | Acesse Usuários e Permissões > Convidar Membro. Informe email e perfil. |
-| **Administração** | Como definir permissões de acesso? | Ao convidar, escolha o perfil: Membro, Administrador ou Proprietário. |
+| Arquivo | Tabela | Correcao |
+|---------|--------|----------|
+| `src/components/Fornecedores/FornecedorForm.tsx` | `fornecedores` | Adicionar `organization_id` |
+| `src/pages/Unidades.tsx` | `unidades` | Adicionar `organization_id` |
+| `src/pages/Templates.tsx` | `contract_templates` | Adicionar `organization_id` + corrigir enum |
+| `src/pages/Franquias.tsx` | `franquias` | Adicionar `organization_id` em 2 inserts |
+| `src/pages/Contratos.tsx` | `contratos` | Adicionar `organization_id` |
 
----
+### Prioridade 2: Funcionalidades de Contrato
 
-## 3. Guias Rápidos
+| Arquivo | Tabela | Correcao |
+|---------|--------|----------|
+| `src/components/ContractComments.tsx` | `contract_comments` | Adicionar `organization_id` |
+| `src/components/ContractDetails/ContractAttachments.tsx` | `contract_attachments` | Adicionar `organization_id` |
+| `src/components/ContractDetails/ContractObligations.tsx` | `contract_obligations` | Adicionar `organization_id` |
+| `src/components/ContractDetails/ContractQuickActions.tsx` | `contratos` + `contract_alerts` | Adicionar `organization_id` em 2 inserts |
+| `src/components/ContractDetails/ContractRedlineEditor.tsx` | `contract_redlines` | Adicionar `organization_id` |
+| `src/components/ContractSignature.tsx` | `contract_signatures` | Adicionar `organization_id` |
+| `src/components/ContractImport/ContractImport.tsx` | `fornecedores` + `contratos` | Adicionar `organization_id` em 2 inserts |
 
-### Lista de Guias
+### Prioridade 3: Configuracoes e Governanca
 
-| Guia | Tempo | Categoria | Descrição |
-|------|-------|-----------|-----------|
-| Criar seu primeiro contrato | 5 min | Contratos | Passo a passo para cadastrar e acompanhar um contrato |
-| Configurar alertas | 3 min | Alertas | Como nunca perder um prazo importante |
-| Adicionar fornecedor | 2 min | Base | Cadastre parceiros comerciais rapidamente |
-| Configurar fluxo de aprovação | 4 min | Automação | Monte seu processo de aprovação em níveis |
-| Gerar relatório de vencimentos | 3 min | Relatórios | Exporte lista de contratos a vencer |
-| Ativar 2FA | 2 min | Segurança | Proteja sua conta com verificação em duas etapas |
-| Convidar equipe | 2 min | Administração | Adicione membros à sua organização |
+| Arquivo | Tabela | Correcao |
+|---------|--------|----------|
+| `src/pages/NotificationSettings.tsx` | `notification_preferences` | Adicionar `organization_id` |
+| `src/pages/ComplianceLGPD.tsx` | `data_retention_policies` | Adicionar `organization_id` |
+| `src/pages/Relatorios.tsx` | `report_configurations` + `compliance_logs` | Adicionar `organization_id` em 2 inserts |
+| `src/pages/WorkflowAprovacoes.tsx` | `approval_workflows` | Adicionar `organization_id` |
+| `src/pages/EspecificacoesServico.tsx` | `especificacoes_servico` | Adicionar `organization_id` |
 
----
+### Prioridade 4: Auditoria
 
-## 4. Arquivos a Criar
-
-| Arquivo | Descrição |
-|---------|-----------|
-| `src/pages/CentralAjuda.tsx` | Página principal da Central de Ajuda |
-| `src/components/Help/FAQSection.tsx` | Componente de FAQ com accordion e busca |
-| `src/components/Help/QuickGuides.tsx` | Cards de guias rápidos com filtro por categoria |
-| `src/components/Help/SupportContact.tsx` | Seção de contato e suporte |
-| `src/components/Help/HeroCards.tsx` | Cards de destaque no topo da página |
-| `src/components/Help/index.ts` | Barrel export |
-| `src/lib/faq-data.ts` | Dados estruturados de FAQ e guias |
+| Arquivo | Tabela | Correcao |
+|---------|--------|----------|
+| `src/hooks/useAuditLog.ts` | `audit_logs` | Adicionar `organization_id` |
 
 ---
 
-## 5. Arquivos a Modificar
+## Padrao de Correcao
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/App.tsx` | Adicionar rota `/ajuda` |
-| `src/components/AppSidebar.tsx` | Alterar link "Central de Ajuda" para rota interna |
-
----
-
-## 6. Funcionalidades
-
-### Busca em Tempo Real
-- Campo de busca no topo da página
-- Filtra FAQs por palavra-chave instantaneamente
-- Destaca termos encontrados
-
-### Categorização
-- FAQs organizadas por categoria
-- Guias filtráveis por tipo (Contratos, Alertas, etc.)
-- Tabs para navegação rápida
-
-### Links Contextuais
-- Cada FAQ tem link "Ir para a página" quando aplicável
-- Guias direcionam para a funcionalidade relacionada
-
-### Responsivo
-- Layout adaptável para mobile
-- Cards empilham verticalmente em telas menores
-
----
-
-## 7. Detalhes Técnicos
-
-### Estrutura de Dados (faq-data.ts)
+Cada arquivo seguira este padrao:
 
 ```typescript
-interface FAQItem {
-  id: string;
-  question: string;
-  answer: string;
-  category: "primeiros-passos" | "contratos" | "alertas" | "relatorios" | "seguranca" | "administracao";
-  relatedLink?: string;
+// 1. Importar hook de organizacao
+import { useOrganization } from "@/contexts/OrganizationContext";
+
+// 2. Obter organization_id no componente
+const { organization } = useOrganization();
+
+// 3. Validar antes de inserir
+if (!organization?.id) {
+  toast({
+    variant: "destructive",
+    title: "Organizacao nao encontrada",
+    description: "Finalize o onboarding ou verifique seu acesso.",
+  });
+  return;
 }
 
-interface GuideItem {
-  id: string;
-  title: string;
-  description: string;
-  duration: string;
-  category: string;
-  link: string;
-  icon: string;
+// 4. Incluir no INSERT
+const { error } = await supabase.from("tabela").insert({
+  ...dados,
+  organization_id: organization.id,
+  created_by: user.id,
+});
+```
+
+---
+
+## Correcao Especifica: Templates (Enum)
+
+Alem do `organization_id`, o arquivo `src/pages/Templates.tsx` precisa corrigir os valores do enum `contract_type`:
+
+| Valor Atual (Invalido) | Valor Correto (Enum) |
+|------------------------|----------------------|
+| `servico` | `prestacao_servicos` |
+| `compra` | `fornecimento` |
+| `locacao` | `locacao` |
+| `outro` | `outro` |
+
+Novos valores disponiveis:
+- `confidencialidade` (NDA)
+- `parceria`
+
+---
+
+## Correcao Especifica: Fornecedor (UX)
+
+No `FornecedorForm.tsx`, quando `tipo_pessoa === "fisica"`:
+- Ocultar ou renomear campo "Porte da Empresa" 
+- Tornar CNPJ opcional (ja esta)
+- Label mais neutro para pessoa fisica
+
+---
+
+## Mensagens de Erro Melhoradas
+
+Adicionar tratamento especifico para erros RLS:
+
+```typescript
+if (error) {
+  if (error.message.includes("row-level security") || error.code === "42501") {
+    toast({
+      variant: "destructive",
+      title: "Sem permissao",
+      description: "Voce nao tem permissao para esta acao ou sua organizacao nao foi identificada.",
+    });
+  } else {
+    toast({
+      variant: "destructive",
+      title: "Erro ao salvar",
+      description: error.message,
+    });
+  }
 }
 ```
 
-### Componentes Reutilizados
-- `Accordion` - Para expandir/colapsar FAQs
-- `Tabs` - Para filtrar guias por categoria
-- `Card` - Para layout dos guias e destaques
-- `Input` - Para campo de busca
-- `Badge` - Para indicar tempo de leitura
+---
+
+## Ordem de Execucao
+
+### Fase 1: Cadastros Criticos (5 arquivos)
+1. `FornecedorForm.tsx` - Corrigir insert + UX pessoa fisica
+2. `Unidades.tsx` - Adicionar organization_id
+3. `Templates.tsx` - Adicionar organization_id + corrigir enum
+4. `Franquias.tsx` - Adicionar organization_id em 2 inserts
+5. `Contratos.tsx` - Adicionar organization_id
+
+### Fase 2: Funcionalidades de Contrato (7 arquivos)
+6. `ContractComments.tsx`
+7. `ContractAttachments.tsx`
+8. `ContractObligations.tsx`
+9. `ContractQuickActions.tsx` (2 inserts)
+10. `ContractRedlineEditor.tsx`
+11. `ContractSignature.tsx`
+12. `ContractImport.tsx` (2 inserts)
+
+### Fase 3: Configuracoes (5 arquivos)
+13. `NotificationSettings.tsx`
+14. `ComplianceLGPD.tsx`
+15. `Relatorios.tsx` (2 inserts)
+16. `WorkflowAprovacoes.tsx`
+17. `EspecificacoesServico.tsx`
+
+### Fase 4: Auditoria (1 arquivo)
+18. `useAuditLog.ts`
 
 ---
 
-## 8. Navegação no Sidebar
+## Verificacao Pos-Correcao
 
-### Alteração no AppSidebar.tsx
-
-```text
-Antes:
-- Central de Ajuda (link externo para docs.lexflow.com.br)
-
-Depois:
-- Central de Ajuda (rota interna /ajuda)
-```
-
-Também adicionar no footer do sidebar um ícone de ajuda para acesso rápido.
-
----
-
-## 9. Ordem de Execução
-
-1. **Fase 1: Dados**
-   - Criar `src/lib/faq-data.ts` com conteúdo de FAQ e guias
-
-2. **Fase 2: Componentes**
-   - Criar componentes Help (FAQSection, QuickGuides, SupportContact, HeroCards)
-
-3. **Fase 3: Página**
-   - Criar `src/pages/CentralAjuda.tsx` integrando os componentes
-
-4. **Fase 4: Navegação**
-   - Registrar rota em App.tsx
-   - Atualizar link no AppSidebar.tsx
+Testar cada funcionalidade:
+- [ ] Criar fornecedor PF
+- [ ] Criar fornecedor PJ
+- [ ] Criar unidade
+- [ ] Criar template
+- [ ] Criar franquia
+- [ ] Criar contrato
+- [ ] Adicionar comentario em contrato
+- [ ] Upload de anexo
+- [ ] Criar obrigacao
+- [ ] Duplicar contrato
+- [ ] Criar alerta
+- [ ] Criar redline
+- [ ] Enviar para assinatura
+- [ ] Importar contratos
+- [ ] Salvar preferencias de notificacao
+- [ ] Criar politica de retencao
+- [ ] Criar relatorio
+- [ ] Criar workflow de aprovacao
+- [ ] Criar especificacao de servico
 
 ---
 
-## 10. Estilo Visual
+## Resultado Esperado
 
-- **Cores**: Seguir paleta existente do LexFlow
-- **Ícones**: Lucide React (consistência com o resto da aplicação)
-- **Espaçamento**: Padding generoso para legibilidade
-- **Cards**: Hover sutil com elevação (shadow-md)
-- **Accordion**: Transições suaves de abertura/fechamento
+Apos a correcao:
+- Todos os cadastros funcionam sem erro de RLS
+- Templates usam valores validos do enum
+- Formulario de fornecedor adapta-se para PF/PJ
+- Mensagens de erro sao claras e orientam o usuario
+- Sistema multi-tenant permanece seguro
 
----
-
-## 11. Acessibilidade
-
-- Todos os elementos interativos com `aria-label`
-- Navegação por teclado no accordion
-- Contraste adequado para textos
-- Focus visible em todos os links e botões
