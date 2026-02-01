@@ -1,402 +1,222 @@
 
-# Plano: LexFlow Final Product & UX Strategy
+# Plano: Central de Ajuda Completa
 
-## Visao Geral
+## Visão Geral
 
-Este plano implementa a estrategia completa de UX e posicionamento do LexFlow como "SaaS de Gestao Preventiva de Contratos", focado em gestores (nao juristas). As mudancas abrangem navegacao, landing page, dashboard, onboarding e microcopy, mantendo a arquitetura tecnica existente.
-
----
-
-## 1. Reestruturacao da Navegacao (Sidebar)
-
-### Objetivo
-Reorganizar o menu lateral seguindo a logica "gestor-first", agrupando por objetivo ao inves de funcionalidade tecnica.
-
-### Estrutura Proposta
-
-| Grupo | Objetivo | Itens |
-|-------|----------|-------|
-| **Principal** | Mostrar o que exige atencao agora | Visao Geral (Dashboard), Contratos, Alertas e Prazos, Requisicoes |
-| **Base** | Organizar dados fundamentais | Fornecedores, Unidades, Modelos de Contrato |
-| **Automacao** | Evitar trabalho manual | Fluxos de Aprovacao |
-| **Governanca** | Seguranca e controle avancado | Relatorios, Historico de Acoes, Seguranca, Protecao de Dados |
-| **Configuracoes** | Controle do sistema | Usuarios e Permissoes, Notificacoes, Preferencias do Sistema |
-
-### Mudancas Especificas
-
-**Arquivo: `src/components/AppSidebar.tsx`**
-
-```text
-Antes                          ->  Depois
-----------------------------------------------------------
-Principal                      ->  Principal
-  - Dashboard                      - Visao Geral
-                                   - Contratos
-Organizacao                       - Alertas e Prazos
-  - Membros                        - Requisicoes
-  - Configuracoes              
-                               ->  Base
-Gestao                             - Fornecedores
-  - Contratos                      - Unidades
-  - Franquias                      - Modelos de Contrato
-  - Requisicoes                
-                               ->  Automacao
-Sistema                            - Fluxos de Aprovacao
-  - Relatorios                 
-  - Seguranca                  ->  Governanca
-  - Compliance LGPD                - Relatorios
-  - Trilha de Auditoria            - Historico de Acoes
-  - Cadastro (submenu)             - Seguranca
-  - Configuracoes (submenu)        - Protecao de Dados
-                               
-                               ->  Configuracoes
-                                   - Usuarios e Permissoes
-                                   - Notificacoes
-                                   - Preferencias
-```
-
-### Novas Labels (Sem Juridiques)
-
-| Antes | Depois |
-|-------|--------|
-| Dashboard | Visao Geral |
-| Compliance LGPD | Protecao de Dados |
-| Trilha de Auditoria | Historico de Acoes |
-| Workflows | Fluxos de Aprovacao |
-| Templates | Modelos de Contrato |
-| Alertas | Alertas e Prazos |
+Criar uma Central de Ajuda profissional e funcional em `/ajuda` que centralize FAQs pesquisáveis, guias rápidos organizados por módulo, e seção de suporte/contato. A página será acessível via sidebar e seguirá o design system existente.
 
 ---
 
-## 2. Landing Page (Hero Section)
+## 1. Estrutura da Página
 
-### Objetivo
-Reposicionar a comunicacao para gestores, focando em "nao perder prazos" ao inves de "gestao juridica".
-
-### Novo Conteudo
-
-**Arquivo: `src/pages/Index.tsx`**
+### Layout Proposto
 
 ```text
-ANTES:
-Headline: "Gestao de Contratos Inteligente"
-Subheadline: "Automatize todo o ciclo contratual em uma unica plataforma."
-
-DEPOIS:
-Headline: "Controle seus contratos. Nunca mais perca um prazo."
-Subheadline: "Centralize contratos, acompanhe vencimentos e receba alertas antes que vire problema."
++------------------------------------------------------------------+
+|  CENTRAL DE AJUDA                              [Campo de Busca]  |
+|  Encontre respostas e aprenda a usar o sistema                   |
++------------------------------------------------------------------+
+|                                                                   |
+|  [Card: Primeiros Passos]  [Card: FAQ]  [Card: Fale Conosco]    |
+|   Icone: Rocket             Icone: HelpCircle  Icone: MessageCircle
+|   "Comece por aqui"         "Perguntas frequentes" "Precisa de ajuda?"
++------------------------------------------------------------------+
+|                                                                   |
+|  GUIAS RÁPIDOS                                                   |
+|  [Tab: Todos] [Tab: Contratos] [Tab: Alertas] [Tab: Administração]
+|  +------------------------------------------------------------+  |
+|  | [Card] Criar primeiro contrato        [5 min]              |  |
+|  | [Card] Configurar alertas             [3 min]              |  |
+|  | [Card] Adicionar fornecedor           [2 min]              |  |
+|  | [Card] Configurar fluxo de aprovação  [4 min]              |  |
+|  +------------------------------------------------------------+  |
+|                                                                   |
+|  PERGUNTAS FREQUENTES                                            |
+|  [Busca: Filtrar perguntas...]                                   |
+|  +------------------------------------------------------------+  |
+|  | Como criar meu primeiro contrato?                     [v]  |  |
+|  |   Resposta expandida com passos...                         |  |
+|  +------------------------------------------------------------+  |
+|  | Como configurar alertas de vencimento?                [v]  |  |
+|  +------------------------------------------------------------+  |
+|  | Como funciona o fluxo de aprovação?                   [v]  |  |
+|  +------------------------------------------------------------+  |
+|  | ... mais perguntas                                         |  |
+|  +------------------------------------------------------------+  |
+|                                                                   |
+|  PRECISA DE MAIS AJUDA?                                          |
+|  +------------------------------------------------------------+  |
+|  | Email: suporte@lexflow.com.br                              |  |
+|  | Horário: Seg-Sex, 9h-18h                                   |  |
+|  | [Botão: Enviar Mensagem]                                   |  |
+|  +------------------------------------------------------------+  |
++------------------------------------------------------------------+
 ```
-
-### Novos Highlights (Destaques)
-
-```text
-ANTES:
-- Aprovacoes automatizadas
-- Assinatura eletronica
-- Alertas de vencimento
-
-DEPOIS:
-- Alertas antes do vencimento
-- Dashboard de riscos em tempo real
-- Sem depender do juridico
-```
-
-### Novos Features Cards
-
-```text
-ANTES:
-- Gestao Completa
-- Controle de Fornecedores
-- Dashboards Executivos
-- Seguranca e Compliance
-
-DEPOIS:
-- Nunca perca um prazo (alertas automaticos)
-- Veja os riscos antes (dashboard preventivo)
-- Tudo em um lugar (centralizacao)
-- Controle sem juridico (autonomia para gestores)
-```
-
-### CTAs
-
-| CTA Primario | CTA Secundario |
-|--------------|----------------|
-| Comecar agora | Ver como funciona |
 
 ---
 
-## 3. Dashboard Orientado a Gestor
+## 2. Conteúdo do FAQ
 
-### Objetivo
-Transformar o dashboard para mostrar "riscos e proximas acoes" em segundos, nao metricas tecnicas.
+### Categorias e Perguntas
 
-### Novos KPIs Primarios
-
-| KPI Atual | KPI Novo | Significado para Gestor |
-|-----------|----------|-------------------------|
-| Contratos Ativos | Contratos a vencer | Quantos vencem em 30/60/90 dias |
-| Valor Total | Valor em risco | Impacto financeiro de contratos em alerta |
-| Riscos Altos | Servicos em alerta | Servicos que exigem acao imediata |
-| - | Proxima acao recomendada | O que resolver agora |
-
-### Componente: ProximaAcaoCard
-
-Novo card que mostra a acao mais urgente:
-
-```text
-+------------------------------------------+
-|  PROXIMA ACAO RECOMENDADA                |
-|                                          |
-|  [!] 3 contratos vencem em 7 dias        |
-|      Revise e decida sobre renovacao     |
-|                                          |
-|  [Botao: Ver contratos]                  |
-+------------------------------------------+
-```
-
-### Arquivo: `src/pages/Dashboard.tsx`
-
-**Mudancas:**
-1. Trocar `PageHeader.title` de "Dashboard Executivo" para "Visao Geral"
-2. Adicionar card "Proxima Acao Recomendada"
-3. Reorganizar KPIs primarios para focar em vencimentos
-4. Adicionar badge de urgencia visual (vermelho/amarelo)
+| Categoria | Pergunta | Resposta (resumo) |
+|-----------|----------|-------------------|
+| **Primeiros Passos** | Como criar meu primeiro contrato? | Acesse Contratos > Novo Contrato. Preencha dados básicos e salve. |
+| **Primeiros Passos** | Como adicionar um fornecedor? | Vá em Fornecedores > Novo. Informe CNPJ/CPF e dados de contato. |
+| **Primeiros Passos** | Como configurar meu perfil? | Acesse Preferências no menu. Atualize nome, foto e telefone. |
+| **Contratos** | Como funciona o fluxo de aprovação? | Contratos passam por níveis configuráveis. Cada nível aprova em sequência. |
+| **Contratos** | Como anexar documentos a um contrato? | Na página do contrato, clique em "Anexos" e arraste os arquivos. |
+| **Contratos** | Como usar modelos de contrato? | Ao criar, selecione um modelo. Os campos serão preenchidos automaticamente. |
+| **Alertas** | Como configurar alertas de vencimento? | Em Alertas e Prazos, defina dias de antecedência e canais de notificação. |
+| **Alertas** | Quais canais de notificação posso usar? | E-mail, notificação no sistema e WhatsApp (se configurado). |
+| **Relatórios** | Como exportar relatórios em PDF? | Em Relatórios, aplique filtros e clique em "Exportar PDF". |
+| **Segurança** | Como ativar autenticação de dois fatores? | Acesse Preferências > 2FA. Escaneie o QR code com seu app autenticador. |
+| **Segurança** | Como gerenciar sessões ativas? | Em Preferências > Sessões, veja dispositivos conectados e encerre se necessário. |
+| **Administração** | Como convidar novos usuários? | Acesse Usuários e Permissões > Convidar Membro. Informe email e perfil. |
+| **Administração** | Como definir permissões de acesso? | Ao convidar, escolha o perfil: Membro, Administrador ou Proprietário. |
 
 ---
 
-## 4. Onboarding Atualizado
+## 3. Guias Rápidos
 
-### Objetivo
-Alinhar mensagens do tour com a nova proposta de valor.
+### Lista de Guias
 
-### Novas Mensagens
-
-| Step | Foco | Mensagem Atual | Mensagem Nova |
-|------|------|----------------|---------------|
-| 1 | Dashboard | "Bem-vindo ao LexFlow! Aqui voce acompanha todos os indicadores..." | "Aqui voce ve todos os prazos e alertas importantes." |
-| 2 | Criar | "Crie novos contratos ou servicos com poucos cliques..." | "Cadastre contratos para ativar alertas automaticos." |
-| 3 | Alertas | "Receba alertas automaticos sobre vencimentos..." | "O sistema avisa antes que um prazo vire problema." |
-
-### Mensagem Final
-
-```text
-"Pronto. Agora seus contratos estao sob controle."
-```
-
-### Arquivo: `src/hooks/useOnboardingTour.ts`
-
-Atualizar `tourSteps` com novas mensagens.
+| Guia | Tempo | Categoria | Descrição |
+|------|-------|-----------|-----------|
+| Criar seu primeiro contrato | 5 min | Contratos | Passo a passo para cadastrar e acompanhar um contrato |
+| Configurar alertas | 3 min | Alertas | Como nunca perder um prazo importante |
+| Adicionar fornecedor | 2 min | Base | Cadastre parceiros comerciais rapidamente |
+| Configurar fluxo de aprovação | 4 min | Automação | Monte seu processo de aprovação em níveis |
+| Gerar relatório de vencimentos | 3 min | Relatórios | Exporte lista de contratos a vencer |
+| Ativar 2FA | 2 min | Segurança | Proteja sua conta com verificação em duas etapas |
+| Convidar equipe | 2 min | Administração | Adicione membros à sua organização |
 
 ---
 
-## 5. Microcopy Orientado a Decisao
+## 4. Arquivos a Criar
 
-### Objetivo
-Todos os textos devem indicar impacto e sugerir proxima acao, evitando jargao juridico.
-
-### Arquivo: `src/lib/help-texts.ts`
-
-**Regras Aplicadas:**
-- Sempre indicar impacto
-- Sempre sugerir proxima acao
-- Evitar termos juridicos complexos
-- Usar frases curtas
-
-### Exemplos de Mudanca
-
-| Campo | Antes | Depois |
-|-------|-------|--------|
-| contratosAtivos | "Contratos em vigor que geram obrigacoes e custos." | "Contratos que precisam de acompanhamento. Veja quais exigem acao." |
-| vencendo30Dias | "Contratos proximos do vencimento." | "Vencem em breve. Revise e decida: renovar, renegociar ou encerrar." |
-| riscosAltos | "Contratos com clausulas de alto risco identificadas por IA." | "Requerem atencao. Revise antes que virem problema." |
-
----
-
-## 6. Implementacao Tecnica
-
-### Arquivos a Modificar
-
-| Arquivo | Alteracao |
+| Arquivo | Descrição |
 |---------|-----------|
-| `src/components/AppSidebar.tsx` | Reestruturar menu sections, renomear labels |
-| `src/pages/Index.tsx` | Novo headline, subheadline, features e CTAs |
-| `src/pages/Dashboard.tsx` | Trocar titulo, adicionar ProximaAcaoCard, reorganizar KPIs |
-| `src/hooks/useOnboardingTour.ts` | Atualizar mensagens do tour |
-| `src/lib/help-texts.ts` | Refinar microcopy de todos os campos |
+| `src/pages/CentralAjuda.tsx` | Página principal da Central de Ajuda |
+| `src/components/Help/FAQSection.tsx` | Componente de FAQ com accordion e busca |
+| `src/components/Help/QuickGuides.tsx` | Cards de guias rápidos com filtro por categoria |
+| `src/components/Help/SupportContact.tsx` | Seção de contato e suporte |
+| `src/components/Help/HeroCards.tsx` | Cards de destaque no topo da página |
+| `src/components/Help/index.ts` | Barrel export |
+| `src/lib/faq-data.ts` | Dados estruturados de FAQ e guias |
 
-### Arquivos a Criar
+---
 
-| Arquivo | Descricao |
+## 5. Arquivos a Modificar
+
+| Arquivo | Alteração |
 |---------|-----------|
-| `src/components/Dashboard/ProximaAcaoCard.tsx` | Card de acao recomendada |
-| `src/components/Dashboard/GestorKPIGrid.tsx` | Grid de KPIs focado em gestor |
+| `src/App.tsx` | Adicionar rota `/ajuda` |
+| `src/components/AppSidebar.tsx` | Alterar link "Central de Ajuda" para rota interna |
 
 ---
 
-## 7. Detalhes da Navegacao por Grupo
+## 6. Funcionalidades
 
-### Grupo: Principal
+### Busca em Tempo Real
+- Campo de busca no topo da página
+- Filtra FAQs por palavra-chave instantaneamente
+- Destaca termos encontrados
 
-```javascript
-{
-  id: "principal",
-  title: "Principal",
-  icon: LayoutDashboard,
-  defaultOpen: true,
-  items: [
-    { title: "Visao Geral", url: "/dashboard", icon: LayoutDashboard },
-    { title: "Contratos", url: "/contratos", icon: FileText },
-    { title: "Alertas e Prazos", url: "/alertas", icon: Bell },
-    { title: "Requisicoes", url: "/requisicoes", icon: FileInput },
-  ],
-}
-```
+### Categorização
+- FAQs organizadas por categoria
+- Guias filtráveis por tipo (Contratos, Alertas, etc.)
+- Tabs para navegação rápida
 
-### Grupo: Base
+### Links Contextuais
+- Cada FAQ tem link "Ir para a página" quando aplicável
+- Guias direcionam para a funcionalidade relacionada
 
-```javascript
-{
-  id: "base",
-  title: "Base",
-  icon: Database,
-  defaultOpen: false,
-  items: [
-    { title: "Fornecedores", url: "/fornecedores", icon: Users },
-    { title: "Unidades", url: "/unidades", icon: Building2 },
-    { title: "Modelos de Contrato", url: "/templates", icon: FileStack },
-  ],
-}
-```
-
-### Grupo: Automacao
-
-```javascript
-{
-  id: "automacao",
-  title: "Automacao",
-  icon: Workflow,
-  defaultOpen: false,
-  items: [
-    { title: "Fluxos de Aprovacao", url: "/workflows", icon: GitBranch },
-  ],
-}
-```
-
-### Grupo: Governanca
-
-```javascript
-{
-  id: "governanca",
-  title: "Governanca",
-  icon: Shield,
-  defaultOpen: false,
-  visibility: "advanced", // Colapsar por padrao
-  items: [
-    { title: "Relatorios", url: "/relatorios", icon: BarChart3 },
-    { title: "Historico de Acoes", url: "/audit-logs", icon: Activity },
-    { title: "Seguranca", url: "/security", icon: Shield },
-    { title: "Protecao de Dados", url: "/compliance", icon: ShieldCheck },
-  ],
-}
-```
-
-### Grupo: Configuracoes
-
-```javascript
-{
-  id: "configuracoes",
-  title: "Configuracoes",
-  icon: Settings,
-  defaultOpen: false,
-  items: [
-    { title: "Usuarios e Permissoes", url: "/usuarios", icon: UserCog },
-    { title: "Notificacoes", url: "/notification-settings", icon: Bell },
-    { title: "Preferencias", url: "/settings", icon: Settings },
-  ],
-}
-```
+### Responsivo
+- Layout adaptável para mobile
+- Cards empilham verticalmente em telas menores
 
 ---
 
-## 8. Ordem de Execucao
+## 7. Detalhes Técnicos
 
-1. **Fase 1: Navegacao**
-   - Reestruturar AppSidebar.tsx com nova hierarquia
-   - Renomear labels para linguagem de gestor
-   - Mover "Franquias" para dentro de "Contratos" como submenu
+### Estrutura de Dados (faq-data.ts)
 
-2. **Fase 2: Landing Page**
-   - Atualizar Index.tsx com novo headline e features
-   - Trocar CTAs e highlights
+```typescript
+interface FAQItem {
+  id: string;
+  question: string;
+  answer: string;
+  category: "primeiros-passos" | "contratos" | "alertas" | "relatorios" | "seguranca" | "administracao";
+  relatedLink?: string;
+}
 
-3. **Fase 3: Dashboard**
-   - Criar ProximaAcaoCard.tsx
-   - Reorganizar KPIs primarios
-   - Trocar titulo para "Visao Geral"
+interface GuideItem {
+  id: string;
+  title: string;
+  description: string;
+  duration: string;
+  category: string;
+  link: string;
+  icon: string;
+}
+```
 
-4. **Fase 4: Onboarding**
-   - Atualizar mensagens em useOnboardingTour.ts
-
-5. **Fase 5: Microcopy**
-   - Refinar todos os textos em help-texts.ts
-
----
-
-## 9. Consideracoes de UX
-
-- **Gestor-first**: Toda decisao prioriza a experiencia do gestor
-- **Orientado a acao**: Cada elemento mostra "o que fazer agora"
-- **Sem juridiques**: Evitar termos como "clausulas", "obrigacoes contratuais"
-- **Clareza antes de profundidade**: Informacao essencial primeiro
-- **Problema + proxima acao**: Sempre mostrar o problema e o caminho
-
----
-
-## 10. Metricas de Sucesso
-
-| Metrica | Definicao |
-|---------|-----------|
-| Ativacao | Primeiro contrato cadastrado |
-| Engajamento | Alertas ativos |
-| Retencao | Uso semanal do dashboard |
-| Valor realizado | Zero contratos vencidos sem aviso |
+### Componentes Reutilizados
+- `Accordion` - Para expandir/colapsar FAQs
+- `Tabs` - Para filtrar guias por categoria
+- `Card` - Para layout dos guias e destaques
+- `Input` - Para campo de busca
+- `Badge` - Para indicar tempo de leitura
 
 ---
 
-## 11. Componente: ProximaAcaoCard
+## 8. Navegação no Sidebar
+
+### Alteração no AppSidebar.tsx
 
 ```text
-+--------------------------------------------------+
-|  [!] PROXIMA ACAO                     [Vermelho] |
-+--------------------------------------------------+
-|                                                   |
-|  "3 contratos vencem em menos de 7 dias"         |
-|                                                   |
-|  Revise e decida: renovar, renegociar ou         |
-|  encerrar antes do prazo.                        |
-|                                                   |
-|  [Botao: Ver contratos urgentes]                 |
-|                                                   |
-+--------------------------------------------------+
+Antes:
+- Central de Ajuda (link externo para docs.lexflow.com.br)
+
+Depois:
+- Central de Ajuda (rota interna /ajuda)
 ```
 
-### Logica de Priorizacao
-
-1. Contratos vencendo em < 7 dias (critico)
-2. Contratos vencendo em < 30 dias (alerta)
-3. Aprovacoes pendentes > 5 dias (atencao)
-4. Riscos altos sem revisao (informativo)
-5. "Tudo sob controle" (quando nao ha acoes urgentes)
+Também adicionar no footer do sidebar um ícone de ajuda para acesso rápido.
 
 ---
 
-## 12. Resumo de Impacto
+## 9. Ordem de Execução
 
-| Area | Antes | Depois |
-|------|-------|--------|
-| Posicionamento | Gestao juridica | Gestao preventiva |
-| Publico | Juridico | Gestores administrativos |
-| Linguagem | Termos juridicos | Linguagem de negocios |
-| Navegacao | Por funcionalidade | Por objetivo |
-| Dashboard | Metricas tecnicas | Acoes e riscos |
-| Onboarding | Apresentacao de features | Valor e resultado |
+1. **Fase 1: Dados**
+   - Criar `src/lib/faq-data.ts` com conteúdo de FAQ e guias
+
+2. **Fase 2: Componentes**
+   - Criar componentes Help (FAQSection, QuickGuides, SupportContact, HeroCards)
+
+3. **Fase 3: Página**
+   - Criar `src/pages/CentralAjuda.tsx` integrando os componentes
+
+4. **Fase 4: Navegação**
+   - Registrar rota em App.tsx
+   - Atualizar link no AppSidebar.tsx
+
+---
+
+## 10. Estilo Visual
+
+- **Cores**: Seguir paleta existente do LexFlow
+- **Ícones**: Lucide React (consistência com o resto da aplicação)
+- **Espaçamento**: Padding generoso para legibilidade
+- **Cards**: Hover sutil com elevação (shadow-md)
+- **Accordion**: Transições suaves de abertura/fechamento
+
+---
+
+## 11. Acessibilidade
+
+- Todos os elementos interativos com `aria-label`
+- Navegação por teclado no accordion
+- Contraste adequado para textos
+- Focus visible em todos os links e botões
