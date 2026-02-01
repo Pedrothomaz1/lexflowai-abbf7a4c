@@ -994,6 +994,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "contratos_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "contratos_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -1168,6 +1175,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "fornecedor_anexos_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "fornecedor_anexos_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -1204,6 +1218,13 @@ export type Database = {
             columns: ["fornecedor_id"]
             isOneToOne: false
             referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fornecedor_categorias_servico_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores_safe"
             referencedColumns: ["id"]
           },
           {
@@ -2204,6 +2225,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "servico_historico_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "servico_historico_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -2312,6 +2340,13 @@ export type Database = {
             columns: ["fornecedor_preferencial_id"]
             isOneToOne: false
             referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "servicos_periodicos_fornecedor_preferencial_id_fkey"
+            columns: ["fornecedor_preferencial_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores_safe"
             referencedColumns: ["id"]
           },
           {
@@ -2689,7 +2724,116 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      fornecedores_safe: {
+        Row: {
+          agencia: string | null
+          banco: string | null
+          cep: string | null
+          cidade: string | null
+          cnpj: string | null
+          conta: string | null
+          contato_cargo: string | null
+          contato_email: string | null
+          contato_nome: string | null
+          contato_telefone: string | null
+          cpf: string | null
+          created_at: string | null
+          created_by: string | null
+          documentos: Json | null
+          email: string | null
+          endereco: string | null
+          estado: string | null
+          id: string | null
+          inscricao_estadual: string | null
+          inscricao_municipal: string | null
+          is_active: boolean | null
+          nome: string | null
+          notas: string | null
+          organization_id: string | null
+          pix: string | null
+          porte_empresa: string | null
+          telefone: string | null
+          tipo_pessoa: string | null
+          titular_conta: string | null
+          updated_at: string | null
+          website: string | null
+        }
+        Insert: {
+          agencia?: never
+          banco?: never
+          cep?: string | null
+          cidade?: string | null
+          cnpj?: string | null
+          conta?: never
+          contato_cargo?: string | null
+          contato_email?: string | null
+          contato_nome?: string | null
+          contato_telefone?: string | null
+          cpf?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          documentos?: Json | null
+          email?: string | null
+          endereco?: string | null
+          estado?: string | null
+          id?: string | null
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
+          is_active?: boolean | null
+          nome?: string | null
+          notas?: string | null
+          organization_id?: string | null
+          pix?: never
+          porte_empresa?: string | null
+          telefone?: string | null
+          tipo_pessoa?: string | null
+          titular_conta?: never
+          updated_at?: string | null
+          website?: string | null
+        }
+        Update: {
+          agencia?: never
+          banco?: never
+          cep?: string | null
+          cidade?: string | null
+          cnpj?: string | null
+          conta?: never
+          contato_cargo?: string | null
+          contato_email?: string | null
+          contato_nome?: string | null
+          contato_telefone?: string | null
+          cpf?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          documentos?: Json | null
+          email?: string | null
+          endereco?: string | null
+          estado?: string | null
+          id?: string | null
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
+          is_active?: boolean | null
+          nome?: string | null
+          notas?: string | null
+          organization_id?: string | null
+          pix?: never
+          porte_empresa?: string | null
+          telefone?: string | null
+          tipo_pessoa?: string | null
+          titular_conta?: never
+          updated_at?: string | null
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fornecedores_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       belongs_to_org: {
