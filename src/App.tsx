@@ -49,6 +49,7 @@ import WaitingForInvite from "./pages/WaitingForInvite";
 import OrganizationSettings from "./pages/OrganizationSettings";
 import OrganizationMembers from "./pages/OrganizationMembers";
 import AcceptInvite from "./pages/AcceptInvite";
+import TermosDeUso from "./pages/TermosDeUso";
 
 const queryClient = new QueryClient();
 
@@ -68,6 +69,7 @@ function App() {
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/auth/callback" element={<AuthCallback />} />
                   <Route path="/privacidade" element={<Privacidade />} />
+                  <Route path="/termos" element={<TermosDeUso />} />
                   <Route path="/requisicao" element={<RequisicaoPublica />} />
                   
                   {/* Organization onboarding routes */}

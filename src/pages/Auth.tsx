@@ -5,16 +5,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Scale, ArrowRight, Shield, BarChart3, Bell, Lock, Eye, EyeOff, Wrench, FileText } from "lucide-react";
 import logoVeridiana from "@/assets/logo-veridiana.png";
 import { cn } from "@/lib/utils";
+
+const TERMS_VERSION = "1.0";
+const PRIVACY_VERSION = "1.0";
 
 const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   useEffect(() => {
     // Check if user is already logged in and redirect
@@ -34,7 +39,38 @@ const Auth = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
+  // Function to register LGPD consent
+  const registrarAceiteLGPD = async (userId: string) => {
+    try {
+      const { error } = await supabase.functions.invoke("registrar-aceite-lgpd", {
+        body: {
+          user_id: userId,
+          versao_termos: TERMS_VERSION,
+          versao_privacidade: PRIVACY_VERSION,
+        },
+      });
+
+      if (error) {
+        console.error("Error registering LGPD consent:", error);
+        // Don't block authentication if consent logging fails
+      } else {
+        console.log("LGPD consent registered successfully");
+      }
+    } catch (err) {
+      console.error("Failed to register LGPD consent:", err);
+    }
+  };
+
   const handleGoogleLogin = async () => {
+    if (!termsAccepted) {
+      toast({
+        variant: "destructive",
+        title: "Aceite obrigatório",
+        description: "Você precisa aceitar os Termos de Uso e a Política de Privacidade para continuar.",
+      });
+      return;
+    }
+
     setLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -55,13 +91,23 @@ const Auth = () => {
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (!termsAccepted) {
+      toast({
+        variant: "destructive",
+        title: "Aceite obrigatório",
+        description: "Você precisa aceitar os Termos de Uso e a Política de Privacidade para continuar.",
+      });
+      return;
+    }
+
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
       toast({
@@ -69,6 +115,9 @@ const Auth = () => {
         title: "Erro ao fazer login",
         description: error.message,
       });
+    } else if (data.user) {
+      // Register LGPD consent after successful login
+      await registrarAceiteLGPD(data.user.id);
     }
 
     setLoading(false);
@@ -76,6 +125,16 @@ const Auth = () => {
 
   const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (!termsAccepted) {
+      toast({
+        variant: "destructive",
+        title: "Aceite obrigatório",
+        description: "Você precisa aceitar os Termos de Uso e a Política de Privacidade para continuar.",
+      });
+      return;
+    }
+
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
@@ -83,7 +142,7 @@ const Auth = () => {
     const password = formData.get("password") as string;
     const fullName = formData.get("fullName") as string;
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -101,6 +160,10 @@ const Auth = () => {
         description: error.message,
       });
     } else {
+      // Register LGPD consent after successful signup
+      if (data.user) {
+        await registrarAceiteLGPD(data.user.id);
+      }
       toast({
         title: "Conta criada com sucesso!",
         description: "Você já pode fazer login.",
@@ -220,7 +283,7 @@ const Auth = () => {
                     variant="outline"
                     className="w-full h-11 text-sm font-medium"
                     onClick={handleGoogleLogin}
-                    disabled={loading}
+                    disabled={loading || !termsAccepted}
                   >
                     <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                       <path
@@ -300,7 +363,7 @@ const Auth = () => {
                   <Button
                     type="submit"
                     className="w-full h-11 text-sm font-medium"
-                    disabled={loading}
+                    disabled={loading || !termsAccepted}
                   >
                     {loading ? (
                       "Entrando..."
@@ -379,7 +442,7 @@ const Auth = () => {
                   <Button
                     type="submit"
                     className="w-full h-11 text-sm font-medium"
-                    disabled={loading}
+                    disabled={loading || !termsAccepted}
                   >
                     {loading ? (
                       "Criando conta..."
@@ -394,16 +457,52 @@ const Auth = () => {
               </TabsContent>
             </Tabs>
 
-            <p className="text-xs text-center text-muted-foreground">
-              Ao continuar, você concorda com nossos{" "}
-              <a href="#" className="underline hover:text-foreground transition-colors">
-                Termos de Uso
-              </a>{" "}
-              e{" "}
-              <Link to="/privacidade" className="underline hover:text-foreground transition-colors">
-                Política de Privacidade
-              </Link>
-            </p>
+            {/* LGPD Checkbox - Required */}
+            <div className="space-y-4 pt-2">
+              <div className="flex items-start space-x-3">
+                <Checkbox
+                  id="terms-checkbox"
+                  checked={termsAccepted}
+                  onCheckedChange={(checked) => setTermsAccepted(checked === true)}
+                  className="mt-1"
+                />
+                <Label
+                  htmlFor="terms-checkbox"
+                  className="text-sm leading-relaxed cursor-pointer text-muted-foreground"
+                >
+                  Declaro que li e concordo com os{" "}
+                  <Link
+                    to="/termos"
+                    className="text-primary underline hover:no-underline font-medium"
+                    target="_blank"
+                  >
+                    Termos de Uso
+                  </Link>{" "}
+                  e estou ciente da{" "}
+                  <Link
+                    to="/privacidade"
+                    className="text-primary underline hover:no-underline font-medium"
+                    target="_blank"
+                  >
+                    Política de Privacidade
+                  </Link>
+                  .
+                </Label>
+              </div>
+
+              {/* Legal Text */}
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Ao continuar, você declara que leu e concorda com os{" "}
+                <Link to="/termos" className="underline hover:text-foreground transition-colors">
+                  Termos de Uso
+                </Link>{" "}
+                e está ciente da{" "}
+                <Link to="/privacidade" className="underline hover:text-foreground transition-colors">
+                  Política de Privacidade
+                </Link>
+                , inclusive quanto ao tratamento de dados pessoais nos termos da Lei nº 13.709/2018 (LGPD).
+              </p>
+            </div>
           </div>
         </div>
       </div>

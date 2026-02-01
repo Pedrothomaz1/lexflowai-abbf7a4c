@@ -16,18 +16,20 @@ import {
   Mail,
   ArrowLeft,
   Clock,
+  BookOpen,
 } from "lucide-react";
 
 const Privacidade = () => {
   const sections = [
-    { id: "dados-coletados", title: "Dados Coletados", icon: Database },
-    { id: "finalidade", title: "Finalidade", icon: Target },
-    { id: "base-legal", title: "Base Legal", icon: FileCheck },
+    { id: "dados-tratados", title: "Dados Tratados", icon: Database },
+    { id: "papeis", title: "Papéis das Partes", icon: Users },
+    { id: "finalidades", title: "Finalidades", icon: Target },
+    { id: "dados-sensiveis", title: "Dados Sensíveis", icon: Shield },
     { id: "compartilhamento", title: "Compartilhamento", icon: Users },
     { id: "armazenamento", title: "Armazenamento", icon: Server },
     { id: "seguranca", title: "Segurança", icon: Shield },
     { id: "direitos", title: "Direitos do Titular", icon: UserCheck },
-    { id: "contato", title: "Contato", icon: Mail },
+    { id: "contato", title: "Contato LGPD", icon: Mail },
   ];
 
   return (
@@ -39,7 +41,7 @@ const Privacidade = () => {
             <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center">
               <Scale className="h-6 w-6 text-primary-foreground" />
             </div>
-            <span className="text-2xl font-bold">LexFlow</span>
+            <span className="text-2xl font-bold">LexFlow AI</span>
           </Link>
           <Button variant="ghost" asChild>
             <Link to="/" className="gap-2">
@@ -87,111 +89,101 @@ const Privacidade = () => {
             <div className="mb-8">
               <div className="flex items-center gap-3 mb-4">
                 <Shield className="h-8 w-8 text-primary" />
-                <h1 className="text-3xl font-bold">Política de Privacidade</h1>
+                <h1 className="text-3xl font-bold">Política de Privacidade e Proteção de Dados Pessoais</h1>
               </div>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
                 <Badge variant="secondary" className="gap-1">
                   <Clock className="h-3 w-3" />
-                  Atualizado em 27/01/2026
+                  Versão 1.0
                 </Badge>
-                <span>Controlador: Veridiana Quirino / LexFlow</span>
+                <Badge variant="outline" className="gap-1">
+                  Atualizado em 01/02/2026
+                </Badge>
               </div>
               <p className="mt-4 text-muted-foreground">
-                Esta Política de Privacidade descreve como coletamos, usamos,
-                armazenamos e protegemos seus dados pessoais em conformidade com a
-                Lei Geral de Proteção de Dados (LGPD - Lei nº 13.709/2018).
+                A LEXFLOW AI atua em conformidade com a Lei nº 13.709/2018 (LGPD) e respeita a 
+                privacidade e a proteção dos dados pessoais tratados em sua plataforma SaaS de 
+                Inteligência Artificial jurídica.
               </p>
             </div>
 
             <div className="space-y-8">
-              {/* 1. Dados Coletados */}
-              <section id="dados-coletados">
+              {/* 1. Dados Pessoais Tratados */}
+              <section id="dados-tratados">
                 <Card className="card-elevated">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Database className="h-5 w-5 text-primary" />
-                      1. Dados Coletados
+                      1. Dados Pessoais Tratados
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div>
-                      <h4 className="font-medium mb-2">Dados de Cadastro</h4>
-                      <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-                        <li>Nome completo</li>
-                        <li>Endereço de e-mail</li>
-                        <li>Telefone</li>
-                        <li>Departamento/Cargo</li>
-                      </ul>
+                    <p className="text-sm text-muted-foreground">
+                      Podem ser tratados:
+                    </p>
+                    <ul className="space-y-2">
+                      {[
+                        "Nome, e-mail profissional e dados de autenticação",
+                        "Dados técnicos (IP, logs, dispositivo)",
+                        "Dados pessoais de terceiros inseridos pelo cliente",
+                      ].map((item, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                          <span className="text-primary font-medium">•</span>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              </section>
+
+              {/* 2. Papéis das Partes */}
+              <section id="papeis">
+                <Card className="card-elevated">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="h-5 w-5 text-primary" />
+                      2. Papéis das Partes
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="p-4 rounded-lg border border-border">
+                      <Badge className="mb-2">Controlador de Dados</Badge>
+                      <p className="text-sm text-muted-foreground">
+                        O cliente atua como CONTROLADOR DE DADOS.
+                      </p>
                     </div>
-                    <Separator />
-                    <div>
-                      <h4 className="font-medium mb-2">Dados de Perfil</h4>
-                      <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-                        <li>Foto de avatar (opcional)</li>
-                        <li>Preferências de notificação</li>
-                      </ul>
-                    </div>
-                    <Separator />
-                    <div>
-                      <h4 className="font-medium mb-2">Dados de Uso</h4>
-                      <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-                        <li>Endereço IP</li>
-                        <li>Navegador e sistema operacional (user agent)</li>
-                        <li>Logs de acesso e auditoria</li>
-                        <li>Data e hora de ações realizadas</li>
-                      </ul>
-                    </div>
-                    <Separator />
-                    <div>
-                      <h4 className="font-medium mb-2">Dados de Fornecedores</h4>
-                      <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-                        <li>CNPJ ou CPF</li>
-                        <li>Razão social/Nome</li>
-                        <li>Dados bancários (banco, agência, conta, PIX)</li>
-                        <li>Endereço comercial</li>
-                        <li>Dados de contato</li>
-                      </ul>
+                    <div className="p-4 rounded-lg border border-border">
+                      <Badge variant="secondary" className="mb-2">Operadora</Badge>
+                      <p className="text-sm text-muted-foreground">
+                        A LEXFLOW AI atua como OPERADORA, tratando os dados exclusivamente 
+                        para execução do contrato.
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
               </section>
 
-              {/* 2. Finalidade */}
-              <section id="finalidade">
+              {/* 3. Finalidades */}
+              <section id="finalidades">
                 <Card className="card-elevated">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Target className="h-5 w-5 text-primary" />
-                      2. Finalidade do Tratamento
+                      3. Finalidades
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Os dados são tratados para:
+                    </p>
                     <div className="grid gap-3">
                       {[
-                        {
-                          title: "Identificação e Autenticação",
-                          desc: "Verificar a identidade dos usuários e controlar o acesso ao sistema",
-                        },
-                        {
-                          title: "Gestão de Contratos",
-                          desc: "Administrar o ciclo de vida dos contratos, prazos e renovações",
-                        },
-                        {
-                          title: "Gestão de Fornecedores",
-                          desc: "Manter cadastro atualizado e histórico de relacionamento",
-                        },
-                        {
-                          title: "Comunicação",
-                          desc: "Enviar notificações por e-mail e WhatsApp sobre alertas e vencimentos",
-                        },
-                        {
-                          title: "Auditoria e Compliance",
-                          desc: "Registrar ações para fins de rastreabilidade e conformidade legal",
-                        },
-                        {
-                          title: "Melhoria do Serviço",
-                          desc: "Analisar uso do sistema para aprimorar funcionalidades",
-                        },
+                        { title: "Operação da plataforma", desc: "Funcionamento dos serviços contratados" },
+                        { title: "Suporte técnico", desc: "Atendimento e resolução de problemas" },
+                        { title: "Segurança da informação", desc: "Proteção contra acessos não autorizados" },
+                        { title: "Cumprimento de obrigações legais", desc: "Atendimento a requisitos regulatórios" },
+                        { title: "Funcionamento das funcionalidades de IA", desc: "Processamento para análise e sugestões" },
                       ].map((item, i) => (
                         <div key={i} className="p-3 rounded-lg bg-muted/50">
                           <p className="font-medium text-sm">{item.title}</p>
@@ -203,177 +195,119 @@ const Privacidade = () => {
                 </Card>
               </section>
 
-              {/* 3. Base Legal */}
-              <section id="base-legal">
+              {/* 4. Dados Sensíveis */}
+              <section id="dados-sensiveis">
                 <Card className="card-elevated">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <FileCheck className="h-5 w-5 text-primary" />
-                      3. Base Legal (Art. 7º da LGPD)
+                      <Shield className="h-5 w-5 text-primary" />
+                      4. Dados Sensíveis
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      <div className="p-4 rounded-lg border border-border">
-                        <Badge className="mb-2">Execução de Contrato</Badge>
-                        <p className="text-sm text-muted-foreground">
-                          Tratamento necessário para a gestão contratual e prestação dos
-                          serviços contratados.
-                        </p>
-                      </div>
-                      <div className="p-4 rounded-lg border border-border">
-                        <Badge variant="secondary" className="mb-2">Consentimento</Badge>
-                        <p className="text-sm text-muted-foreground">
-                          Para comunicações de marketing e funcionalidades opcionais que
-                          requerem autorização expressa.
-                        </p>
-                      </div>
-                      <div className="p-4 rounded-lg border border-border">
-                        <Badge variant="secondary" className="mb-2">Obrigação Legal</Badge>
-                        <p className="text-sm text-muted-foreground">
-                          Cumprimento de exigências legais, como retenção de documentos
-                          fiscais e logs de auditoria.
-                        </p>
-                      </div>
-                      <div className="p-4 rounded-lg border border-border">
-                        <Badge variant="secondary" className="mb-2">Interesse Legítimo</Badge>
-                        <p className="text-sm text-muted-foreground">
-                          Segurança do sistema, prevenção a fraudes e melhoria contínua
-                          dos serviços.
-                        </p>
-                      </div>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      A LEXFLOW AI não realiza tratamento intencional de dados pessoais sensíveis.
+                    </p>
+                    <div className="p-4 rounded-lg bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700">
+                      <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
+                        ⚠️ A eventual inserção ocorre sob responsabilidade exclusiva do cliente.
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
               </section>
 
-              {/* 4. Compartilhamento */}
+              {/* 5. Compartilhamento */}
               <section id="compartilhamento">
                 <Card className="card-elevated">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Users className="h-5 w-5 text-primary" />
-                      4. Compartilhamento de Dados
+                      5. Compartilhamento
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <p className="text-sm text-muted-foreground">
-                      Seus dados podem ser compartilhados com os seguintes terceiros,
-                      sempre com medidas de proteção adequadas:
+                      Os dados poderão ser compartilhados apenas:
                     </p>
                     <ul className="space-y-3">
                       <li className="flex items-start gap-3">
                         <Server className="h-5 w-5 text-muted-foreground mt-0.5" />
                         <div>
-                          <p className="font-medium text-sm">Provedor de Infraestrutura</p>
+                          <p className="font-medium text-sm">Fornecedores de infraestrutura tecnológica</p>
                           <p className="text-sm text-muted-foreground">
-                            Lovable Cloud para hospedagem segura do sistema e banco de dados.
-                          </p>
-                        </div>
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
-                        <div>
-                          <p className="font-medium text-sm">Serviços de Comunicação</p>
-                          <p className="text-sm text-muted-foreground">
-                            Provedores de e-mail e WhatsApp para envio de notificações (quando configurados).
+                            Para hospedagem e operação da plataforma.
                           </p>
                         </div>
                       </li>
                       <li className="flex items-start gap-3">
                         <FileCheck className="h-5 w-5 text-muted-foreground mt-0.5" />
                         <div>
-                          <p className="font-medium text-sm">Assinatura Eletrônica</p>
+                          <p className="font-medium text-sm">Obrigação legal ou ordem judicial</p>
                           <p className="text-sm text-muted-foreground">
-                            Integrações com provedores de assinatura digital (quando habilitadas).
+                            Quando exigido por lei ou determinação judicial.
                           </p>
                         </div>
                       </li>
                     </ul>
-                    <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
-                      <p className="text-sm font-medium text-primary">
-                        ✓ Não vendemos, alugamos ou comercializamos seus dados pessoais com terceiros.
-                      </p>
-                    </div>
                   </CardContent>
                 </Card>
               </section>
 
-              {/* 5. Armazenamento */}
+              {/* 6. Armazenamento e Retenção */}
               <section id="armazenamento">
                 <Card className="card-elevated">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Server className="h-5 w-5 text-primary" />
-                      5. Armazenamento e Retenção
+                      6. Armazenamento e Retenção
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <h4 className="font-medium mb-2">Local de Armazenamento</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Os dados são armazenados em servidores seguros fornecidos pelo
-                        Lovable Cloud, com infraestrutura distribuída geograficamente.
-                      </p>
-                    </div>
-                    <Separator />
-                    <div>
-                      <h4 className="font-medium mb-2">Períodos de Retenção</h4>
-                      <ul className="space-y-2">
-                        <li className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Dados de conta ativa</span>
-                          <span className="font-medium">Enquanto a conta existir</span>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Os dados são armazenados:
+                    </p>
+                    <ul className="space-y-2">
+                      {[
+                        "Durante a vigência contratual",
+                        "Pelo prazo necessário às finalidades",
+                        "Conforme exigido por lei",
+                      ].map((item, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                          <span className="text-primary font-medium">•</span>
+                          {item}
                         </li>
-                        <li className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Contratos encerrados</span>
-                          <span className="font-medium">Mínimo 5 anos</span>
-                        </li>
-                        <li className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Documentos fiscais</span>
-                          <span className="font-medium">Conforme legislação tributária</span>
-                        </li>
-                        <li className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Logs de auditoria</span>
-                          <span className="font-medium">Conforme política configurada</span>
-                        </li>
-                      </ul>
-                    </div>
+                      ))}
+                    </ul>
                   </CardContent>
                 </Card>
               </section>
 
-              {/* 6. Segurança */}
+              {/* 7. Segurança */}
               <section id="seguranca">
                 <Card className="card-elevated">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Shield className="h-5 w-5 text-primary" />
-                      6. Medidas de Segurança
+                      7. Segurança
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      São adotadas medidas técnicas e administrativas adequadas, nos termos 
+                      do art. 46 da LGPD.
+                    </p>
+                    <Separator className="my-4" />
                     <div className="grid md:grid-cols-2 gap-4">
                       {[
-                        {
-                          title: "Criptografia em Trânsito",
-                          desc: "Todas as comunicações são protegidas por HTTPS/TLS",
-                        },
-                        {
-                          title: "Controle de Acesso (RLS)",
-                          desc: "Políticas de segurança a nível de linha no banco de dados",
-                        },
-                        {
-                          title: "Autenticação Segura",
-                          desc: "Suporte a OAuth 2.0 e autenticação multifator",
-                        },
-                        {
-                          title: "Logs de Auditoria",
-                          desc: "Registro completo de todas as ações para rastreabilidade",
-                        },
+                        { title: "Criptografia em Trânsito", desc: "HTTPS/TLS em todas as comunicações" },
+                        { title: "Controle de Acesso (RLS)", desc: "Políticas de segurança a nível de linha" },
+                        { title: "Autenticação Segura", desc: "OAuth 2.0 e autenticação multifator" },
+                        { title: "Logs de Auditoria", desc: "Registro completo de ações" },
                       ].map((item, i) => (
                         <div key={i} className="p-4 rounded-lg bg-muted/50 border border-border">
                           <p className="font-medium text-sm">{item.title}</p>
-                          <p className="text-sm text-muted-foreground mt-1">{item.desc}</p>
+                          <p className="text-xs text-muted-foreground">{item.desc}</p>
                         </div>
                       ))}
                     </div>
@@ -381,97 +315,122 @@ const Privacidade = () => {
                 </Card>
               </section>
 
-              {/* 7. Direitos do Titular */}
+              {/* 8. Direitos do Titular */}
               <section id="direitos">
                 <Card className="card-elevated">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <UserCheck className="h-5 w-5 text-primary" />
-                      7. Direitos do Titular (Art. 18 da LGPD)
+                      8. Direitos do Titular
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent>
                     <p className="text-sm text-muted-foreground">
-                      Você possui os seguintes direitos sobre seus dados pessoais:
+                      São garantidos os direitos previstos no art. 18 da LGPD:
                     </p>
-                    <div className="grid gap-2">
+                    <Separator className="my-4" />
+                    <div className="grid sm:grid-cols-2 gap-3">
                       {[
                         "Confirmação da existência de tratamento",
-                        "Acesso aos dados pessoais",
-                        "Correção de dados incompletos, inexatos ou desatualizados",
-                        "Anonimização, bloqueio ou eliminação de dados desnecessários",
-                        "Portabilidade dos dados a outro fornecedor",
-                        "Eliminação dos dados tratados com consentimento",
-                        "Informação sobre compartilhamento com terceiros",
-                        "Revogação do consentimento a qualquer momento",
+                        "Acesso aos dados",
+                        "Correção de dados incompletos ou desatualizados",
+                        "Anonimização, bloqueio ou eliminação",
+                        "Portabilidade dos dados",
+                        "Eliminação de dados tratados com consentimento",
+                        "Informação sobre compartilhamento",
+                        "Revogação do consentimento",
                       ].map((right, i) => (
-                        <div key={i} className="flex items-center gap-2 text-sm">
-                          <div className="h-2 w-2 rounded-full bg-primary" />
-                          <span>{right}</span>
+                        <div key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <span className="text-primary">✓</span>
+                          {right}
                         </div>
                       ))}
                     </div>
-                    <Separator />
-                    <div className="p-4 rounded-lg bg-muted/50">
-                      <p className="font-medium text-sm mb-2">Como exercer seus direitos:</p>
-                      <p className="text-sm text-muted-foreground">
-                        Acesse a página de <strong>Compliance LGPD</strong> no menu do sistema
-                        ou entre em contato conosco através do canal indicado abaixo.
+                  </CardContent>
+                </Card>
+              </section>
+
+              {/* 9. Contato LGPD */}
+              <section id="contato">
+                <Card className="card-elevated">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Mail className="h-5 w-5 text-primary" />
+                      9. Contato LGPD
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Para exercer seus direitos ou esclarecer dúvidas sobre o tratamento 
+                      de dados pessoais:
+                    </p>
+                    <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
+                      <p className="text-sm font-medium text-primary flex items-center gap-2">
+                        <Mail className="h-4 w-4" />
+                        📧 privacidade@lexflowai.com.br
                       </p>
                     </div>
                   </CardContent>
                 </Card>
               </section>
 
-              {/* 8. Contato */}
-              <section id="contato">
-                <Card className="card-elevated border-primary/20">
+              {/* 10. Legislação Aplicável */}
+              <section>
+                <Card className="card-elevated">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <Mail className="h-5 w-5 text-primary" />
-                      8. Contato do Encarregado (DPO)
+                      <FileCheck className="h-5 w-5 text-primary" />
+                      10. Legislação Aplicável
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent>
                     <p className="text-sm text-muted-foreground">
-                      Para dúvidas, solicitações ou exercício de direitos relacionados
-                      à privacidade, entre em contato:
+                      Lei nº 13.709/2018 (LGPD).
                     </p>
-                    <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
-                      <p className="font-medium">Encarregado de Proteção de Dados</p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Veridiana Quirino
-                      </p>
-                      <a
-                        href="mailto:privacidade@lexflow.com.br"
-                        className="text-sm text-primary hover:underline mt-2 inline-block"
-                      >
-                        privacidade@lexflow.com.br
-                      </a>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Responderemos sua solicitação em até 15 dias úteis, conforme
-                      previsto na legislação.
+                  </CardContent>
+                </Card>
+              </section>
+
+              {/* Base Legal LGPD */}
+              <section>
+                <Card className="card-elevated border-primary/20">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-primary">
+                      <BookOpen className="h-5 w-5" />
+                      📚 Base Legal LGPD
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      Capítulos I a IV – Arts. 5º, 6º, 7º, 18, 39, 42 e 46
                     </p>
                   </CardContent>
                 </Card>
               </section>
             </div>
+
+            {/* Navigation Footer */}
+            <div className="mt-12 pt-8 border-t border-border">
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                <p className="text-sm text-muted-foreground">
+                  Dúvidas? Entre em contato pelo{" "}
+                  <a href="mailto:privacidade@lexflowai.com.br" className="text-primary hover:underline">
+                    privacidade@lexflowai.com.br
+                  </a>
+                </p>
+                <div className="flex gap-4">
+                  <Button variant="outline" asChild>
+                    <Link to="/termos">Termos de Uso</Link>
+                  </Button>
+                  <Button asChild>
+                    <Link to="/auth">Acessar Plataforma</Link>
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </main>
-
-      {/* Footer */}
-      <footer className="border-t border-border py-8 mt-12">
-        <div className="container mx-auto px-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <p className="text-sm text-muted-foreground">
-            © 2026 LexFlow. Todos os direitos reservados.
-          </p>
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/">Voltar ao início</Link>
-          </Button>
-        </div>
-      </footer>
     </div>
   );
 };
