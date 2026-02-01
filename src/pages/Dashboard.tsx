@@ -30,7 +30,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { PageSkeleton } from "@/components/ui/skeleton-loaders";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PremiumAreaChart, PremiumBarChart, PremiumDonutChart } from "@/components/charts";
-import { ExecutiveSummary } from "@/components/Dashboard";
+import { ExecutiveSummary, ProximaAcaoCard } from "@/components/Dashboard";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { helpTexts } from "@/lib/help-texts";
@@ -334,8 +334,8 @@ const Dashboard = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="Dashboard Executivo"
-        description="Visão geral e análise de contratos"
+        title="Visão Geral"
+        description="Acompanhe o que precisa de atenção"
         actions={
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
@@ -351,7 +351,7 @@ const Dashboard = () => {
               )} />
             </div>
             <Button onClick={() => navigate("/contratos")} size="sm" className="btn-cta" data-tour="novo-contrato">
-              Ver Todos os Contratos
+              Ver Contratos
               <ArrowUpRight className="ml-1.5 h-4 w-4" />
             </Button>
           </div>
@@ -393,8 +393,52 @@ const Dashboard = () => {
       {/* Detailed View - Only show when not in Executive Mode */}
       {!isExecutiveMode && (
         <>
-          {/* KPI Cards */}
-          <StatCardGrid columns={4} data-tour="kpi-grid">
+          {/* Próxima Ação Card + KPI Cards */}
+          <div className="grid gap-6 lg:grid-cols-4">
+            <ProximaAcaoCard 
+              stats={{
+                vencendo7Dias: contratosVencendo.filter(c => getDaysUntil(c.data_fim) <= 7).length,
+                vencendo30Dias: stats.vencendo30Dias,
+                aprovacoesPendentes: stats.aprovacoesPendentes,
+                riscosAltos: stats.riscosAltos,
+              }}
+              className="lg:col-span-1"
+            />
+            <div className="lg:col-span-3">
+              <StatCardGrid columns={3} data-tour="kpi-grid">
+                <StatCard
+                  title="Contratos a Vencer"
+                  value={stats.vencendo30Dias}
+                  icon={Clock}
+                  variant={stats.vencendo30Dias > 0 ? "critical" : "default"}
+                  subtitle="Próximos 30 dias"
+                  onClick={() => navigate("/alertas")}
+                  helpText={helpTexts.dashboard.vencendo30Dias}
+                />
+                <StatCard
+                  title="Valor Total"
+                  value={formatCompactCurrency(stats.valorTotal)}
+                  icon={DollarSign}
+                  variant="success"
+                  trend={{ value: 8, label: "vs mês anterior" }}
+                  onClick={() => navigate("/contratos")}
+                  helpText={helpTexts.dashboard.valorTotal}
+                />
+                <StatCard
+                  title="Riscos Identificados"
+                  value={stats.riscosAltos}
+                  icon={AlertTriangle}
+                  variant={stats.riscosAltos > 0 ? "critical" : "default"}
+                  subtitle="Precisam de atenção"
+                  onClick={() => navigate("/contratos")}
+                  helpText={helpTexts.dashboard.riscosAltos}
+                />
+              </StatCardGrid>
+            </div>
+          </div>
+
+          {/* KPI Cards - Original row */}
+          <StatCardGrid columns={4}>
             <StatCard
               title="Contratos Ativos"
               value={stats.contratosAtivos}
@@ -405,34 +449,30 @@ const Dashboard = () => {
               helpText={helpTexts.dashboard.contratosAtivos}
             />
             <StatCard
-              title="Valor Total"
-              value={formatCompactCurrency(stats.valorTotal)}
-              icon={DollarSign}
-              variant="success"
-              trend={{ value: 8, label: "vs mês anterior" }}
-              onClick={() => navigate("/contratos")}
-              helpText={helpTexts.dashboard.valorTotal}
+              title="Fornecedores"
+              value={stats.fornecedores}
+              icon={Users}
+              subtitle="Cadastrados"
+              onClick={() => navigate("/fornecedores")}
+              helpText={helpTexts.dashboard.fornecedores}
             />
             <StatCard
-              title="Vencendo em 30 dias"
-              value={stats.vencendo30Dias}
-              icon={Clock}
-              variant="critical"
-              onClick={() => navigate("/alertas")}
-              helpText={helpTexts.dashboard.vencendo30Dias}
+              title="Aprovações Pendentes"
+              value={stats.aprovacoesPendentes}
+              icon={Timer}
+              subtitle="Aguardando decisão"
+              onClick={() => navigate("/workflows")}
+              helpText={helpTexts.dashboard.aprovacoesPendentes}
             />
             <StatCard
-              title="Riscos Altos"
-              value={stats.riscosAltos}
-              icon={AlertTriangle}
-              variant="critical"
-              onClick={() => navigate("/contratos")}
-              helpText={helpTexts.dashboard.riscosAltos}
+              title="Tempo Médio Aprovação"
+              value={`${stats.tempoMedioAprovacao.toFixed(1)}d`}
+              icon={Target}
+              subtitle={stats.tempoMedioAprovacao <= 5 ? "✓ Dentro da meta" : "⚠ Acima da meta"}
+              onClick={() => navigate("/workflows")}
+              helpText={helpTexts.dashboard.tempoMedioAprovacao}
             />
           </StatCardGrid>
-
-          {/* Secondary Stats */}
-          <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
             <StatCard
               title="Fornecedores"
               value={stats.fornecedores}
@@ -465,7 +505,6 @@ const Dashboard = () => {
               onClick={() => navigate("/workflows")}
               helpText={helpTexts.dashboard.tempoMedioAprovacao}
             />
-          </div>
 
           {/* Main Charts Grid */}
           <div className="grid gap-6 lg:grid-cols-3">

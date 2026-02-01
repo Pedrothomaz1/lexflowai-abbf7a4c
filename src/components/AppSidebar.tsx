@@ -15,7 +15,6 @@ import {
   Cog,
   Plus,
   Briefcase,
-  FolderCog,
   Monitor,
   Activity,
   BarChart3,
@@ -23,6 +22,9 @@ import {
   FileInput,
   UserCog,
   Building,
+  Bell,
+  Database,
+  Workflow,
 } from "lucide-react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
@@ -76,7 +78,7 @@ interface MenuSectionType {
   defaultOpen?: boolean;
 }
 
-// Menu sections para módulo de Contratos
+// Menu sections para módulo de Contratos - Hierarquia Gestor-First
 const contratosMenuSections: MenuSectionType[] = [
   {
     id: "principal",
@@ -84,25 +86,7 @@ const contratosMenuSections: MenuSectionType[] = [
     icon: LayoutDashboard,
     defaultOpen: true,
     items: [
-      { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: ["all"] },
-    ],
-  },
-  {
-    id: "organizacao",
-    title: "Organização",
-    icon: Building,
-    defaultOpen: false,
-    items: [
-      { title: "Membros", url: "/organization/members", icon: UserCog, roles: ["org_admin"] },
-      { title: "Configurações", url: "/organization/settings", icon: Building2, roles: ["org_admin"] },
-    ],
-  },
-  {
-    id: "gestao",
-    title: "Gestão",
-    icon: Briefcase,
-    defaultOpen: true,
-    items: [
+      { title: "Visão Geral", url: "/dashboard", icon: LayoutDashboard, roles: ["all"] },
       { 
         title: "Contratos", 
         url: "/contratos", 
@@ -110,17 +94,10 @@ const contratosMenuSections: MenuSectionType[] = [
         roles: ["all"],
         subItems: [
           { title: "Novo Contrato", url: "/contratos?novo=true", icon: Plus },
+          { title: "Franquias", url: "/franquias", icon: Building2 },
         ]
       },
-      { 
-        title: "Franquias", 
-        url: "/franquias", 
-        icon: Building2, 
-        roles: ["all"],
-        subItems: [
-          { title: "Nova Franquia", url: "/franquias?nova=true", icon: Plus },
-        ]
-      },
+      { title: "Alertas e Prazos", url: "/alertas", icon: Bell, roles: ["all"] },
       { 
         title: "Requisições", 
         url: "/requisicoes", 
@@ -133,40 +110,53 @@ const contratosMenuSections: MenuSectionType[] = [
     ],
   },
   {
-    id: "sistema",
-    title: "Sistema",
-    icon: Monitor,
+    id: "base",
+    title: "Base",
+    icon: Database,
+    defaultOpen: false,
+    items: [
+      { title: "Fornecedores", url: "/fornecedores", icon: Users, roles: ["all"] },
+      { title: "Unidades", url: "/unidades", icon: Building2, roles: ["all"] },
+      { title: "Modelos de Contrato", url: "/templates", icon: FileStack, roles: ["all"] },
+    ],
+  },
+  {
+    id: "automacao",
+    title: "Automação",
+    icon: Workflow,
+    defaultOpen: false,
+    items: [
+      { title: "Fluxos de Aprovação", url: "/workflows", icon: GitBranch, roles: ["all"] },
+    ],
+  },
+  {
+    id: "governanca",
+    title: "Governança",
+    icon: Shield,
     defaultOpen: false,
     items: [
       { title: "Relatórios", url: "/relatorios", icon: BarChart3, roles: ["all"] },
+      { title: "Histórico de Ações", url: "/audit-logs", icon: Activity, roles: ["administrador"] },
       { title: "Segurança", url: "/security", icon: Shield, roles: ["administrador"] },
-      { title: "Compliance LGPD", url: "/compliance", icon: ShieldCheck, roles: ["administrador"] },
-      { title: "Trilha de Auditoria", url: "/audit-logs", icon: Activity, roles: ["administrador"] },
-      { 
-        title: "Cadastro", 
-        url: "/templates", 
-        icon: FolderCog, 
-        roles: ["all"],
-        subItems: [
-          { title: "Templates", url: "/templates", icon: FileStack },
-          { title: "Fornecedores", url: "/fornecedores", icon: Users },
-          { title: "Workflows", url: "/workflows", icon: GitBranch },
-        ]
-      },
-      { 
-        title: "Configurações", 
-        url: "/settings", 
-        icon: Settings, 
-        roles: ["all"],
-        subItems: [
-          { title: "Usuários", url: "/usuarios", icon: Shield },
-        ]
-      },
+      { title: "Proteção de Dados", url: "/compliance", icon: ShieldCheck, roles: ["administrador"] },
+    ],
+  },
+  {
+    id: "configuracoes",
+    title: "Configurações",
+    icon: Settings,
+    defaultOpen: false,
+    items: [
+      { title: "Usuários e Permissões", url: "/usuarios", icon: UserCog, roles: ["administrador"] },
+      { title: "Membros", url: "/organization/members", icon: Users, roles: ["org_admin"] },
+      { title: "Organização", url: "/organization/settings", icon: Building, roles: ["org_admin"] },
+      { title: "Notificações", url: "/notification-settings", icon: Bell, roles: ["all"] },
+      { title: "Preferências", url: "/settings", icon: Settings, roles: ["all"] },
     ],
   },
 ];
 
-// Menu sections para módulo de Serviços
+// Menu sections para módulo de Serviços - Hierarquia Gestor-First
 const servicosMenuSections: MenuSectionType[] = [
   {
     id: "principal",
@@ -174,53 +164,35 @@ const servicosMenuSections: MenuSectionType[] = [
     icon: LayoutDashboard,
     defaultOpen: true,
     items: [
-      { title: "Dashboard", url: "/servicos", icon: LayoutDashboard, roles: ["all"] },
+      { title: "Visão Geral", url: "/servicos", icon: LayoutDashboard, roles: ["all"] },
     ],
   },
   {
-    id: "organizacao",
-    title: "Organização",
-    icon: Building,
-    defaultOpen: false,
-    items: [
-      { title: "Membros", url: "/organization/members", icon: UserCog, roles: ["org_admin"] },
-      { title: "Configurações", url: "/organization/settings", icon: Building2, roles: ["org_admin"] },
-    ],
-  },
-  {
-    id: "gestao",
-    title: "Gestão",
-    icon: Briefcase,
+    id: "base",
+    title: "Base",
+    icon: Database,
     defaultOpen: true,
     items: [
       { title: "Fornecedores", url: "/fornecedores", icon: Users, roles: ["all"] },
       { title: "Unidades", url: "/unidades", icon: Building2, roles: ["all"] },
+      { 
+        title: "Especificações", 
+        url: "/especificacoes", 
+        icon: Cog, 
+        roles: ["all"],
+      },
     ],
   },
   {
-    id: "sistema",
-    title: "Sistema",
-    icon: Monitor,
+    id: "configuracoes",
+    title: "Configurações",
+    icon: Settings,
     defaultOpen: false,
     items: [
-      { 
-        title: "Cadastro", 
-        url: "/especificacoes", 
-        icon: FolderCog, 
-        roles: ["all"],
-        subItems: [
-          { title: "Especificações", url: "/especificacoes", icon: Cog },
-        ]
-      },
-      { 
-        title: "Configurações", 
-        url: "/settings", 
-        icon: Settings, 
-        roles: ["all"],
-        subItems: [
-          { title: "Usuários", url: "/usuarios", icon: Shield },
-        ]
-      },
+      { title: "Usuários e Permissões", url: "/usuarios", icon: UserCog, roles: ["administrador"] },
+      { title: "Membros", url: "/organization/members", icon: Users, roles: ["org_admin"] },
+      { title: "Organização", url: "/organization/settings", icon: Building, roles: ["org_admin"] },
+      { title: "Preferências", url: "/settings", icon: Settings, roles: ["all"] },
     ],
   },
 ];
@@ -523,7 +495,7 @@ export function AppSidebar() {
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => navigate("/settings")}>
               <Settings className="mr-2 h-4 w-4" />
-              Configurações
+              Preferências
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => window.open("https://docs.lexflow.com.br", "_blank")}>
               <HelpCircle className="mr-2 h-4 w-4" />
@@ -541,7 +513,7 @@ export function AppSidebar() {
         {!collapsed && (
           <div className="mt-2 flex items-center justify-center gap-1.5 text-2xs text-[hsl(var(--lexflow-verde-claro)/0.5)]">
             <Building2 className="h-3 w-3" />
-            <span>v1.1.0</span>
+            <span>v1.2.0</span>
           </div>
         )}
       </SidebarFooter>

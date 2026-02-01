@@ -1,53 +1,53 @@
 /**
  * Textos de ajuda centralizados para tooltips contextuais
- * Fácil manutenção: todos os textos em um único lugar
+ * Estilo: Gestor-first, orientado a decisão, sem juridiquês
  */
 
 export const helpTexts = {
   // ==================== DASHBOARD ====================
   dashboard: {
-    contratosAtivos: "Contratos em vigor que geram obrigações e custos. Monitore para controlar exposição financeira.",
-    valorTotal: "Valor acumulado de todos os contratos ativos. Ajuda a dimensionar o impacto no orçamento.",
-    vencendo30Dias: "Contratos próximos do vencimento. Ação recomendada: revisar e decidir sobre renovação.",
-    riscosAltos: "Contratos com cláusulas de alto risco identificadas por IA. Priorize a revisão jurídica destes itens.",
-    fornecedores: "Total de parceiros comerciais cadastrados. Base para análises de concentração de fornecimento.",
-    valorMedio: "Valor médio por contrato ativo. Indica o porte típico das negociações.",
-    aprovacoesPendentes: "Contratos aguardando decisão. Atrasos podem impactar prazos de projetos.",
-    tempoMedioAprovacao: "Dias para aprovar um contrato. Meta: até 5 dias. Acima disso, revise o fluxo de aprovação.",
-    slaAprovacoes: "Percentual de aprovações no prazo. Meta: 80%. Abaixo disso indica gargalos no processo.",
-    taxaRenovacao: "Percentual de contratos renovados. Meta: 70%. Indica satisfação com fornecedores.",
-    topFornecedores: "Parceiros com maior volume financeiro. Use para negociar melhores condições.",
-    evolucaoContratos: "Tendência de novos contratos. Ajuda a prever demanda de gestão.",
-    valorMensal: "Fluxo financeiro de contratos. Essencial para planejamento orçamentário.",
-    tiposContrato: "Mix de contratos por categoria. Identifica dependência por tipo de serviço.",
-    analiseRiscos: "Mapa de riscos contratuais. Priorize contratos críticos na revisão.",
-    proximosVencimentos: "Agenda de vencimentos. Antecipe negociações e evite gaps de serviço.",
-    conformidadeGeral: "Percentual de contratos em conformidade com políticas internas. Abaixo de 90% requer atenção.",
+    contratosAtivos: "Contratos que precisam de acompanhamento. Veja quais exigem ação.",
+    valorTotal: "Valor total sob gestão. Use para dimensionar impacto no orçamento.",
+    vencendo30Dias: "Vencem em breve. Revise e decida: renovar, renegociar ou encerrar.",
+    riscosAltos: "Requerem atenção. Revise antes que virem problema.",
+    fornecedores: "Seus parceiros comerciais. Base para análises de concentração.",
+    valorMedio: "Valor médio por contrato. Indica o porte típico das negociações.",
+    aprovacoesPendentes: "Aguardando decisão. Atrasos podem impactar prazos de projetos.",
+    tempoMedioAprovacao: "Dias para aprovar. Meta: até 5 dias. Acima disso, revise o fluxo.",
+    slaAprovacoes: "Aprovações no prazo. Meta: 80%. Abaixo indica gargalos.",
+    taxaRenovacao: "Contratos renovados. Meta: 70%. Indica satisfação com parceiros.",
+    topFornecedores: "Maiores parceiros por valor. Use para negociar melhores condições.",
+    evolucaoContratos: "Tendência de novos contratos. Ajuda a prever demanda.",
+    valorMensal: "Fluxo financeiro mensal. Essencial para planejamento.",
+    tiposContrato: "Mix de contratos por tipo. Identifica dependências.",
+    analiseRiscos: "Mapa de riscos. Priorize contratos críticos na revisão.",
+    proximosVencimentos: "Agenda de vencimentos. Antecipe negociações, evite gaps.",
+    conformidadeGeral: "Contratos em conformidade. Abaixo de 90% requer atenção.",
   },
 
   // ==================== CONTRATOS ====================
   contratos: {
-    filtroStatus: "Filtre contratos por status: Rascunho, Em Aprovação, Vigente, Encerrado, etc.",
-    filtroTipo: "Filtre por tipo: Prestação de Serviços, Fornecimento, Locação, NDA ou Parceria.",
-    filtroFornecedor: "Filtre contratos por fornecedor específico.",
-    filtroValor: "Filtre por faixa de valor do contrato.",
-    filtroVigencia: "Filtre por período de início ou término do contrato.",
-    importarXlsx: "Importe múltiplos contratos de uma planilha Excel. Baixe o modelo para ver o formato esperado.",
-    exportarPdf: "Exporte a lista de contratos para PDF com os filtros aplicados.",
-    novoContrato: "Crie um novo contrato manualmente informando os dados básicos.",
-    vistaLista: "Visualize contratos em formato de tabela com colunas ordenáveis.",
-    vistaKanban: "Visualize contratos em quadro Kanban, organizados por status. Arraste para alterar.",
-    vistaCalendario: "Visualize obrigações e vencimentos em formato de calendário mensal.",
-    numeroContrato: "Identificador único do contrato. Gerado automaticamente no formato CT-ANO-SEQUENCIAL.",
+    filtroStatus: "Filtre por status: Rascunho, Em Aprovação, Vigente ou Encerrado.",
+    filtroTipo: "Filtre por tipo: Serviços, Fornecimento, Locação, NDA ou Parceria.",
+    filtroFornecedor: "Filtre por fornecedor específico.",
+    filtroValor: "Filtre por faixa de valor.",
+    filtroVigencia: "Filtre por período de início ou término.",
+    importarXlsx: "Importe múltiplos contratos de planilha. Baixe o modelo para ver o formato.",
+    exportarPdf: "Exporte a lista para PDF com os filtros aplicados.",
+    novoContrato: "Crie um novo contrato informando os dados básicos.",
+    vistaLista: "Visualize em tabela com colunas ordenáveis.",
+    vistaKanban: "Visualize em quadro. Arraste para alterar status.",
+    vistaCalendario: "Visualize obrigações e vencimentos no calendário.",
+    numeroContrato: "Identificador único. Gerado automaticamente.",
   },
 
   // ==================== FORNECEDORES ====================
   fornecedores: {
-    cnpj: "CNPJ é obrigatório para pessoas jurídicas. Formato: 00.000.000/0000-00.",
-    cpf: "CPF é obrigatório para pessoas físicas. Formato: 000.000.000-00.",
-    tipoPessoa: "Selecione Pessoa Jurídica para empresas ou Pessoa Física para autônomos.",
-    categorias: "Categorize fornecedores por tipo de serviço para facilitar a busca e relatórios.",
-    documentos: "Anexe documentos do fornecedor: contratos sociais, certidões, etc.",
+    cnpj: "CNPJ obrigatório para empresas. Formato: 00.000.000/0000-00.",
+    cpf: "CPF obrigatório para autônomos. Formato: 000.000.000-00.",
+    tipoPessoa: "Empresa (PJ) ou autônomo (PF).",
+    categorias: "Categorize por tipo de serviço para facilitar buscas.",
+    documentos: "Anexe contratos sociais, certidões, etc.",
     dadosBancarios: "Dados para pagamento: banco, agência, conta e PIX.",
     contato: "Pessoa de contato principal no fornecedor.",
   },
@@ -55,97 +55,97 @@ export const helpTexts = {
   // ==================== FRANQUIAS ====================
   franquias: {
     statusContrato: "Status atual do contrato de franquia.",
-    statusVigencia: "Indica se o contrato está dentro do prazo de vigência.",
-    renovacao: "Indica se a franqueada aceitou a proposta de renovação.",
-    consultora: "Indica se a consultora responsável foi notificada sobre o vencimento.",
-    novoContrato: "Indica se o novo contrato foi enviado para assinatura.",
-    contratoAssinado: "Indica se o novo contrato já foi assinado pela franqueada.",
+    statusVigencia: "Indica se o contrato está dentro do prazo.",
+    renovacao: "Se a franqueada aceitou renovar.",
+    consultora: "Se a consultora foi notificada sobre vencimento.",
+    novoContrato: "Se o novo contrato foi enviado para assinatura.",
+    contratoAssinado: "Se o novo contrato já foi assinado.",
     notaFiscal: "Número e data da nota fiscal de renovação.",
   },
 
   // ==================== WORKFLOWS ====================
   workflows: {
-    niveis: "Configure até 3 níveis de aprovação em sequência. Cada nível pode ter um ou mais aprovadores.",
-    aprovacaoParalela: "Se ativado, todos os aprovadores de um nível podem aprovar simultaneamente.",
-    tipoContrato: "Selecione para quais tipos de contrato este workflow será aplicado.",
-    aprovadores: "Usuários que podem aprovar contratos neste nível do workflow.",
-    statusPendente: "Contrato aguardando aprovação. Clique para revisar e aprovar/rejeitar.",
-    statusAprovado: "Contrato aprovado por todos os níveis do workflow.",
-    statusRejeitado: "Contrato rejeitado. Veja os comentários para entender o motivo.",
+    niveis: "Configure até 3 níveis de aprovação em sequência.",
+    aprovacaoParalela: "Se ativado, todos do nível podem aprovar simultaneamente.",
+    tipoContrato: "Para quais tipos este fluxo será aplicado.",
+    aprovadores: "Usuários que podem aprovar neste nível.",
+    statusPendente: "Aguardando aprovação. Clique para revisar.",
+    statusAprovado: "Aprovado por todos os níveis.",
+    statusRejeitado: "Rejeitado. Veja os comentários para entender.",
   },
 
   // ==================== OBRIGAÇÕES ====================
   obrigacoes: {
-    tipo: "Tipo da obrigação: Pagamento, Entrega, Renovação, Notificação, etc.",
-    responsavel: "Usuário responsável por cumprir esta obrigação.",
-    status: "Status atual: Pendente, Em Andamento, Concluída ou Atrasada.",
-    valor: "Valor financeiro associado à obrigação, se aplicável.",
-    dataVencimento: "Data limite para cumprimento da obrigação.",
+    tipo: "Tipo: Pagamento, Entrega, Renovação ou Notificação.",
+    responsavel: "Quem deve cumprir esta obrigação.",
+    status: "Status: Pendente, Em Andamento, Concluída ou Atrasada.",
+    valor: "Valor financeiro, se aplicável.",
+    dataVencimento: "Data limite para cumprimento.",
   },
 
   // ==================== ALERTAS ====================
   alertas: {
-    tipoAlerta: "Tipo de alerta: Vencimento, Obrigação, Risco, Renovação, etc.",
-    diasAntecedencia: "Com quantos dias de antecedência o alerta deve ser enviado.",
-    canaisNotificacao: "Canais para envio: E-mail, WhatsApp ou Sistema.",
-    destinatarios: "Usuários que receberão este alerta.",
+    tipoAlerta: "Tipo: Vencimento, Obrigação, Risco ou Renovação.",
+    diasAntecedencia: "Quantos dias antes o alerta será enviado.",
+    canaisNotificacao: "Canais: E-mail, WhatsApp ou Sistema.",
+    destinatarios: "Quem receberá este alerta.",
   },
 
   // ==================== SEGURANÇA ====================
   seguranca: {
-    twoFactor: "Autenticação em dois fatores (2FA) adiciona uma camada extra de segurança usando um código temporário.",
-    auditoria: "Registro detalhado de todas as ações realizadas no sistema: quem, quando e o quê.",
-    sessoes: "Gerencie suas sessões ativas e encerre sessões suspeitas.",
-    senha: "Sua senha deve ter no mínimo 8 caracteres, incluindo maiúsculas, minúsculas e números.",
-    permissoes: "Defina o que cada perfil de usuário pode acessar e modificar no sistema.",
-    lgpd: "Configurações de conformidade com a Lei Geral de Proteção de Dados.",
+    twoFactor: "Autenticação em dois fatores. Adiciona código temporário ao login.",
+    auditoria: "Registro de ações: quem fez, quando e o quê.",
+    sessoes: "Gerencie sessões ativas e encerre suspeitas.",
+    senha: "Mínimo 8 caracteres com maiúsculas, minúsculas e números.",
+    permissoes: "Defina o que cada perfil pode acessar e modificar.",
+    lgpd: "Configurações de conformidade com proteção de dados.",
   },
 
   // ==================== CONFIGURAÇÕES ====================
   configuracoes: {
-    perfil: "Atualize suas informações pessoais: nome, email, telefone e foto.",
-    notificacoes: "Configure quais alertas deseja receber e por qual canal.",
-    assinatura: "Configure a integração com serviços de assinatura eletrônica.",
-    integracoes: "Gerencie integrações com sistemas externos: ERP, CRM, etc.",
-    backup: "Configure backups automáticos e política de retenção de dados.",
+    perfil: "Atualize nome, email, telefone e foto.",
+    notificacoes: "Configure quais alertas receber e por qual canal.",
+    assinatura: "Configure integração com assinatura eletrônica.",
+    integracoes: "Gerencie conexões com ERP, CRM, etc.",
+    backup: "Configure backups automáticos e retenção de dados.",
   },
 
   // ==================== RELATÓRIOS ====================
   relatorios: {
-    tipoRelatorio: "Selecione o tipo de relatório: Contratos, Fornecedores, Obrigações, etc.",
-    periodo: "Defina o período de análise do relatório.",
-    agendamento: "Configure envio automático do relatório por e-mail.",
-    formato: "Escolha o formato de exportação: PDF, Excel ou CSV.",
-    filtros: "Aplique filtros para refinar os dados do relatório.",
+    tipoRelatorio: "Tipo: Contratos, Fornecedores, Obrigações, etc.",
+    periodo: "Período de análise do relatório.",
+    agendamento: "Configure envio automático por e-mail.",
+    formato: "Formato: PDF, Excel ou CSV.",
+    filtros: "Aplique filtros para refinar os dados.",
   },
 
   // ==================== SERVIÇOS ====================
   servicos: {
-    especificacao: "Tipo de serviço conforme tabela de especificações cadastradas.",
-    validade: "Data de vencimento do serviço/certificado.",
-    fornecedor: "Empresa responsável pela execução do serviço.",
-    historico: "Registro de todas as execuções anteriores deste serviço.",
+    especificacao: "Tipo de serviço conforme especificações cadastradas.",
+    validade: "Data de vencimento do serviço ou certificado.",
+    fornecedor: "Empresa responsável pela execução.",
+    historico: "Registro de execuções anteriores.",
   },
 
   // ==================== UNIDADES ====================
   unidades: {
-    codigo: "Código interno da unidade para identificação rápida.",
+    codigo: "Código interno para identificação rápida.",
     responsavel: "Gestor responsável pela unidade.",
-    contratos: "Quantidade de contratos vinculados a esta unidade.",
+    contratos: "Quantidade de contratos vinculados.",
   },
 
   // ==================== TEMPLATES ====================
   templates: {
-    camposVariaveis: "Use {{nome_campo}} para criar campos que serão preenchidos ao usar o template.",
-    tipoTemplate: "Tipo de contrato para o qual este template será sugerido.",
+    camposVariaveis: "Use {{nome_campo}} para criar campos dinâmicos.",
+    tipoTemplate: "Tipo de contrato para qual este modelo será sugerido.",
     preview: "Visualize como o contrato ficará com os campos preenchidos.",
   },
 
   // ==================== CUSTOS ====================
   custos: {
-    comparativoIA: "Compare custos entre diferentes modelos de IA para análise de contratos.",
-    economia: "Economia gerada pela otimização de processos e negociações.",
-    projecao: "Projeção de custos para os próximos meses baseada no histórico.",
+    comparativoIA: "Compare custos entre modelos de IA para análise.",
+    economia: "Economia gerada pela otimização de processos.",
+    projecao: "Projeção de custos para os próximos meses.",
   },
 } as const;
 
