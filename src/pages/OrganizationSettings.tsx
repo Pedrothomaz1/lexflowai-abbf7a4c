@@ -111,19 +111,19 @@ const OrganizationSettings = () => {
         }
       />
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5" />
-              Informações Gerais
-            </CardTitle>
-            <CardDescription>
-              Dados básicos da organização
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit}>
+        <div className="grid gap-6 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                Informações Gerais
+              </CardTitle>
+              <CardDescription>
+                Dados básicos da organização
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="nome">Nome da Organização *</Label>
                 <Input
@@ -167,28 +167,17 @@ const OrganizationSettings = () => {
                   disabled={loading}
                 />
               </div>
+            </CardContent>
+          </Card>
 
-              <Button type="submit" disabled={loading} className="w-full">
-                {loading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Save className="mr-2 h-4 w-4" />
-                )}
-                Salvar Alterações
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Endereço</CardTitle>
-            <CardDescription>
-              Localização da sede da organização
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Endereço</CardTitle>
+              <CardDescription>
+                Localização da sede da organização
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="endereco">Endereço</Label>
                 <Input
@@ -234,19 +223,21 @@ const OrganizationSettings = () => {
                   disabled={loading}
                 />
               </div>
+            </CardContent>
+          </Card>
+        </div>
 
-              <Button type="submit" disabled={loading} className="w-full">
-                {loading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Save className="mr-2 h-4 w-4" />
-                )}
-                Salvar Endereço
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
+        <div className="mt-6 flex justify-end">
+          <Button type="submit" disabled={loading} size="lg">
+            {loading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
+            Salvar Alterações
+          </Button>
+        </div>
+      </form>
 
       <Card>
         <CardHeader>
