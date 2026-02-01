@@ -1,45 +1,45 @@
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Scale, FileText, Users, BarChart3, Shield, CheckCircle, FileSignature, Bell, ArrowRight } from "lucide-react";
+import { Scale, Bell, BarChart3, Users, CheckCircle, Clock, ShieldOff, ArrowRight } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
 
   const features = [
     {
-      icon: FileText,
-      title: "Gestão Completa",
-      description: "Gerencie contratos desde a criação até o encerramento",
-    },
-    {
-      icon: Users,
-      title: "Controle de Fornecedores",
-      description: "Cadastro e histórico completo de parceiros",
+      icon: Bell,
+      title: "Nunca perca um prazo",
+      description: "Alertas automáticos antes que vencimentos virem problemas",
     },
     {
       icon: BarChart3,
-      title: "Dashboards Executivos",
-      description: "Indicadores em tempo real e relatórios detalhados",
+      title: "Veja os riscos antes",
+      description: "Dashboard preventivo com visão clara do que precisa de atenção",
     },
     {
-      icon: Shield,
-      title: "Segurança e Compliance",
-      description: "Auditoria completa e conformidade com LGPD",
+      icon: Users,
+      title: "Tudo em um lugar",
+      description: "Centralize contratos, fornecedores e obrigações em uma plataforma",
+    },
+    {
+      icon: ShieldOff,
+      title: "Controle sem jurídico",
+      description: "Autonomia para gestores acompanharem contratos do dia a dia",
     },
   ];
 
   const highlights = [
     {
-      icon: CheckCircle,
-      text: "Aprovações automatizadas",
-    },
-    {
-      icon: FileSignature,
-      text: "Assinatura eletrônica",
-    },
-    {
       icon: Bell,
-      text: "Alertas de vencimento",
+      text: "Alertas antes do vencimento",
+    },
+    {
+      icon: BarChart3,
+      text: "Dashboard de riscos em tempo real",
+    },
+    {
+      icon: CheckCircle,
+      text: "Sem depender do jurídico",
     },
   ];
 
@@ -62,10 +62,10 @@ const Index = () => {
       <main className="container mx-auto px-6">
         <section className="py-20 text-center">
           <h1 className="text-5xl md:text-6xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-glow">
-            Gestão de Contratos Inteligente
+            Controle seus contratos. Nunca mais perca um prazo.
           </h1>
-          <p className="text-xl text-muted-foreground mb-6 max-w-xl mx-auto">
-            Automatize todo o ciclo contratual em uma única plataforma.
+          <p className="text-xl text-muted-foreground mb-6 max-w-2xl mx-auto">
+            Centralize contratos, acompanhe vencimentos e receba alertas antes que vire problema.
           </p>
           
           {/* Feature Highlights */}
@@ -88,19 +88,22 @@ const Index = () => {
               onClick={() => navigate("/auth")} 
               className="btn-cta gap-2 shadow-lg hover:shadow-xl transition-all"
             >
-              Começar Agora
+              Começar agora
               <ArrowRight className="h-5 w-5" />
             </Button>
             <Button size="lg" variant="outline">
-              Saiba Mais
+              Ver como funciona
             </Button>
           </div>
         </section>
 
         <section className="py-20">
-          <h2 className="text-3xl font-bold text-center mb-12">
-            Recursos Principais
+          <h2 className="text-3xl font-bold text-center mb-4">
+            Gestão preventiva de contratos
           </h2>
+          <p className="text-center text-muted-foreground mb-12 max-w-xl mx-auto">
+            Feito para gestores que querem controle sem complicação
+          </p>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {features.map((feature, index) => {
               const Icon = feature.icon;
@@ -119,6 +122,20 @@ const Index = () => {
                 </div>
               );
             })}
+          </div>
+        </section>
+
+        {/* Social Proof / Value Proposition */}
+        <section className="py-16 text-center">
+          <div className="max-w-3xl mx-auto bg-card/50 border border-border rounded-2xl p-8">
+            <Clock className="h-12 w-12 text-primary mx-auto mb-4" />
+            <h3 className="text-2xl font-semibold mb-3">
+              O sistema que avisa antes do problema acontecer
+            </h3>
+            <p className="text-muted-foreground">
+              Não perca mais prazos, dinheiro ou controle. Com LexFlow, você sabe exatamente 
+              o que precisa de atenção e quando agir.
+            </p>
           </div>
         </section>
       </main>

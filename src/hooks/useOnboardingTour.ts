@@ -15,22 +15,22 @@ export const tourSteps: TourStep[] = [
     step: 1,
     focus: 'dashboard',
     targetSelector: '[data-tour="kpi-grid"]',
-    message: 'Bem-vindo ao LexFlow! Aqui você acompanha todos os indicadores da sua gestão de contratos em tempo real.',
+    message: 'Aqui você vê todos os prazos e alertas importantes. Foco no que precisa de atenção agora.',
     cta: 'Próximo',
   },
   {
     step: 2,
     focus: 'criar',
     targetSelector: '[data-tour="novo-contrato"]',
-    message: 'Crie novos contratos ou serviços com poucos cliques. Use os templates prontos para agilizar o processo.',
+    message: 'Cadastre contratos para ativar alertas automáticos. O sistema monitora por você.',
     cta: 'Próximo',
   },
   {
     step: 3,
     focus: 'alertas',
     targetSelector: '[data-tour="alertas"]',
-    message: 'Receba alertas automáticos sobre vencimentos, riscos e aprovações pendentes. Nunca perca um prazo importante.',
-    cta: 'Finalizar',
+    message: 'O sistema avisa antes que um prazo vire problema. Pronto, seus contratos estão sob controle.',
+    cta: 'Começar',
   },
 ];
 
