@@ -8,38 +8,38 @@ const Index = () => {
   const features = [
     {
       icon: Bell,
-      title: "Nunca perca um prazo",
-      description: "Alertas automáticos antes que vencimentos virem problemas",
+      title: "Antecipe vencimentos importantes",
+      description: "Visualize contratos próximos do vencimento e tenha tempo para decidir com tranquilidade.",
     },
     {
       icon: BarChart3,
-      title: "Veja os riscos antes",
-      description: "Dashboard preventivo com visão clara do que precisa de atenção",
+      title: "Saiba onde está o risco agora",
+      description: "Identifique rapidamente contratos que exigem atenção antes de se tornarem urgência.",
     },
     {
       icon: Users,
-      title: "Tudo em um lugar",
-      description: "Centralize contratos, fornecedores e obrigações em uma plataforma",
+      title: "Tudo centralizado",
+      description: "Contratos, fornecedores e obrigações organizados em uma única visão.",
     },
     {
       icon: ShieldOff,
-      title: "Controle sem jurídico",
-      description: "Autonomia para gestores acompanharem contratos do dia a dia",
+      title: "Autonomia para decidir",
+      description: "Acompanhe o status dos contratos sem depender de outras áreas.",
     },
   ];
 
   const highlights = [
     {
       icon: Bell,
-      text: "Alertas antes do vencimento",
+      text: "Vencimentos antecipados",
     },
     {
       icon: BarChart3,
-      text: "Dashboard de riscos em tempo real",
+      text: "Riscos visíveis em tempo real",
     },
     {
       icon: CheckCircle,
-      text: "Sem depender do jurídico",
+      text: "Decisões no seu tempo",
     },
   ];
 
@@ -62,10 +62,10 @@ const Index = () => {
       <main className="container mx-auto px-6">
         <section className="py-20 text-center">
           <h1 className="text-5xl md:text-6xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-glow">
-            Controle seus contratos. Nunca mais perca um prazo.
+            Contratos sob controle. Decisões no tempo certo.
           </h1>
           <p className="text-xl text-muted-foreground mb-6 max-w-2xl mx-auto">
-            Centralize contratos, acompanhe vencimentos e receba alertas antes que vire problema.
+            Tudo o que exige sua atenção, em um só lugar.
           </p>
           
           {/* Feature Highlights */}
@@ -99,10 +99,10 @@ const Index = () => {
 
         <section className="py-20">
           <h2 className="text-3xl font-bold text-center mb-4">
-            Gestão preventiva de contratos
+            Visão clara para quem decide
           </h2>
           <p className="text-center text-muted-foreground mb-12 max-w-xl mx-auto">
-            Feito para gestores que querem controle sem complicação
+            Recursos pensados para gestores que precisam antecipar, não reagir.
           </p>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {features.map((feature, index) => {
@@ -130,11 +130,11 @@ const Index = () => {
           <div className="max-w-3xl mx-auto bg-card/50 border border-border rounded-2xl p-8">
             <Clock className="h-12 w-12 text-primary mx-auto mb-4" />
             <h3 className="text-2xl font-semibold mb-3">
-              O sistema que avisa antes do problema acontecer
+              O tempo certo para cada decisão
             </h3>
             <p className="text-muted-foreground">
-              Não perca mais prazos, dinheiro ou controle. Com LexFlow, você sabe exatamente 
-              o que precisa de atenção e quando agir.
+              Antecipe vencimentos, organize obrigações e mantenha o controle. 
+              Simples assim.
             </p>
           </div>
         </section>
