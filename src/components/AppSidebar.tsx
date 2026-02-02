@@ -105,15 +105,7 @@ const contratosMenuSections: MenuSectionType[] = [
           { title: "Nova Franquia", url: "/franquias?nova=true", icon: Plus },
         ]
       },
-      { 
-        title: "Requisições", 
-        url: "/requisicoes", 
-        icon: FileInput, 
-        roles: ["all"],
-        subItems: [
-          { title: "Nova Requisição", url: "/requisicoes?nova=true", icon: Plus },
-        ]
-      },
+      { title: "Requisições", url: "/requisicoes", icon: FileInput, roles: ["all"] },
       { title: "Alertas e Prazos", url: "/alertas", icon: Bell, roles: ["all"] },
     ],
   },

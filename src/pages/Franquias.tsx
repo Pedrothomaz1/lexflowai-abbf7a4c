@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useMemo, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -77,6 +77,7 @@ const statusVigenciaLabels: Record<string, { label: string; variant: "default" |
 
 export default function Franquias() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { organization } = useOrganization();
   const queryClient = useQueryClient();
@@ -85,6 +86,13 @@ export default function Franquias() {
   const [activeTab, setActiveTab] = useState<TabFilter>("todas");
   const [showForm, setShowForm] = useState(false);
   const [showImport, setShowImport] = useState(false);
+
+  // Open form if ?nova=true in URL
+  useEffect(() => {
+    if (searchParams.get("nova") === "true") {
+      setShowForm(true);
+    }
+  }, [searchParams]);
 
   // Fetch franquias
   const { data: franquias, isLoading } = useQuery({
