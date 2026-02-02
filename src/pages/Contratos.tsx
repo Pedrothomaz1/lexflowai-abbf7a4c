@@ -96,6 +96,13 @@ const Contratos = () => {
     generateNextContractNumber();
   }, [filtros]);
 
+  // Open dialog if ?novo=true in URL
+  useEffect(() => {
+    if (searchParams.get("novo") === "true") {
+      setDialogOpen(true);
+    }
+  }, [searchParams]);
+
   const generateNextContractNumber = async () => {
     const { data } = await supabase
       .from("contratos")
