@@ -96,7 +96,15 @@ const contratosMenuSections: MenuSectionType[] = [
           { title: "Novo Contrato", url: "/contratos?novo=true", icon: Plus },
         ]
       },
-      { title: "Franquias", url: "/franquias", icon: Building2, roles: ["all"] },
+      { 
+        title: "Franquias", 
+        url: "/franquias", 
+        icon: Building2, 
+        roles: ["all"],
+        subItems: [
+          { title: "Nova Franquia", url: "/franquias?nova=true", icon: Plus },
+        ]
+      },
       { 
         title: "Requisições", 
         url: "/requisicoes", 
