@@ -18,7 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { supabase } from "@/integrations/supabase/client";
-import logoLexFlowIcon from "@/assets/logo-lexflow-icon.png";
+import logoVeridiana from "@/assets/logo-veridiana.png";
 
 const requisicaoSchema = z.object({
   solicitante_nome: z.string().min(3, "Nome deve ter no mínimo 3 caracteres").max(100),
@@ -179,7 +179,7 @@ export default function RequisicaoPublica() {
           {/* Logo Container with Glassmorphism */}
           <div className="flex justify-center">
             <div className="h-20 w-20 rounded-2xl bg-white/15 flex items-center justify-center backdrop-blur-sm border border-white/20 shadow-xl">
-              <img src={logoLexFlowIcon} alt="LexFlow" className="h-12 w-12 object-contain" />
+              <img src={logoVeridiana} alt="Veridiana" className="h-12 w-12 object-contain" />
             </div>
           </div>
 

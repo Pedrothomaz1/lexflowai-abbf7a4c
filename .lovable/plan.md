@@ -1,102 +1,94 @@
 
-# Plano: Implementação do Novo Logo LexFlow
+# Plano: Atualização de Branding/SEO e Domínio Customizado
 
 ## Resumo
-Substituir o logo antigo (`logo-veridiana.png`) pelos novos assets do LexFlow em todas as áreas da aplicação:
-- Logo horizontal (400x100px) para a página de login
-- Logo quadrado (200x200px) para a sidebar e ícone
+Atualizar o `index.html` com as informações profissionais da marca LexFlow e preparar os metadados para o domínio `www.lexflowai.com.br`.
 
 ---
 
-## Assets a serem adicionados
+## O que será atualizado
 
-| Arquivo | Destino | Uso |
-|---------|---------|-----|
-| `Logo_400x100px.png` | `src/assets/logo-lexflow-horizontal.png` | Página de login (desktop e mobile) |
-| `Logo_200x200px.png` | `src/assets/logo-lexflow-icon.png` | Sidebar header (ícone compacto) |
+### 1. Metadados SEO no `index.html`
 
----
+| Campo | Valor Atual | Novo Valor |
+|-------|-------------|------------|
+| Título | `lexflow-ai-contracts` | `LexFlow - Gestão de Contratos` |
+| Descrição | `Lovable Generated Project` | `Plataforma inteligente para gestão preventiva de contratos. Antecipe vencimentos, organize obrigações e mantenha o controle dos seus contratos empresariais.` |
+| Autor | `Lovable` | `LexFlow AI` |
+| Idioma | `en` | `pt-BR` |
+| URL canônica | (não existe) | `https://www.lexflowai.com.br` |
 
-## Componentes a serem atualizados
+### 2. Open Graph (compartilhamento em redes sociais)
 
-### 1. Sidebar (`src/components/AppSidebar.tsx`)
+| Campo | Valor Atual | Novo Valor |
+|-------|-------------|------------|
+| og:title | `lexflow-ai-contracts` | `LexFlow - Gestão de Contratos` |
+| og:description | `Lovable Generated Project` | `Contratos sob controle. Decisões no tempo certo.` |
+| og:url | (não existe) | `https://www.lexflowai.com.br` |
+| og:image | Imagem genérica Lovable | `/og-image.png` (imagem própria) |
+| og:locale | (não existe) | `pt_BR` |
 
-| Linha | Alteração |
-|-------|-----------|
-| 61 | Trocar `import logoVeridiana from "@/assets/logo-veridiana.png"` por `import logoLexFlowIcon from "@/assets/logo-lexflow-icon.png"` |
-| 319 | Atualizar `<img src={logoVeridiana}` para `<img src={logoLexFlowIcon}` e ajustar alt para "LexFlow" |
+### 3. Twitter/X Cards
 
-**Resultado visual:** O ícone quadrado aparecerá no topo da sidebar, ao lado do nome "LexFlow".
-
----
-
-### 2. Página de Login (`src/pages/Auth.tsx`)
-
-| Linha | Alteração |
-|-------|-----------|
-| 11 | Trocar `import logoVeridiana from "@/assets/logo-veridiana.png"` por `import logoLexFlowIcon from "@/assets/logo-lexflow-icon.png"` e adicionar `import logoLexFlowHorizontal from "@/assets/logo-lexflow-horizontal.png"` |
-| 206-210 | Desktop: usar o ícone quadrado no container |
-| 258-262 | Mobile: usar o ícone quadrado no container |
-
-**Alternativa:** Opcionalmente, podemos usar o logo horizontal completo no desktop e apenas o ícone no mobile para melhor aproveitamento do espaço.
-
----
-
-### 3. Arquivo legado a remover
-
-| Arquivo | Ação |
-|---------|------|
-| `src/assets/logo-veridiana.png` | Pode ser removido após a migração |
+| Campo | Valor Atual | Novo Valor |
+|-------|-------------|------------|
+| twitter:site | `@lovable_dev` | (remover - ou criar conta própria) |
+| twitter:title | (não existe) | `LexFlow - Gestão de Contratos` |
+| twitter:description | (não existe) | `Contratos sob controle. Decisões no tempo certo.` |
+| twitter:image | Imagem genérica Lovable | `/og-image.png` |
 
 ---
 
-## Visualização das mudanças
+## Sobre a Imagem OG
 
-```text
-ANTES:
-┌────────────────────────┐
-│ [Veridiana Icon]       │
-│  LexFlow               │
-│  Módulo: Jurídico      │
-└────────────────────────┘
+**Situação atual:** Não existe uma imagem OG própria da marca no projeto. O arquivo `logo-veridiana.png` está desatualizado.
 
-DEPOIS:
-┌────────────────────────────────┐
-│ [LexFlow Icon]                 │
-│  (escudo com lupa + relógio)   │
-│  LexFlow                       │
-│  Módulo: Jurídico              │
-└────────────────────────────────┘
-```
+**Opções:**
+1. **Criar placeholder:** Usar o caminho `/og-image.png` agora e você faz upload da imagem depois
+2. **Manter temporariamente:** Usar a imagem do Lovable até ter a imagem própria
+
+**Recomendação:** Vou configurar o caminho `/og-image.png` e você pode fazer upload de uma imagem com as dimensões recomendadas (1200x630 pixels) quando estiver pronta.
+
+---
+
+## Sobre o Domínio Customizado
+
+Para conectar o domínio `www.lexflowai.com.br`:
+
+1. Acesse **Project Settings → Domains**
+2. Clique em **Connect Domain**
+3. Digite `lexflowai.com.br`
+4. Siga as instruções para adicionar os registros DNS:
+   - **A Record** para `@` (raiz) → `185.158.133.1`
+   - **A Record** para `www` → `185.158.133.1`
+   - **TXT Record** para `_lovable` → valor fornecido pelo Lovable
+
+O SSL (HTTPS) será provisionado automaticamente após a propagação do DNS (pode levar até 72h).
 
 ---
 
 ## Arquivos que serão modificados
 
-| Arquivo | Tipo |
-|---------|------|
-| `src/assets/logo-lexflow-icon.png` | Novo (copiar de upload) |
-| `src/assets/logo-lexflow-horizontal.png` | Novo (copiar de upload) |
-| `src/components/AppSidebar.tsx` | Editar imports e referências |
-| `src/pages/Auth.tsx` | Editar imports e referências |
+| Arquivo | Alteração |
+|---------|-----------|
+| `index.html` | Atualização completa dos metadados SEO, OG e Twitter |
 
 ---
 
 ## Detalhes Técnicos
 
-Os logos serão importados como módulos ES6 através da pasta `src/assets/`, seguindo o padrão já existente no projeto. Isso garante:
-- Otimização de bundling pelo Vite
-- Type safety com TypeScript
-- Cache busting automático em produção
-
-```typescript
-// Exemplo de uso nos componentes
-import logoLexFlowIcon from "@/assets/logo-lexflow-icon.png";
-import logoLexFlowHorizontal from "@/assets/logo-lexflow-horizontal.png";
-
-// Sidebar
-<img src={logoLexFlowIcon} alt="LexFlow" className="h-6 w-6 object-contain" />
-
-// Login page (desktop)
-<img src={logoLexFlowIcon} alt="LexFlow" className="h-6 w-6 object-contain" />
+```text
+Estrutura final do <head>:
+┌─────────────────────────────────────────────────┐
+│ <html lang="pt-BR">                             │
+│   <head>                                        │
+│     ├─ charset, viewport                        │
+│     ├─ title: LexFlow - Gestão de Contratos     │
+│     ├─ meta description (profissional)          │
+│     ├─ meta author: LexFlow AI                  │
+│     ├─ link canonical: lexflowai.com.br         │
+│     ├─ Open Graph tags (og:*)                   │
+│     └─ Twitter Card tags (twitter:*)            │
+│   </head>                                       │
+└─────────────────────────────────────────────────┘
 ```

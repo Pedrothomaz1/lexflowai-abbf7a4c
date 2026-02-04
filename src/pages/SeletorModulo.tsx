@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useModulo } from "@/contexts/ModuloContext";
 import { FadeIn, StaggerContainer, StaggerItem } from "@/components/ui/motion-container";
 import { FileText, Wrench, ArrowRight, HelpCircle } from "lucide-react";
-import logoLexFlowIcon from "@/assets/logo-lexflow-icon.png";
+import logoVeridiana from "@/assets/logo-veridiana.png";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -52,7 +52,7 @@ const SeletorModulo = () => {
           <div className="text-center space-y-4">
             <div className="flex items-center justify-center mb-8">
               <div className="h-16 w-16 rounded-2xl bg-[hsl(var(--lexflow-off-white)/0.1)] flex items-center justify-center backdrop-blur-sm border border-[hsl(var(--lexflow-off-white)/0.1)]">
-                <img src={logoLexFlowIcon} alt="LexFlow" className="h-10 w-10 object-contain" />
+                <img src={logoVeridiana} alt="Veridiana" className="h-10 w-10 object-contain" />
               </div>
             </div>
             <h1 className="text-3xl md:text-4xl font-bold text-[hsl(var(--lexflow-off-white))] tracking-tight">

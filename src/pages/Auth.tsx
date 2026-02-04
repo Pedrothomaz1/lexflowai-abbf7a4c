@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Scale, ArrowRight, Shield, BarChart3, Bell, Lock, Eye, EyeOff, Wrench, FileText } from "lucide-react";
-import logoLexFlowIcon from "@/assets/logo-lexflow-icon.png";
+import logoVeridiana from "@/assets/logo-veridiana.png";
 import { cn } from "@/lib/utils";
 
 const TERMS_VERSION = "1.0";
@@ -205,7 +205,7 @@ const Auth = () => {
           {/* Logo */}
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center border border-white/20">
-              <img src={logoLexFlowIcon} alt="LexFlow" className="h-6 w-6 object-contain" />
+              <img src={logoVeridiana} alt="Veridiana" className="h-6 w-6 object-contain" />
             </div>
             <span className="text-xl font-semibold">LexFlow</span>
           </div>
@@ -257,7 +257,7 @@ const Auth = () => {
           {/* Mobile Logo */}
           <div className="flex items-center justify-center gap-3 mb-8 lg:hidden">
             <div className="h-12 w-12 rounded-xl bg-primary flex items-center justify-center">
-              <img src={logoLexFlowIcon} alt="LexFlow" className="h-7 w-7 object-contain" />
+              <img src={logoVeridiana} alt="Veridiana" className="h-7 w-7 object-contain" />
             </div>
             <span className="text-2xl font-bold text-foreground">LexFlow</span>
           </div>
