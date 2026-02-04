@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Building2, Loader2 } from "lucide-react";
-import logoVeridiana from "@/assets/logo-veridiana.png";
+import logoLexFlowIcon from "@/assets/logo-lexflow-icon.png";
 
 const OnboardingOrganization = () => {
   const navigate = useNavigate();
@@ -168,7 +168,7 @@ const OnboardingOrganization = () => {
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
             <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-primary/10">
-              <img src={logoVeridiana} alt="LexFlow" className="h-10 w-10 object-contain" />
+              <img src={logoLexFlowIcon} alt="LexFlow" className="h-10 w-10 object-contain" />
             </div>
           </div>
           <CardTitle className="text-2xl">Criar Organização</CardTitle>
