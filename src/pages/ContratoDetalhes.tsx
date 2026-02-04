@@ -259,9 +259,25 @@ const ContratoDetalhes = () => {
     const file = e.target.files[0];
     setUploading(true);
 
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setUploading(false);
+      return;
+    }
+
+    // Get organization for storage RLS isolation
+    const { data: orgMember } = await supabase
+      .from('organization_members')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single();
+
     const fileExt = file.name.split(".").pop();
-    const fileName = `${contrato.id}-${Date.now()}.${fileExt}`;
-    const filePath = `${fileName}`;
+    // Use organization.id as first folder for RLS isolation
+    const filePath = orgMember?.organization_id
+      ? `${orgMember.organization_id}/${user.id}/${contrato.id}-${Date.now()}.${fileExt}`
+      : `${user.id}/${contrato.id}-${Date.now()}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from("contratos-documentos")

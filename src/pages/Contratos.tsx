@@ -246,7 +246,11 @@ const Contratos = () => {
       if (!user) return;
 
       const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      // Use organization.id for RLS isolation, fallback to user.id for backwards compatibility
+      const orgId = organization?.id;
+      const fileName = orgId 
+        ? `${orgId}/${user.id}/${Date.now()}.${fileExt}`
+        : `${user.id}/${Date.now()}.${fileExt}`;
       
       const { error: uploadError } = await supabase.storage
         .from('contratos-documentos')
