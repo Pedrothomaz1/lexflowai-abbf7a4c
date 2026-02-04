@@ -1,164 +1,150 @@
 
-# Plano: Reorganização de Contratos, Franquias e Menu Principal
+# Plano: Atualizar Documentacao de Seguranca do Projeto
 
-## Contexto
+## Objetivo
 
-O sistema gerencia dois tipos de registros distintos:
-1. **Contratos de Serviços** - Contratos com terceiros/fornecedores externos
-2. **Franquias** - Contratos internos de franqueados do grupo
-
-Atualmente há problemas de UX que confundem o usuário.
+Criar e atualizar arquivos de documentacao com foco em boas praticas de gestao de segredos, garantindo que desenvolvedores sigam padroes seguros ao trabalhar no projeto.
 
 ---
 
-## Problemas Identificados
+## Arquivos a Criar/Modificar
 
-### 1. Franquias como Submenu de Contratos
-O link para "Franquias" está escondido dentro do menu "Contratos", sugerindo erroneamente que franquias são um tipo de contrato.
-
-### 2. Ordem do Menu não Reflete Fluxo de Trabalho
-"Alertas e Prazos" aparece antes de "Requisições", mas Requisições são ações ativas enquanto Alertas são monitoramento passivo.
-
-### 3. Dashboard sem Visão de Franquias
-A Visão Geral mostra apenas métricas de contratos de terceiros, ignorando as franquias.
-
-### 4. Nomenclatura Genérica
-"Contratos" pode confundir (contrato de serviço vs franquia).
+| Arquivo | Acao | Descricao |
+|---------|------|-----------|
+| `SECURITY.md` | Criar | Guia completo de seguranca do projeto |
+| `.env.example` | Criar | Template de variaveis de ambiente |
+| `README.md` | Modificar | Adicionar secao "Security Notes" |
+| `DOCUMENTACAO_TECNICA.md` | Modificar | Adicionar nota de seguranca apos variaveis |
 
 ---
 
-## Solução Proposta
+## 1. Criar SECURITY.md
 
-### Fase 1: Reorganização do Menu Lateral
+Arquivo na raiz com orientacoes claras de seguranca:
 
-**Antes:**
-```
-Principal
-├─ Visão Geral
-├─ Contratos
-│  ├─ Novo Contrato
-│  └─ Franquias         ← Escondido
-├─ Alertas e Prazos
-└─ Requisições
-```
-
-**Depois:**
-```
-Principal
-├─ Visão Geral
-├─ Contratos de Serviço  ← Renomeado
-├─ Franquias             ← Promovido
-├─ Requisições           ← Subiu (ação ativa)
-└─ Alertas e Prazos      ← Desceu (monitoramento)
-```
-
-**Arquivo:** `src/components/AppSidebar.tsx`
-
-**Alterações:**
-- Renomear "Contratos" para "Contratos de Serviço"
-- Remover "Franquias" do submenu de Contratos
-- Adicionar "Franquias" como item principal (ícone Building2)
-- Inverter ordem de "Requisições" e "Alertas e Prazos"
-
----
-
-### Fase 2: Dashboard com Seção de Franquias
-
-Adicionar nova seção de KPIs de Franquias no Dashboard:
-
-```
-┌─────────────────────────────────────────────────────────┐
-│ CONTRATOS DE SERVIÇO                                    │
-│ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐        │
-│ │ Total   │ │ Ativos  │ │ A Vencer│ │ Valor   │        │
-│ │   45    │ │   38    │ │    5    │ │ R$ 2.3M │        │
-│ └─────────┘ └─────────┘ └─────────┘ └─────────┘        │
-├─────────────────────────────────────────────────────────┤
-│ FRANQUIAS                           [cor mostarda]      │
-│ ┌─────────┐ ┌─────────┐ ┌─────────┐                    │
-│ │ Ativas  │ │ A Vencer│ │Renovação│                    │
-│ │   12    │ │    2    │ │    1    │                    │
-│ └─────────┘ └─────────┘ └─────────┘                    │
-└─────────────────────────────────────────────────────────┘
-```
-
-**Arquivo:** `src/pages/Dashboard.tsx`
-
-**Alterações:**
-- Adicionar query para buscar franquias
-- Criar seção visual com cor mostarda
-- Exibir KPIs: Total ativas, Próximas ao vencimento, Em renovação
-
----
-
-### Fase 3: Distinção Visual
-
-| Elemento | Contratos de Serviço | Franquias |
-|----------|---------------------|-----------|
-| Cor de destaque | Verde Principal | Mostarda |
-| Ícone | FileText | Building2 |
-| Badge | "Serviço" | "Franquia" |
-| Botão CTA | "Novo Contrato de Serviço" | "Nova Franquia" |
-
----
-
-### Fase 4: Página de Contratos - Clareza
-
-**Arquivo:** `src/pages/Contratos.tsx`
-
-**Alterações:**
-- Título: "Contratos de Serviço" (não apenas "Contratos")
-- Descrição: "Gestão de contratos com fornecedores e terceiros"
-- Botão: "Novo Contrato de Serviço"
-
----
-
-### Fase 5: Página de Franquias - Quick Stats
-
-**Arquivo:** `src/pages/Franquias.tsx`
-
-**Alterações:**
-- Adicionar quick stats no header (igual estilo do dashboard)
-- Cards: Ativas | A Vencer em 90 dias | Em Renovação
-
----
-
-## Estrutura de Menu Final
+### Conteudo Proposto
 
 ```text
-┌─────────────────────────────────────┐
-│ PRINCIPAL                           │
-├─────────────────────────────────────┤
-│ ● Visão Geral                       │
-│ ● Contratos de Serviço              │
-│ ● Franquias                         │
-│ ● Requisições                       │
-│ ● Alertas e Prazos                  │
-├─────────────────────────────────────┤
-│ BASE                                │
-├─────────────────────────────────────┤
-│ ● Fornecedores                      │
-│ ● Unidades                          │
-│ ● Modelos de Contrato               │
-└─────────────────────────────────────┘
+SECURITY.md
+├── Introducao
+├── Gestao de Segredos
+│   ├── Regra #1: Nunca commitar .env
+│   ├── Regra #2: Usar apenas anon key no frontend
+│   ├── Regra #3: SERVICE_ROLE_KEY apenas no backend
+│   ├── Regra #4: Rotacao de chaves em caso de exposicao
+│   └── Regra #5: RLS obrigatorio em tabelas sensiveis
+├── Variaveis de Ambiente Seguras
+│   ├── Chaves Publicas (podem ir no frontend)
+│   └── Chaves Privadas (apenas Edge Functions)
+├── Procedimento de Rotacao de Chaves
+├── Row Level Security (RLS)
+│   ├── Tabelas que exigem RLS
+│   └── Verificacao de politicas
+├── Checklist de Seguranca
+└── Reportando Vulnerabilidades
+```
+
+### Topicos Detalhados
+
+**Gestao de Segredos:**
+- Arquivo `.env` esta no `.gitignore` - NUNCA remover
+- `VITE_SUPABASE_PUBLISHABLE_KEY` (anon key) - segura para frontend
+- `SUPABASE_SERVICE_ROLE_KEY` - NUNCA expor no client, apenas Edge Functions
+- Se chave for exposta: rotacionar imediatamente no Lovable Cloud
+
+**RLS Obrigatorio:**
+- Listar tabelas que exigem RLS (contratos, fornecedores, profiles, etc.)
+- Mencionar que o sistema usa isolamento multi-tenant via `organization_id`
+
+---
+
+## 2. Criar .env.example
+
+Template com placeholders para referencia:
+
+```bash
+# Variaveis de Ambiente - LexFlowAI
+# Copie este arquivo para .env e preencha os valores
+
+# === FRONTEND (Variaveis publicas - prefixo VITE_) ===
+VITE_SUPABASE_PROJECT_ID="seu-project-id"
+VITE_SUPABASE_PUBLISHABLE_KEY="sua-anon-key"
+VITE_SUPABASE_URL="https://seu-projeto.supabase.co"
+
+# IMPORTANTE: As variaveis acima sao PUBLICAS e seguras para o frontend
+# Chaves privadas como SERVICE_ROLE_KEY devem ser configuradas
+# apenas no backend (Lovable Cloud > Secrets)
 ```
 
 ---
 
-## Resumo Técnico
+## 3. Modificar README.md
 
-| Arquivo | Alterações |
-|---------|-----------|
-| `src/components/AppSidebar.tsx` | Promover Franquias, renomear Contratos, inverter Requisições/Alertas |
-| `src/pages/Dashboard.tsx` | Adicionar seção de KPIs de Franquias com cor mostarda |
-| `src/pages/Contratos.tsx` | Atualizar título/descrição para "Contratos de Serviço" |
-| `src/pages/Franquias.tsx` | Adicionar quick stats no header |
+Adicionar secao "Security Notes" antes do final do arquivo:
+
+```markdown
+## Security Notes
+
+Este projeto segue boas praticas de seguranca para proteger dados sensiveis.
+
+- **Segredos**: Nunca commite arquivos `.env` com valores reais. Use `.env.example` como referencia.
+- **Chaves de API**: Apenas a `anon key` e permitida no frontend. Chaves privadas devem ficar no backend.
+- **RLS**: Todas as tabelas com dados sensiveis possuem Row Level Security habilitado.
+
+Para mais detalhes, consulte o arquivo [SECURITY.md](./SECURITY.md).
+```
 
 ---
 
-## Benefícios
+## 4. Modificar DOCUMENTACAO_TECNICA.md
 
-1. **Clareza imediata**: Usuário sabe exatamente onde está e o que gerencia
-2. **Fluxo lógico**: Requisições próximas de Contratos (ação), Alertas ao final (monitoramento)
-3. **Visão completa**: Dashboard mostra ambos os universos (Serviços + Franquias)
-4. **Consistência visual**: Cores e ícones distintos em todo o sistema
+Adicionar nota de seguranca apos o bloco de variaveis do frontend (linha 145):
+
+**Localizacao:** Apos a secao "### Frontend (.env)" na linha 141-145
+
+**Conteudo a adicionar:**
+
+```markdown
+> **Nota de Seguranca:** O arquivo `.env` deve ser mantido apenas localmente e 
+> NUNCA commitado no repositorio. Use `.env.example` como referencia para as 
+> variaveis necessarias. As chaves `VITE_*` sao publicas e seguras para o frontend.
+> Chaves privadas como `SERVICE_ROLE_KEY` devem ser configuradas apenas no backend
+> via Lovable Cloud > Secrets.
+```
+
+---
+
+## Resumo das Alteracoes
+
+### SECURITY.md (Novo - ~80 linhas)
+- Introducao ao modelo de seguranca
+- 5 regras de gestao de segredos
+- Procedimento de rotacao de chaves
+- Guia de RLS
+- Checklist de seguranca
+- Canal para reportar vulnerabilidades
+
+### .env.example (Novo - ~12 linhas)
+- 3 variaveis com placeholders
+- Comentarios explicativos
+- Aviso sobre chaves privadas
+
+### README.md (Modificar - adicionar ~10 linhas)
+- Secao "Security Notes" com resumo
+- Link para SECURITY.md
+
+### DOCUMENTACAO_TECNICA.md (Modificar - adicionar ~5 linhas)
+- Bloco de nota apos variaveis frontend
+- Reforco sobre .env local e .env.example
+
+---
+
+## Validacao Final
+
+Apos implementacao, verificar:
+- [ ] `.gitignore` ja inclui `.env` (confirmado - ja esta configurado)
+- [ ] `SECURITY.md` criado na raiz
+- [ ] `.env.example` com placeholders corretos
+- [ ] `README.md` com secao Security Notes
+- [ ] `DOCUMENTACAO_TECNICA.md` com nota de seguranca
+
