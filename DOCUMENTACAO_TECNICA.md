@@ -144,6 +144,8 @@ VITE_SUPABASE_URL=https://xxx.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=eyJxxx
 ```
 
+> **Nota de seguranca:** mantenha `.env` apenas localmente e use `.env.example` como referencia sem valores reais.
+
 ### Supabase (Dashboard > Settings > Edge Functions)
 ```bash
 ALLOWED_ORIGIN=https://seu-dominio.com
