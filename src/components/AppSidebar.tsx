@@ -58,7 +58,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { useModulo, ModuloAtivo } from "@/contexts/ModuloContext";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { cn } from "@/lib/utils";
-import logoVeridiana from "@/assets/logo-veridiana.png";
+import logoLexFlowIcon from "@/assets/logo-lexflow-icon.png";
 import { Badge } from "@/components/ui/badge";
 
 // Interface para itens com submenus
@@ -316,7 +316,7 @@ export function AppSidebar() {
       <SidebarHeader className="border-b border-sidebar-border px-4 py-4">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[hsl(var(--lexflow-off-white)/0.1)]">
-            <img src={logoVeridiana} alt="Veridiana" className="h-6 w-6 object-contain" />
+            <img src={logoLexFlowIcon} alt="LexFlow" className="h-6 w-6 object-contain" />
           </div>
           {!collapsed && (
             <div className="flex flex-col gap-1.5">
