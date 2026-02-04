@@ -1,193 +1,94 @@
 
+# Plano: Atualização de Branding/SEO e Domínio Customizado
 
-# Plano: Consolidar Politicas RLS da Tabela contract_requests
+## Resumo
+Atualizar o `index.html` com as informações profissionais da marca LexFlow e preparar os metadados para o domínio `www.lexflowai.com.br`.
 
-## Situacao Atual
+---
 
-A tabela `contract_requests` possui **8 politicas RLS** quando deveria ter apenas **4**, causando redundancia e potenciais conflitos.
+## O que será atualizado
+
+### 1. Metadados SEO no `index.html`
+
+| Campo | Valor Atual | Novo Valor |
+|-------|-------------|------------|
+| Título | `lexflow-ai-contracts` | `LexFlow - Gestão de Contratos` |
+| Descrição | `Lovable Generated Project` | `Plataforma inteligente para gestão preventiva de contratos. Antecipe vencimentos, organize obrigações e mantenha o controle dos seus contratos empresariais.` |
+| Autor | `Lovable` | `LexFlow AI` |
+| Idioma | `en` | `pt-BR` |
+| URL canônica | (não existe) | `https://www.lexflowai.com.br` |
+
+### 2. Open Graph (compartilhamento em redes sociais)
+
+| Campo | Valor Atual | Novo Valor |
+|-------|-------------|------------|
+| og:title | `lexflow-ai-contracts` | `LexFlow - Gestão de Contratos` |
+| og:description | `Lovable Generated Project` | `Contratos sob controle. Decisões no tempo certo.` |
+| og:url | (não existe) | `https://www.lexflowai.com.br` |
+| og:image | Imagem genérica Lovable | `/og-image.png` (imagem própria) |
+| og:locale | (não existe) | `pt_BR` |
+
+### 3. Twitter/X Cards
+
+| Campo | Valor Atual | Novo Valor |
+|-------|-------------|------------|
+| twitter:site | `@lovable_dev` | (remover - ou criar conta própria) |
+| twitter:title | (não existe) | `LexFlow - Gestão de Contratos` |
+| twitter:description | (não existe) | `Contratos sob controle. Decisões no tempo certo.` |
+| twitter:image | Imagem genérica Lovable | `/og-image.png` |
+
+---
+
+## Sobre a Imagem OG
+
+**Situação atual:** Não existe uma imagem OG própria da marca no projeto. O arquivo `logo-veridiana.png` está desatualizado.
+
+**Opções:**
+1. **Criar placeholder:** Usar o caminho `/og-image.png` agora e você faz upload da imagem depois
+2. **Manter temporariamente:** Usar a imagem do Lovable até ter a imagem própria
+
+**Recomendação:** Vou configurar o caminho `/og-image.png` e você pode fazer upload de uma imagem com as dimensões recomendadas (1200x630 pixels) quando estiver pronta.
+
+---
+
+## Sobre o Domínio Customizado
+
+Para conectar o domínio `www.lexflowai.com.br`:
+
+1. Acesse **Project Settings → Domains**
+2. Clique em **Connect Domain**
+3. Digite `lexflowai.com.br`
+4. Siga as instruções para adicionar os registros DNS:
+   - **A Record** para `@` (raiz) → `185.158.133.1`
+   - **A Record** para `www` → `185.158.133.1`
+   - **TXT Record** para `_lovable` → valor fornecido pelo Lovable
+
+O SSL (HTTPS) será provisionado automaticamente após a propagação do DNS (pode levar até 72h).
+
+---
+
+## Arquivos que serão modificados
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `index.html` | Atualização completa dos metadados SEO, OG e Twitter |
+
+---
+
+## Detalhes Técnicos
 
 ```text
-Politicas Atuais:
-├── INSERT (2 duplicadas)
-│   ├── "Público pode inserir requisições" → WITH CHECK (true)
-│   └── "mt_contract_requests_insert" → WITH CHECK (true)  [REMOVER]
-├── SELECT (2 conflitantes)
-│   ├── "Usuários autenticados podem visualizar" → role-based
-│   └── "mt_contract_requests_select" → org-based  [MANTER E AJUSTAR]
-├── UPDATE (2 conflitantes)
-│   ├── "Consultores e admins podem atualizar" → sem org_id
-│   └── "mt_contract_requests_update" → com org_id  [MANTER]
-└── DELETE (2 conflitantes)
-    ├── "Admins podem deletar" → sem org_id
-    └── "mt_contract_requests_delete" → com org_id  [MANTER]
+Estrutura final do <head>:
+┌─────────────────────────────────────────────────┐
+│ <html lang="pt-BR">                             │
+│   <head>                                        │
+│     ├─ charset, viewport                        │
+│     ├─ title: LexFlow - Gestão de Contratos     │
+│     ├─ meta description (profissional)          │
+│     ├─ meta author: LexFlow AI                  │
+│     ├─ link canonical: lexflowai.com.br         │
+│     ├─ Open Graph tags (og:*)                   │
+│     └─ Twitter Card tags (twitter:*)            │
+│   </head>                                       │
+└─────────────────────────────────────────────────┘
 ```
-
----
-
-## Modelo de Acesso Proposto
-
-### Fluxo Hibrido
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│                    REQUISICOES DE CONTRATO                       │
-├─────────────────────────────────────────────────────────────────┤
-│  ENTRADA PUBLICA           │  GESTAO INTERNA                    │
-│  (formulario /requisicao)  │  (pagina /requisicoes)             │
-│                            │                                     │
-│  • Usuario anonimo         │  • Usuario autenticado             │
-│  • INSERT sem auth         │  • SELECT/UPDATE/DELETE            │
-│  • organization_id = NULL  │  • Requer role + organization_id   │
-│                            │                                     │
-│  Edge Function bypassa RLS │  Frontend usa RLS                  │
-└─────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Plano de Acao
-
-### Etapa 1: Remover Politicas Redundantes
-
-Remover 4 politicas antigas que nao seguem o padrao multi-tenant:
-
-```sql
--- Remover politicas duplicadas/antigas
-DROP POLICY IF EXISTS "Público pode inserir requisições" ON contract_requests;
-DROP POLICY IF EXISTS "Usuários autenticados podem visualizar requisições" ON contract_requests;
-DROP POLICY IF EXISTS "Consultores e admins podem atualizar requisições" ON contract_requests;
-DROP POLICY IF EXISTS "Admins podem deletar requisições" ON contract_requests;
-```
-
-### Etapa 2: Ajustar Politica INSERT
-
-A politica `mt_contract_requests_insert` com `true` esta correta porque:
-- A Edge Function usa `SERVICE_ROLE_KEY` que bypassa RLS
-- Permite insercoes publicas quando necessario
-
-**Nenhuma alteracao necessaria na INSERT.**
-
-### Etapa 3: Ajustar Politica SELECT
-
-A politica atual exige `organization_id = current_user_org()`, mas requisicoes publicas tem `organization_id = NULL`.
-
-Precisamos ajustar para permitir que admins vejam requisicoes sem organizacao:
-
-```sql
--- Recriar politica SELECT para incluir requisicoes sem organizacao
-DROP POLICY IF EXISTS "mt_contract_requests_select" ON contract_requests;
-
-CREATE POLICY "mt_contract_requests_select" ON contract_requests
-FOR SELECT USING (
-  auth.uid() IS NOT NULL 
-  AND has_any_role(auth.uid(), ARRAY[
-    'analista_juridico'::app_role, 
-    'consultoria_juridica'::app_role, 
-    'administrador'::app_role
-  ])
-  AND (
-    organization_id IS NULL  -- Requisicoes publicas (ainda nao atribuidas)
-    OR organization_id = current_user_org()  -- Requisicoes da organizacao
-  )
-);
-```
-
-### Etapa 4: Manter Politicas UPDATE e DELETE
-
-As politicas `mt_contract_requests_update` e `mt_contract_requests_delete` estao corretas:
-- Exigem `organization_id = current_user_org()`
-- Isso significa que so podem ser editadas apos serem atribuidas a uma organizacao
-
----
-
-## Resultado Final
-
-Apos consolidacao, a tabela tera **4 politicas limpas**:
-
-| Politica | Comando | Logica |
-|----------|---------|--------|
-| `mt_contract_requests_insert` | INSERT | `true` (Edge Function usa service role) |
-| `mt_contract_requests_select` | SELECT | Role especifica + (org_id NULL ou propria org) |
-| `mt_contract_requests_update` | UPDATE | org_id + role |
-| `mt_contract_requests_delete` | DELETE | org_id + admin |
-
----
-
-## Consideracoes Tecnicas
-
-### Por que manter INSERT com `true`?
-
-O formulario publico (`/requisicao`) chama a Edge Function `processar-requisicao-contrato` que:
-1. Usa `SUPABASE_SERVICE_ROLE_KEY` (bypassa RLS)
-2. Implementa propria validacao e rate limiting
-3. Sanitiza todos os inputs
-
-A politica `true` no RLS e uma camada de fallback, nao a protecao principal.
-
-### Seguranca da Edge Function
-
-A Edge Function ja implementa:
-- Rate limiting (5 req/IP/hora)
-- Honeypot anti-spam
-- Validacao de campos obrigatorios
-- Sanitizacao HTML
-- Logging de IP e User-Agent
-
-### Fluxo de Atribuicao
-
-Quando uma requisicao publica e analisada internamente:
-1. Usuario com role apropriada visualiza requisicao (org_id = NULL)
-2. Ao aprovar/converter em contrato, atribui `organization_id`
-3. A partir dai, aplica-se isolamento multi-tenant normal
-
----
-
-## Migracao SQL Completa
-
-```sql
--- =============================================
--- Consolidacao de Politicas RLS: contract_requests
--- =============================================
-
--- 1. Remover politicas duplicadas/antigas
-DROP POLICY IF EXISTS "Público pode inserir requisições" ON contract_requests;
-DROP POLICY IF EXISTS "Usuários autenticados podem visualizar requisições" ON contract_requests;
-DROP POLICY IF EXISTS "Consultores e admins podem atualizar requisições" ON contract_requests;
-DROP POLICY IF EXISTS "Admins podem deletar requisições" ON contract_requests;
-
--- 2. Recriar SELECT para incluir requisicoes sem organizacao
-DROP POLICY IF EXISTS "mt_contract_requests_select" ON contract_requests;
-
-CREATE POLICY "mt_contract_requests_select" ON contract_requests
-FOR SELECT USING (
-  auth.uid() IS NOT NULL 
-  AND has_any_role(auth.uid(), ARRAY[
-    'analista_juridico'::app_role, 
-    'consultoria_juridica'::app_role, 
-    'administrador'::app_role
-  ])
-  AND (
-    organization_id IS NULL
-    OR organization_id = current_user_org()
-  )
-);
-
--- 3. Manter INSERT como esta (true)
--- Politica mt_contract_requests_insert ja existe e esta correta
-
--- 4. Manter UPDATE e DELETE como estao
--- Politicas mt_contract_requests_update e mt_contract_requests_delete 
--- ja exigem organization_id = current_user_org()
-```
-
----
-
-## Validacao Pos-Implementacao
-
-Apos aplicar a migracao:
-
-- [ ] Testar formulario publico /requisicao - deve continuar funcionando
-- [ ] Testar pagina /requisicoes - deve listar requisicoes pendentes
-- [ ] Verificar que apenas 4 politicas restam na tabela
-- [ ] Confirmar isolamento entre organizacoes
-
