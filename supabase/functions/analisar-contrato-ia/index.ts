@@ -121,7 +121,7 @@ serve(async (req) => {
     // Verify contract exists and user has permission to analyze it
     const { data: contrato, error: contratoError } = await supabase
       .from('contratos')
-      .select('id, created_by')
+      .select('id, created_by, organization_id')
       .eq('id', contratoId)
       .single();
 
@@ -284,6 +284,7 @@ Avisos importantes:
       .from('contract_analysis')
       .insert({
         contrato_id: contratoId,
+        organization_id: contrato.organization_id,
         riscos_identificados: analise.riscos_identificados,
         clausulas_importantes: analise.clausulas_importantes,
         sugestoes_melhoria: analise.sugestoes_melhoria,
