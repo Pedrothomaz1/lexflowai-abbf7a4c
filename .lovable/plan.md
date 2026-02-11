@@ -1,94 +1,44 @@
 
-# Plano: Atualização de Branding/SEO e Domínio Customizado
 
-## Resumo
-Atualizar o `index.html` com as informações profissionais da marca LexFlow e preparar os metadados para o domínio `www.lexflowai.com.br`.
+# Plano: Testar Integração com API de Compras
 
----
+## Situação Atual
+- A integração com `gest10.com.br` esta cadastrada mas **desativada** (`is_active = false`)
+- Autenticacao configurada como `bearer` (usando o secret `COMPRAS_API_KEY`)
+- Existe 1 servico cadastrado na organizacao (status `dentro_prazo`)
+- Ja existem Edge Functions prontas: `testar-conexao-compras` e `enviar-solicitacao-compras`
 
-## O que será atualizado
+## Etapas
 
-### 1. Metadados SEO no `index.html`
+### 1. Ativar a integracao
+- Atualizar o registro em `integracao_config` para `is_active = true`
 
-| Campo | Valor Atual | Novo Valor |
-|-------|-------------|------------|
-| Título | `lexflow-ai-contracts` | `LexFlow - Gestão de Contratos` |
-| Descrição | `Lovable Generated Project` | `Plataforma inteligente para gestão preventiva de contratos. Antecipe vencimentos, organize obrigações e mantenha o controle dos seus contratos empresariais.` |
-| Autor | `Lovable` | `LexFlow AI` |
-| Idioma | `en` | `pt-BR` |
-| URL canônica | (não existe) | `https://www.lexflowai.com.br` |
+### 2. Testar a conexao
+- Chamar a Edge Function `testar-conexao-compras` com a URL configurada para verificar se o servidor responde
+- Analisar o resultado (status HTTP, mensagem)
 
-### 2. Open Graph (compartilhamento em redes sociais)
+### 3. Adicionar botao "Enviar para Compras" na pagina de servicos
+- Adicionar um botao na listagem de servicos que permite disparar manualmente o envio de uma solicitacao para a API
+- O botao chamara a Edge Function `enviar-solicitacao-compras` passando o `servicoId`
+- Mostrar feedback visual (toast) com o resultado: sucesso, erro ou pendente
 
-| Campo | Valor Atual | Novo Valor |
-|-------|-------------|------------|
-| og:title | `lexflow-ai-contracts` | `LexFlow - Gestão de Contratos` |
-| og:description | `Lovable Generated Project` | `Contratos sob controle. Decisões no tempo certo.` |
-| og:url | (não existe) | `https://www.lexflowai.com.br` |
-| og:image | Imagem genérica Lovable | `/og-image.png` (imagem própria) |
-| og:locale | (não existe) | `pt_BR` |
+### 4. Monitorar resultado
+- Verificar na tabela `solicitacoes_compras` se o registro foi criado com o payload, resposta da API e status
 
-### 3. Twitter/X Cards
+## Detalhes Tecnicos
 
-| Campo | Valor Atual | Novo Valor |
-|-------|-------------|------------|
-| twitter:site | `@lovable_dev` | (remover - ou criar conta própria) |
-| twitter:title | (não existe) | `LexFlow - Gestão de Contratos` |
-| twitter:description | (não existe) | `Contratos sob controle. Decisões no tempo certo.` |
-| twitter:image | Imagem genérica Lovable | `/og-image.png` |
+### Botao na pagina Servicos (`src/pages/Servicos.tsx`)
+- Novo botao `Send` / `ShoppingCart` ao lado de cada servico na listagem
+- Ao clicar, chama `supabase.functions.invoke('enviar-solicitacao-compras', { body: { servicoId } })` com o header de autorizacao `CRON_SECRET`
+- Como o `CRON_SECRET` e um secret do backend, o botao na verdade deve chamar via uma abordagem diferente: criar um wrapper no frontend que usa o token do usuario, e ajustar a Edge Function para aceitar tambem tokens de usuario autenticado (alem do CRON_SECRET)
 
----
+### Alternativa mais simples (recomendada)
+- Testar diretamente via as ferramentas de desenvolvimento, chamando a Edge Function `testar-conexao-compras` e `enviar-solicitacao-compras` para validar a integracao sem precisar alterar codigo
+- Depois, adicionar o botao manual na UI
 
-## Sobre a Imagem OG
+### Sequencia do teste
+1. Ativar integracao no banco
+2. Chamar `testar-conexao-compras` para verificar conectividade
+3. Chamar `enviar-solicitacao-compras` com o servico existente
+4. Verificar resultado em `solicitacoes_compras`
 
-**Situação atual:** Não existe uma imagem OG própria da marca no projeto. O arquivo `logo-veridiana.png` está desatualizado.
-
-**Opções:**
-1. **Criar placeholder:** Usar o caminho `/og-image.png` agora e você faz upload da imagem depois
-2. **Manter temporariamente:** Usar a imagem do Lovable até ter a imagem própria
-
-**Recomendação:** Vou configurar o caminho `/og-image.png` e você pode fazer upload de uma imagem com as dimensões recomendadas (1200x630 pixels) quando estiver pronta.
-
----
-
-## Sobre o Domínio Customizado
-
-Para conectar o domínio `www.lexflowai.com.br`:
-
-1. Acesse **Project Settings → Domains**
-2. Clique em **Connect Domain**
-3. Digite `lexflowai.com.br`
-4. Siga as instruções para adicionar os registros DNS:
-   - **A Record** para `@` (raiz) → `185.158.133.1`
-   - **A Record** para `www` → `185.158.133.1`
-   - **TXT Record** para `_lovable` → valor fornecido pelo Lovable
-
-O SSL (HTTPS) será provisionado automaticamente após a propagação do DNS (pode levar até 72h).
-
----
-
-## Arquivos que serão modificados
-
-| Arquivo | Alteração |
-|---------|-----------|
-| `index.html` | Atualização completa dos metadados SEO, OG e Twitter |
-
----
-
-## Detalhes Técnicos
-
-```text
-Estrutura final do <head>:
-┌─────────────────────────────────────────────────┐
-│ <html lang="pt-BR">                             │
-│   <head>                                        │
-│     ├─ charset, viewport                        │
-│     ├─ title: LexFlow - Gestão de Contratos     │
-│     ├─ meta description (profissional)          │
-│     ├─ meta author: LexFlow AI                  │
-│     ├─ link canonical: lexflowai.com.br         │
-│     ├─ Open Graph tags (og:*)                   │
-│     └─ Twitter Card tags (twitter:*)            │
-│   </head>                                       │
-└─────────────────────────────────────────────────┘
-```
