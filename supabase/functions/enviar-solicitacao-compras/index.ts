@@ -281,6 +281,7 @@ serve(async (req) => {
     const apiUrl = config.url_api;
     const apiKey = Deno.env.get("COMPRAS_API_KEY");
     
+    
     let headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
