@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useOrganization } from "@/hooks/useOrganization";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -60,6 +61,7 @@ interface IntegracaoConfig {
 const Settings = () => {
   const { toast } = useToast();
   const { userRole, isAnalista, isConsultor, isAdmin } = useUserRole();
+  const { organization } = useOrganization();
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
@@ -172,13 +174,18 @@ const Settings = () => {
   const handleSaveIntegracao = async () => {
     setSavingIntegracao(true);
     try {
-      const payload = {
+      const payload: any = {
         tipo: "sistema_compras",
         nome: "Sistema de Compras Interno",
         url_api: integracaoForm.url_api || null,
         tipo_autenticacao: integracaoForm.tipo_autenticacao,
         is_active: integracaoForm.is_active,
       };
+
+      // Add organization_id for new inserts
+      if (!integracaoConfig?.id && organization?.id) {
+        payload.organization_id = organization.id;
+      }
 
       if (integracaoConfig?.id) {
         const { error } = await supabase
