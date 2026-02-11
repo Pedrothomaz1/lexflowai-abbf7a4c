@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, differenceInDays, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useOrganization } from "@/hooks/useOrganization";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Wrench,
   Plus,
@@ -122,6 +124,8 @@ const statusConfig: Record<string, { label: string; color: string; icon: typeof 
 export default function Servicos() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { organization } = useOrganization();
+  const { user } = useAuth();
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [unidades, setUnidades] = useState<Unidade[]>([]);
   const [especificacoes, setEspecificacoes] = useState<Especificacao[]>([]);
@@ -290,6 +294,8 @@ export default function Servicos() {
       valor_estimado: formData.valor_estimado ? parseFloat(formData.valor_estimado) : null,
       fornecedor_preferencial_id: formData.fornecedor_preferencial_id || null,
       observacoes: formData.observacoes || null,
+      organization_id: organization?.id,
+      created_by: user?.id,
     };
 
     try {
