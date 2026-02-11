@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { format, differenceInDays, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useOrganization } from "@/hooks/useOrganization";
@@ -123,6 +123,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: typeof 
 
 export default function Servicos() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const { organization } = useOrganization();
   const { user } = useAuth();
@@ -167,6 +168,15 @@ export default function Servicos() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Open dialog if ?novo=true in URL
+  useEffect(() => {
+    if (searchParams.get("novo") === "true") {
+      resetForm();
+      setIsDialogOpen(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams]);
 
   const fetchData = async () => {
     setIsLoading(true);

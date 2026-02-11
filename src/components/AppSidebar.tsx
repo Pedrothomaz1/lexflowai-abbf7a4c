@@ -164,7 +164,11 @@ const servicosMenuSections: MenuSectionType[] = [
     icon: LayoutDashboard,
     defaultOpen: true,
     items: [
-      { title: "Visão Geral", url: "/servicos", icon: LayoutDashboard, roles: ["all"] },
+      { title: "Visão Geral", url: "/servicos", icon: LayoutDashboard, roles: ["all"],
+        subItems: [
+          { title: "Novo Serviço", url: "/servicos?novo=true", icon: Plus },
+        ]
+      },
     ],
   },
   {
