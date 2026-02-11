@@ -194,9 +194,11 @@ const Settings = () => {
           .eq("id", integracaoConfig.id);
         if (error) throw error;
       } else {
+        // Use upsert to handle duplicate tipo constraint
+        payload.organization_id = organization?.id;
         const { error } = await supabase
           .from("integracao_config")
-          .insert(payload);
+          .upsert(payload, { onConflict: "tipo" });
         if (error) throw error;
       }
 
