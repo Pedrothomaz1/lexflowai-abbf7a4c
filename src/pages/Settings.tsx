@@ -182,23 +182,25 @@ const Settings = () => {
         is_active: integracaoForm.is_active,
       };
 
-      // Add organization_id for new inserts
-      if (!integracaoConfig?.id && organization?.id) {
-        payload.organization_id = organization.id;
-      }
+      // Check if record already exists (may not be in state if fetched failed)
+      const { data: existing } = await supabase
+        .from("integracao_config")
+        .select("id")
+        .eq("tipo", "sistema_compras")
+        .maybeSingle();
 
-      if (integracaoConfig?.id) {
+      if (existing?.id || integracaoConfig?.id) {
+        const recordId = existing?.id || integracaoConfig?.id;
         const { error } = await supabase
           .from("integracao_config")
           .update(payload)
-          .eq("id", integracaoConfig.id);
+          .eq("id", recordId);
         if (error) throw error;
       } else {
-        // Use upsert to handle duplicate tipo constraint
         payload.organization_id = organization?.id;
         const { error } = await supabase
           .from("integracao_config")
-          .upsert(payload, { onConflict: "tipo" });
+          .insert(payload);
         if (error) throw error;
       }
 
