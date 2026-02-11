@@ -229,36 +229,27 @@ const Settings = () => {
 
     setTestingIntegracao(true);
     try {
-      // Simple connectivity test
-      const response = await fetch(integracaoForm.url_api, {
-        method: "OPTIONS",
-        mode: "no-cors",
+      const { data, error } = await supabase.functions.invoke("testar-conexao-compras", {
+        body: {
+          url: integracaoForm.url_api,
+          tipo_autenticacao: integracaoForm.tipo_autenticacao,
+          organization_id: organization?.id,
+        },
       });
 
-      // Update last test status
-      if (integracaoConfig?.id) {
-        await supabase
-          .from("integracao_config")
-          .update({
-            ultimo_teste: new Date().toISOString(),
-            status_ultimo_teste: "success",
-          })
-          .eq("id", integracaoConfig.id);
-      }
+      if (error) throw error;
 
-      toast({ title: "Conexão testada com sucesso!" });
+      if (data?.success) {
+        toast({ title: "Conexão testada com sucesso!", description: data.message });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Falha na conexão",
+          description: data?.message || "Não foi possível conectar à API.",
+        });
+      }
       fetchIntegracaoConfig();
     } catch (error: any) {
-      if (integracaoConfig?.id) {
-        await supabase
-          .from("integracao_config")
-          .update({
-            ultimo_teste: new Date().toISOString(),
-            status_ultimo_teste: "error",
-          })
-          .eq("id", integracaoConfig.id);
-      }
-
       toast({
         variant: "destructive",
         title: "Erro na conexão",
