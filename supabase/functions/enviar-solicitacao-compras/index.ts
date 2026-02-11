@@ -87,19 +87,33 @@ serve(async (req) => {
   }
 
   try {
-    // SECURITY: CRON_SECRET is mandatory for internal/scheduled calls
+    // SECURITY: Accept CRON_SECRET for scheduled calls OR authenticated user token
     const cronSecret = Deno.env.get('CRON_SECRET');
     const authHeader = req.headers.get('Authorization');
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     
-    if (!cronSecret) {
-      console.error('CRON_SECRET environment variable is not configured');
-      return new Response(
-        JSON.stringify({ error: 'Server configuration error' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    let isAuthorized = false;
+    
+    // Check CRON_SECRET first
+    if (cronSecret && authHeader && authHeader.replace('Bearer ', '') === cronSecret) {
+      isAuthorized = true;
     }
     
-    if (!authHeader || authHeader.replace('Bearer ', '') !== cronSecret) {
+    // If not CRON, check if it's a valid authenticated user
+    if (!isAuthorized && authHeader) {
+      const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+      const userSupabase = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } }
+      });
+      const { data: claimsData, error: claimsError } = await userSupabase.auth.getClaims(authHeader.replace('Bearer ', ''));
+      if (!claimsError && claimsData?.claims?.sub) {
+        isAuthorized = true;
+        console.log(`Authenticated user: ${claimsData.claims.sub}`);
+      }
+    }
+    
+    if (!isAuthorized) {
       console.error('Unauthorized access attempt to enviar-solicitacao-compras');
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
@@ -107,9 +121,9 @@ serve(async (req) => {
       );
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const svcUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = createClient(svcUrl, supabaseKey);
 
     const { servicoId } = await req.json();
 
