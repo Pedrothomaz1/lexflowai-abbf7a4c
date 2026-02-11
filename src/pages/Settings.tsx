@@ -182,15 +182,16 @@ const Settings = () => {
         is_active: integracaoForm.is_active,
       };
 
-      // Check if record already exists (may not be in state if fetched failed)
+      // Check if record already exists
       const { data: existing } = await supabase
         .from("integracao_config")
         .select("id")
         .eq("tipo", "sistema_compras")
+        .eq("organization_id", organization?.id)
         .maybeSingle();
 
-      if (existing?.id || integracaoConfig?.id) {
-        const recordId = existing?.id || integracaoConfig?.id;
+      const recordId = existing?.id || integracaoConfig?.id;
+      if (recordId) {
         const { error } = await supabase
           .from("integracao_config")
           .update(payload)
@@ -198,10 +199,24 @@ const Settings = () => {
         if (error) throw error;
       } else {
         payload.organization_id = organization?.id;
-        const { error } = await supabase
+        const { data: inserted, error } = await supabase
           .from("integracao_config")
-          .insert(payload);
-        if (error) throw error;
+          .insert(payload)
+          .select("id")
+          .maybeSingle();
+        if (error) {
+          // If duplicate key, try updating instead
+          if (error.code === '23505') {
+            const { error: updateError } = await supabase
+              .from("integracao_config")
+              .update(payload)
+              .eq("tipo", "sistema_compras")
+              .eq("organization_id", organization?.id);
+            if (updateError) throw updateError;
+          } else {
+            throw error;
+          }
+        }
       }
 
       toast({ title: "Configuração salva com sucesso!" });
