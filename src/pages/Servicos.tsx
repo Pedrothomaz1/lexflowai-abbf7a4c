@@ -126,6 +126,7 @@ export default function Servicos() {
   const { toast } = useToast();
   const { organization } = useOrganization();
   const { user } = useAuth();
+  const [sendingCompras, setSendingCompras] = useState<string | null>(null);
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [unidades, setUnidades] = useState<Unidade[]>([]);
   const [especificacoes, setEspecificacoes] = useState<Especificacao[]>([]);
@@ -537,6 +538,46 @@ export default function Servicos() {
       header: "",
       render: (_, row: Servico) => (
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              setSendingCompras(row.id);
+              try {
+                const { data, error } = await supabase.functions.invoke('enviar-solicitacao-compras', {
+                  body: { servicoId: row.id },
+                });
+                if (error) throw error;
+                if (data?.success) {
+                  toast({
+                    title: "Solicitação enviada!",
+                    description: data.status === "pendente" 
+                      ? "Registrada como pendente (integração não configurada)." 
+                      : `Código: ${data.codigo_solicitacao || data.solicitacao_id}`,
+                  });
+                } else {
+                  toast({
+                    title: "Erro ao enviar",
+                    description: data?.message || "Erro desconhecido",
+                    variant: "destructive",
+                  });
+                }
+                fetchData();
+              } catch (err: any) {
+                toast({
+                  title: "Erro ao enviar para compras",
+                  description: err.message,
+                  variant: "destructive",
+                });
+              } finally {
+                setSendingCompras(null);
+              }
+            }}
+            disabled={sendingCompras === row.id}
+          >
+            <ShoppingCart className="h-4 w-4 mr-1" />
+            {sendingCompras === row.id ? "Enviando..." : "Compras"}
+          </Button>
           <Button
             variant="outline"
             size="sm"
