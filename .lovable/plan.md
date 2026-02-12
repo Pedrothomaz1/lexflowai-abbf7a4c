@@ -1,44 +1,45 @@
 
 
-## Plano: Adicionar Log de Debug para Verificar Envio do Token
+## Problem
 
-### Problema Identificado
+When changing a contract's status (or any field), the database trigger `create_contract_version()` fires to save a version snapshot. However, it does **not** include the `organization_id` column in the INSERT statement, causing the error:
 
-O codigo esta correto:
-- A configuracao na base de dados tem `tipo_autenticacao = "bearer"` e `url_api = "https://gest10.com.br/api/v1/solicitacoes"`
-- O codigo monta o header como `Authorization: Bearer <token>` (linha 293)
-- A secret `COMPRAS_API_KEY` esta configurada
-- Porem o Gest10 retorna `MISSING_TOKEN` em todas as tentativas
+> "null value in column 'organization_id' of relation 'contract_versions' violates not-null constraint"
 
-### O que vou fazer
+This blocks all contract updates (status changes, edits, approvals, etc.).
 
-1. **Adicionar logs temporarios de debug** na Edge Function `enviar-solicitacao-compras` para registrar:
-   - Se a variavel `COMPRAS_API_KEY` esta preenchida (primeiros 8 caracteres apenas, por seguranca)
-   - O valor do `tipo_autenticacao` lido da base de dados
-   - Os headers que estao sendo enviados (mascarando o token)
-   - Confirmar que o branch `bearer` esta sendo atingido
+## Root Cause
 
-2. **Disparar um envio de teste** para gerar os logs
+The trigger function `create_contract_version()` inserts into `contract_versions` with these columns: `contrato_id`, `versao`, `snapshot`, `alteracoes`, `created_by` -- but omits `organization_id`.
 
-3. **Verificar os logs** para confirmar exatamente o que esta sendo enviado
+Since `contract_versions.organization_id` is `NOT NULL`, the insert fails.
 
-4. **Remover os logs de debug** apos a verificacao
+## Fix
 
-### Detalhes Tecnicos
+A single database migration to update the `create_contract_version()` function, adding `NEW.organization_id` to the INSERT statement:
 
-A alteracao sera apenas em `supabase/functions/enviar-solicitacao-compras/index.ts`, adicionando `console.log` antes do `fetch`:
-
-```typescript
-// Debug temporario
-console.log(`[DEBUG] COMPRAS_API_KEY exists: ${!!apiKey}, length: ${apiKey?.length}, starts: ${apiKey?.substring(0,8)}`);
-console.log(`[DEBUG] tipo_autenticacao: ${config.tipo_autenticacao}`);
-console.log(`[DEBUG] Authorization header: ${headers["Authorization"]?.substring(0, 20)}...`);
-console.log(`[DEBUG] All header keys: ${Object.keys(headers).join(', ')}`);
+```sql
+-- Add organization_id to the INSERT in create_contract_version()
+INSERT INTO public.contract_versions (
+  contrato_id,
+  versao,
+  snapshot,
+  alteracoes,
+  created_by,
+  organization_id  -- ADD THIS
+) VALUES (
+  NEW.id,
+  NEW.versao,
+  ...,
+  changes,
+  auth.uid(),
+  NEW.organization_id  -- ADD THIS
+);
 ```
 
-Tambem verificarei se `headers_customizados` pode estar sobrescrevendo o header `Authorization` (linha 297-298), pois ele e aplicado DEPOIS da autenticacao com spread operator.
+No frontend code changes are needed -- the trigger runs server-side automatically.
 
-### Hipotese
+## Impact
 
-Ha uma possibilidade de que o campo `headers_customizados` (que esta como `{}` vazio na base) esteja de alguma forma sobrescrevendo o `Authorization`. Ou ainda, que a secret `COMPRAS_API_KEY` esteja vazia/nula no ambiente de execucao da Edge Function mesmo apos o update.
+Once applied, all contract modifications (status changes, field edits, approvals) will work again without errors.
 
