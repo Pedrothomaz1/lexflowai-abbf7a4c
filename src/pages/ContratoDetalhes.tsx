@@ -61,6 +61,7 @@ import {
 } from "@/components/ContractDetails";
 import { FinanceNotificationModal } from "@/components/FinanceNotificationModal";
 import { useAuditLog } from "@/hooks/useAuditLog";
+import { useOrganization } from "@/contexts/OrganizationContext";
 
 type Contrato = {
   id: string;
@@ -97,6 +98,7 @@ const ContratoDetalhes = () => {
   const { toast } = useToast();
   const { canApprove } = useUserRole();
   const { logView, logApprove, logExport, logAnalyze } = useAuditLog();
+  const { organization } = useOrganization();
   const [contrato, setContrato] = useState<Contrato | null>(null);
   const [aprovacoes, setAprovacoes] = useState<Aprovacao[]>([]);
   const [loading, setLoading] = useState(true);
@@ -340,6 +342,7 @@ const ContratoDetalhes = () => {
         status: novaAprovacao.status,
         comentario: novaAprovacao.comentario,
         data_aprovacao: new Date().toISOString(),
+        organization_id: organization?.id,
       },
     ]);
 
