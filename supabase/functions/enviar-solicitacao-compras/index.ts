@@ -293,10 +293,21 @@ serve(async (req) => {
       headers["Authorization"] = `Bearer ${apiKey}`;
     }
 
-    // Adicionar headers customizados
+    // Adicionar headers customizados ANTES da autenticação para não sobrescrever
     if (config.headers_customizados && typeof config.headers_customizados === "object") {
-      headers = { ...headers, ...(config.headers_customizados as Record<string, string>) };
+      const customHeaders = config.headers_customizados as Record<string, string>;
+      // Remove Authorization dos customizados para não sobrescrever
+      const { Authorization: _removed, ...safeCustomHeaders } = customHeaders;
+      headers = { ...headers, ...safeCustomHeaders };
     }
+
+    // === DEBUG TEMPORÁRIO ===
+    console.log(`[DEBUG] COMPRAS_API_KEY exists: ${!!apiKey}, length: ${apiKey?.length}, starts: ${apiKey?.substring(0, 8)}`);
+    console.log(`[DEBUG] tipo_autenticacao: ${config.tipo_autenticacao}`);
+    console.log(`[DEBUG] Authorization header: ${headers["Authorization"]?.substring(0, 20)}...`);
+    console.log(`[DEBUG] All header keys: ${Object.keys(headers).join(', ')}`);
+    console.log(`[DEBUG] headers_customizados raw: ${JSON.stringify(config.headers_customizados)}`);
+    // === FIM DEBUG ===
 
     console.log(`[Org ${organizationId}] Enviando para API: ${apiUrl}`);
 
