@@ -62,7 +62,7 @@
     --border: 165 10% 90%;
     --input: 165 10% 90%;
     --ring: 165 35% 45%;
-    --radius: 0.5rem;
+    --radius: 1.25rem;
     
     /* Sidebar - Master Blueprint Theme */
     --sidebar-background: var(--lexflow-verde-escuro);
@@ -179,28 +179,28 @@
     -moz-osx-font-smoothing: grayscale;
   }
   
-  /* Typography Scale */
+  /* Typography Scale - 5 levels */
   h1 {
-    @apply text-2xl font-semibold tracking-tight text-foreground;
+    @apply text-xl font-semibold tracking-tight text-foreground leading-7;
   }
   
   h2 {
-    @apply text-xl font-semibold tracking-tight text-foreground;
+    @apply text-lg font-semibold tracking-tight text-foreground leading-7;
   }
   
   h3 {
-    @apply text-lg font-medium text-foreground;
+    @apply text-base font-medium text-foreground leading-6;
   }
   
   h4 {
-    @apply text-base font-medium text-foreground;
+    @apply text-sm font-medium text-foreground leading-5;
   }
 }
 
 @layer components {
   /* Card Styles */
   .card-elevated {
-    @apply bg-card rounded-xl border border-border;
+    @apply bg-card rounded-2xl border border-border;
     box-shadow: var(--shadow-sm);
     transition: box-shadow 0.2s ease, transform 0.2s ease;
   }
@@ -220,7 +220,7 @@
   
   /* Stat Card Variants */
   .stat-card {
-    @apply relative overflow-hidden rounded-xl border border-border bg-card p-5;
+    @apply relative overflow-hidden rounded-2xl border border-border bg-card p-5;
     box-shadow: var(--shadow-sm);
     transition: all 0.2s ease;
   }
@@ -323,6 +323,7 @@
   
   /* CTA Button - Amarelo Ouro */
   .btn-cta {
+    @apply rounded-xl;
     background: hsl(var(--lexflow-amarelo));
     color: hsl(var(--lexflow-verde-escuro));
     font-weight: 600;
