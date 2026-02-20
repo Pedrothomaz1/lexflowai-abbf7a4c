@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Download, Calendar, Eye, FileText, ArrowUpRight, Upload, List, Kanban as KanbanIcon } from "lucide-react";
+import { Plus, Download, Calendar, Eye, FileText, ArrowUpRight, Upload, List, Kanban as KanbanIcon, X, Loader2 } from "lucide-react";
 import { exportContratosPDF } from "@/utils/pdfExport";
 import { BuscaAvancada, FiltrosAvancados } from "@/components/BuscaAvancada";
 import { DataTable, Column } from "@/components/ui/data-table";
@@ -80,7 +80,8 @@ const Contratos = () => {
     data_fim: "",
     fornecedor_id: "",
   });
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [submitting, setSubmitting] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [filtros, setFiltros] = useState<FiltrosAvancados>({
     busca: searchParams.get("search") || "",
@@ -234,52 +235,15 @@ const Contratos = () => {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploadedFiles(prev => [...prev, ...Array.from(files)]);
+    e.target.value = '';
+  };
 
-    setUploadedFile(file);
-    setIsAnalyzing(true);
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const fileExt = file.name.split('.').pop();
-      // Use organization.id for RLS isolation, fallback to user.id for backwards compatibility
-      const orgId = organization?.id;
-      const fileName = orgId 
-        ? `${orgId}/${user.id}/${Date.now()}.${fileExt}`
-        : `${user.id}/${Date.now()}.${fileExt}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('contratos-documentos')
-        .upload(fileName, file);
-
-      if (uploadError) {
-        toast({
-          variant: "destructive",
-          title: "Erro ao enviar arquivo",
-          description: uploadError.message,
-        });
-        setIsAnalyzing(false);
-        return;
-      }
-
-      toast({
-        title: "Arquivo enviado com sucesso!",
-        description: "Preencha as datas de início e término do contrato",
-      });
-
-    } catch (error) {
-      console.error('Erro:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao processar arquivo",
-      });
-    } finally {
-      setIsAnalyzing(false);
-    }
+  const removeFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -306,33 +270,69 @@ const Contratos = () => {
       return;
     }
 
-    const { error } = await supabase.from("contratos").insert([
-      {
-        ...formData,
-        organization_id: organization.id,
-        valor_total: formData.valor_total ? parseFloat(formData.valor_total) : null,
-        fornecedor_id: formData.fornecedor_id,
-        created_by: user.id,
-      },
-    ]);
+    setSubmitting(true);
+    try {
+      const { data, error } = await supabase.from("contratos").insert([
+        {
+          ...formData,
+          organization_id: organization.id,
+          valor_total: formData.valor_total ? parseFloat(formData.valor_total) : null,
+          fornecedor_id: formData.fornecedor_id,
+          created_by: user.id,
+        },
+      ]).select("id").single();
 
-    if (error) {
-      if (error.message.includes("row-level security") || error.code === "42501") {
-        toast({
-          variant: "destructive",
-          title: "Sem permissão",
-          description: "Você não tem permissão para criar contratos. Verifique seu acesso.",
-        });
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Erro ao criar contrato",
-          description: error.message,
-        });
+      if (error) {
+        if (error.message.includes("row-level security") || error.code === "42501") {
+          toast({
+            variant: "destructive",
+            title: "Sem permissão",
+            description: "Você não tem permissão para criar contratos. Verifique seu acesso.",
+          });
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Erro ao criar contrato",
+            description: error.message,
+          });
+        }
+        return;
       }
-    } else {
+
+      // Upload attachments to Storage and insert into contract_attachments
+      if (data && uploadedFiles.length > 0) {
+        for (const file of uploadedFiles) {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${organization.id}/${user.id}/${Date.now()}-${file.name}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('contratos-documentos')
+            .upload(fileName, file);
+
+          if (uploadError) {
+            console.error('Upload error:', uploadError);
+            continue;
+          }
+
+          const { data: { publicUrl } } = supabase.storage
+            .from('contratos-documentos')
+            .getPublicUrl(fileName);
+
+          await supabase.from("contract_attachments").insert({
+            organization_id: organization.id,
+            contrato_id: data.id,
+            nome_arquivo: file.name,
+            arquivo_url: publicUrl,
+            tipo_documento: file.type,
+            tamanho_bytes: file.size,
+            uploaded_by: user.id,
+          });
+        }
+      }
+
       toast({
         title: "Contrato criado com sucesso!",
+        description: uploadedFiles.length > 0 ? `${uploadedFiles.length} anexo(s) adicionado(s)` : undefined,
       });
       setDialogOpen(false);
       setFormData({
@@ -346,9 +346,11 @@ const Contratos = () => {
         data_fim: "",
         fornecedor_id: "",
       });
-      setUploadedFile(null);
+      setUploadedFiles([]);
       fetchContratos();
       generateNextContractNumber();
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -540,23 +542,33 @@ const Contratos = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="arquivo">Anexar Contrato (PDF)</Label>
+                    <Label htmlFor="arquivo">Anexos (múltiplos arquivos)</Label>
                     <Input
                       id="arquivo"
                       type="file"
-                      accept=".pdf,.doc,.docx"
-                      onChange={handleFileUpload}
-                      disabled={isAnalyzing}
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                      onChange={handleFileSelect}
+                      multiple
                     />
-                    {isAnalyzing && (
-                      <p className="text-sm text-muted-foreground">
-                        Enviando arquivo...
-                      </p>
-                    )}
-                    {uploadedFile && !isAnalyzing && (
-                      <p className="text-sm text-success flex items-center gap-1">
-                        ✓ Arquivo anexado: {uploadedFile.name}
-                      </p>
+                    {uploadedFiles.length > 0 && (
+                      <div className="space-y-1.5 mt-2">
+                        {uploadedFiles.map((file, index) => (
+                          <div key={index} className="flex items-center gap-2 text-sm bg-muted/40 rounded-lg px-3 py-1.5">
+                            <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span className="truncate flex-1">{file.name}</span>
+                            <span className="text-xs text-muted-foreground shrink-0">
+                              {(file.size / 1024).toFixed(0)} KB
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => removeFile(index)}
+                              className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
 
@@ -643,10 +655,13 @@ const Contratos = () => {
                   </div>
 
                   <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                    <Button type="button" variant="outline" onClick={() => { setDialogOpen(false); setUploadedFiles([]); }}>
                       Cancelar
                     </Button>
-                    <Button type="submit">Criar Contrato</Button>
+                    <Button type="submit" disabled={submitting}>
+                      {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      Criar Contrato
+                    </Button>
                   </DialogFooter>
                 </form>
               </DialogContent>

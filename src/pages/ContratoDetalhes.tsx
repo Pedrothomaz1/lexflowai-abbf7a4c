@@ -115,6 +115,10 @@ const ContratoDetalhes = () => {
   const [userAlreadyApproved, setUserAlreadyApproved] = useState(false);
 
   useEffect(() => {
+    // Reset analysis state when switching contracts
+    setAnalise(null);
+    setShowAnalise(false);
+
     const initData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
