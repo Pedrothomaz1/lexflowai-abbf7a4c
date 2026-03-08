@@ -1812,6 +1812,53 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          lida: boolean
+          mensagem: string | null
+          organization_id: string
+          referencia_id: string | null
+          referencia_tipo: string | null
+          tipo: string
+          titulo: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lida?: boolean
+          mensagem?: string | null
+          organization_id: string
+          referencia_id?: string | null
+          referencia_tipo?: string | null
+          tipo?: string
+          titulo: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lida?: boolean
+          mensagem?: string | null
+          organization_id?: string
+          referencia_id?: string | null
+          referencia_tipo?: string | null
+          tipo?: string
+          titulo?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_members: {
         Row: {
           id: string
@@ -2978,9 +3025,21 @@ export type Database = {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
       }
+      job_notificar_vencimentos: { Args: never; Returns: undefined }
       mask_pii: {
         Args: { field_type?: string; value: string }
         Returns: string
+      }
+      notify_org_members: {
+        Args: {
+          _mensagem?: string
+          _org_id: string
+          _referencia_id?: string
+          _referencia_tipo?: string
+          _tipo: string
+          _titulo: string
+        }
+        Returns: undefined
       }
       record_login_attempt: {
         Args: {

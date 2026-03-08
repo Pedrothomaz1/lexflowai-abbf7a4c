@@ -131,9 +131,18 @@ export function FornecedorAnexos({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Gera nome único para o arquivo
-      const fileExt = file.name.split(".").pop();
-      const fileName = `fornecedores/${fornecedorId}/${Date.now()}-${file.name}`;
+      // Get organization for storage RLS isolation
+      const { data: orgMember } = await supabase
+        .from('organization_members')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .single();
+
+      // Gera nome único para o arquivo com organization.id prefix for RLS isolation
+      const fileName = orgMember?.organization_id
+        ? `${orgMember.organization_id}/${user.id}/fornecedores/${fornecedorId}/${Date.now()}-${file.name}`
+        : `${user.id}/fornecedores/${fornecedorId}/${Date.now()}-${file.name}`;
 
       // Upload para o storage
       const { error: uploadError } = await supabase.storage

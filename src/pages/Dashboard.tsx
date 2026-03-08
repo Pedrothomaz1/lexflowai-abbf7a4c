@@ -31,6 +31,9 @@ import { PageSkeleton } from "@/components/ui/skeleton-loaders";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PremiumAreaChart, PremiumBarChart, PremiumDonutChart } from "@/components/charts";
 import { ExecutiveSummary, ProximaAcaoCard, FranquiasKPIGrid } from "@/components/Dashboard";
+import { SLAIndicatorsCard } from "@/components/Dashboard/SLAIndicatorsCard";
+import { TopFornecedoresCard } from "@/components/Dashboard/TopFornecedoresCard";
+import { ExpiryTimelineSection } from "@/components/Dashboard/ExpiryTimelineSection";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { helpTexts } from "@/lib/help-texts";
@@ -531,118 +534,15 @@ const Dashboard = () => {
 
           {/* Main Charts Grid */}
           <div className="grid gap-6 lg:grid-cols-3">
-            {/* SLA Card */}
-            <Card className="card-elevated">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Target className="h-4 w-4 text-primary" />
-                  Indicadores de SLA
-                </CardTitle>
-                <CardDescription className="text-xs">Performance vs Metas</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-5">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Aprovações no prazo</span>
-                    <span className={cn(
-                      "font-medium",
-                      stats.taxaAprovacaoNoPrazo >= 80 ? "text-emerald-600" : "text-amber-600"
-                    )}>
-                      {stats.taxaAprovacaoNoPrazo.toFixed(0)}%
-                    </span>
-                  </div>
-                  <Progress value={stats.taxaAprovacaoNoPrazo} className="h-2" />
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Meta: 80%</span>
-                    <span>{stats.taxaAprovacaoNoPrazo >= 80 ? "✓ Atingida" : "⚠ Abaixo"}</span>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Taxa de Renovação</span>
-                    <span className={cn(
-                      "font-medium",
-                      stats.taxaRenovacao >= 70 ? "text-emerald-600" : "text-amber-600"
-                    )}>
-                      {stats.taxaRenovacao.toFixed(0)}%
-                    </span>
-                  </div>
-                  <Progress value={stats.taxaRenovacao} className="h-2" />
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Meta: 70%</span>
-                    <span>{stats.taxaRenovacao >= 70 ? "✓ Atingida" : "⚠ Abaixo"}</span>
-                  </div>
-                </div>
-
-                <div className="pt-3 border-t border-border space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <RefreshCcw className="h-3.5 w-3.5" />
-                      <span>Contratos renovados</span>
-                    </div>
-                    <Badge variant="secondary" className="text-xs">{stats.contratosRenovados}</Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Top Fornecedores */}
-            <Card className="card-elevated lg:col-span-2">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Building2 className="h-4 w-4 text-primary" />
-                  Top Fornecedores
-                </CardTitle>
-                <CardDescription className="text-xs">Por valor de contratos</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {topFornecedores.length > 0 ? (
-                  <div className="space-y-3">
-                    {topFornecedores.map((fornecedor, index) => {
-                      const maxValor = topFornecedores[0]?.valor || 1;
-                      const percentual = (fornecedor.valor / maxValor) * 100;
-                      
-                      return (
-                        <div key={index} className="space-y-1.5">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <div className={cn(
-                                "h-7 w-7 rounded-full flex items-center justify-center text-xs font-semibold shrink-0",
-                                index === 0 ? "bg-warning/20 text-warning" :
-                                index === 1 ? "bg-muted text-muted-foreground" :
-                                "bg-muted/50 text-muted-foreground"
-                              )}>
-                                {index + 1}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-sm font-medium truncate">{fornecedor.nome}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {fornecedor.count} contrato{fornecedor.count > 1 ? "s" : ""}
-                                </p>
-                              </div>
-                            </div>
-                            <span className="text-sm font-semibold shrink-0">
-                              {formatCompactCurrency(fornecedor.valor)}
-                            </span>
-                          </div>
-                          <Progress value={percentual} className="h-1" />
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <EmptyState
-                    title="Adicione seus fornecedores"
-                    description="Cadastre fornecedores para acompanhar o valor dos contratos por parceiro."
-                    action={{
-                      label: "Ir para Fornecedores",
-                      onClick: () => navigate("/fornecedores"),
-                    }}
-                  />
-                )}
-              </CardContent>
-            </Card>
+            <SLAIndicatorsCard
+              taxaAprovacaoNoPrazo={stats.taxaAprovacaoNoPrazo}
+              taxaRenovacao={stats.taxaRenovacao}
+              contratosRenovados={stats.contratosRenovados}
+            />
+            <TopFornecedoresCard
+              topFornecedores={topFornecedores}
+              onNavigate={navigate}
+            />
           </div>
 
           {/* Charts Row - Premium Style */}
@@ -773,69 +673,10 @@ const Dashboard = () => {
             </Card>
           </div>
 
-          {/* Timeline */}
-          <Card className="card-elevated">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <CalendarIcon className="h-4 w-4 text-primary" />
-                Próximos Vencimentos
-              </CardTitle>
-              <CardDescription className="text-xs">Contratos nos próximos 90 dias</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {timelineVencimentos.length > 0 ? (
-                <div className="space-y-3">
-                  {timelineVencimentos.slice(0, 8).map((contrato) => {
-                    const dias = getDaysUntil(contrato.data_fim);
-                    const urgencia = dias <= 7 ? "destructive" : dias <= 30 ? "warning" : "default";
-                    
-                    return (
-                      <div 
-                        key={contrato.id} 
-                        className="flex items-center gap-4 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer"
-                        onClick={() => navigate(`/contratos/${contrato.id}`)}
-                      >
-                        <Badge 
-                          variant={urgencia === "destructive" ? "destructive" : urgencia === "warning" ? "default" : "secondary"}
-                          className="w-14 justify-center shrink-0"
-                        >
-                          {dias}d
-                        </Badge>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{contrato.titulo}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Vence em {new Date(contrato.data_fim).toLocaleDateString("pt-BR")}
-                          </p>
-                        </div>
-                        <span className="text-sm font-semibold shrink-0">
-                          {formatCurrency(contrato.valor_total || 0)}
-                        </span>
-                      </div>
-                    );
-                  })}
-                  {timelineVencimentos.length > 8 && (
-                    <Button 
-                      variant="ghost" 
-                      className="w-full text-sm" 
-                      onClick={() => navigate("/calendario")}
-                    >
-                      Ver todos os {timelineVencimentos.length} vencimentos
-                      <ArrowUpRight className="ml-1.5 h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                <EmptyState
-                  title="Nenhum vencimento próximo"
-                  description="Não há contratos vencendo nos próximos 90 dias. Mantenha seus contratos atualizados para receber alertas."
-                  action={{
-                    label: "Ver Contratos",
-                    onClick: () => navigate("/contratos"),
-                  }}
-                />
-              )}
-            </CardContent>
-          </Card>
+          <ExpiryTimelineSection
+            timelineVencimentos={timelineVencimentos}
+            onNavigate={navigate}
+          />
         </>
       )}
     </div>

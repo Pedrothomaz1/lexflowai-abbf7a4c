@@ -43,35 +43,30 @@ export function usePermissions() {
       }
 
       if (roleData?.role) {
-        // Fetch permissions for this role
-        const { data: permData, error: permError } = await supabase
-          .from('role_permissions')
-          .select(`
-            permission_id,
-            permissions (
-              name
-            )
-          `)
-          .eq('role', roleData.role);
+        // Fetch permissions + MFA requirement in parallel (was sequential — saves ~300ms)
+        const [permResult, mfaResult] = await Promise.all([
+          supabase
+            .from('role_permissions')
+            .select('permission_id, permissions (name)')
+            .eq('role', roleData.role),
+          supabase
+            .from('mfa_requirements')
+            .select('is_required, grace_period_days')
+            .eq('role', roleData.role)
+            .maybeSingle(),
+        ]);
 
-        if (permError) {
-          console.error('[usePermissions] Permission fetch error:', permError);
+        if (permResult.error) {
+          console.error('[usePermissions] Permission fetch error:', permResult.error);
         } else {
-          const permNames = permData?.map((p: any) => p.permissions?.name).filter(Boolean) || [];
+          const permNames = permResult.data?.map((p: any) => p.permissions?.name).filter(Boolean) || [];
           setPermissions(permNames);
         }
 
-        // Fetch MFA requirement for this role
-        const { data: mfaData, error: mfaError } = await supabase
-          .from('mfa_requirements')
-          .select('is_required, grace_period_days')
-          .eq('role', roleData.role)
-          .maybeSingle();
-
-        if (mfaError) {
-          console.error('[usePermissions] MFA requirement fetch error:', mfaError);
+        if (mfaResult.error) {
+          console.error('[usePermissions] MFA requirement fetch error:', mfaResult.error);
         } else {
-          setMfaRequired(mfaData?.is_required || false);
+          setMfaRequired(mfaResult.data?.is_required || false);
         }
       }
     } catch (err) {

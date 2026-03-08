@@ -29,7 +29,7 @@ const AnimatedCard = React.forwardRef<HTMLDivElement, AnimatedCardProps>(
         }}
         whileTap={{ scale: 0.98 }}
         className={cn(
-          "rounded-lg border bg-card text-card-foreground shadow-sm transition-colors",
+          "rounded-2xl border bg-card text-card-foreground shadow-sm transition-all duration-200",
           className
         )}
         {...props}
@@ -53,7 +53,7 @@ const AnimatedCardHeader = React.forwardRef<HTMLDivElement, AnimatedCardHeaderPr
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ delay: 0.2 }}
-      className={cn("flex flex-col space-y-1.5 p-6", className)}
+      className={cn("flex flex-col space-y-1.5 p-5", className)}
       {...props}
     >
       {children}
@@ -74,7 +74,7 @@ const AnimatedCardContent = React.forwardRef<HTMLDivElement, AnimatedCardContent
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ delay: 0.3 }}
-      className={cn("p-6 pt-0", className)}
+      className={cn("p-5 pt-0", className)}
       {...props}
     >
       {children}

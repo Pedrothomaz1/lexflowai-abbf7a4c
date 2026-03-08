@@ -4,27 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Download, Calendar, Eye, FileText, ArrowUpRight, Upload, List, Kanban as KanbanIcon } from "lucide-react";
+import { Download, Calendar, Eye, Upload, List, Kanban as KanbanIcon } from "lucide-react";
 import { exportContratosPDF } from "@/utils/pdfExport";
 import { BuscaAvancada, FiltrosAvancados } from "@/components/BuscaAvancada";
 import { DataTable, Column } from "@/components/ui/data-table";
@@ -34,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { ContractImport } from "@/components/ContractImport/ContractImport";
 import { KanbanBoard } from "@/components/contracts/KanbanBoard";
 import { CalendarView, CalendarObligation } from "@/components/contracts/CalendarView";
+import { ContratoFormDialog } from "@/components/contracts/ContratoFormDialog";
 import { helpTexts } from "@/lib/help-texts";
 import { HelpTooltip } from "@/components/ui/help-tooltip";
 
@@ -80,7 +62,8 @@ const Contratos = () => {
     data_fim: "",
     fornecedor_id: "",
   });
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [submitting, setSubmitting] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [filtros, setFiltros] = useState<FiltrosAvancados>({
     busca: searchParams.get("search") || "",
@@ -234,48 +217,15 @@ const Contratos = () => {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploadedFiles(prev => [...prev, ...Array.from(files)]);
+    e.target.value = '';
+  };
 
-    setUploadedFile(file);
-    setIsAnalyzing(true);
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('contratos-documentos')
-        .upload(fileName, file);
-
-      if (uploadError) {
-        toast({
-          variant: "destructive",
-          title: "Erro ao enviar arquivo",
-          description: uploadError.message,
-        });
-        setIsAnalyzing(false);
-        return;
-      }
-
-      toast({
-        title: "Arquivo enviado com sucesso!",
-        description: "Preencha as datas de início e término do contrato",
-      });
-
-    } catch (error) {
-      console.error('Erro:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao processar arquivo",
-      });
-    } finally {
-      setIsAnalyzing(false);
-    }
+  const removeFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -302,33 +252,69 @@ const Contratos = () => {
       return;
     }
 
-    const { error } = await supabase.from("contratos").insert([
-      {
-        ...formData,
-        organization_id: organization.id,
-        valor_total: formData.valor_total ? parseFloat(formData.valor_total) : null,
-        fornecedor_id: formData.fornecedor_id,
-        created_by: user.id,
-      },
-    ]);
+    setSubmitting(true);
+    try {
+      const { data, error } = await supabase.from("contratos").insert([
+        {
+          ...formData,
+          organization_id: organization.id,
+          valor_total: formData.valor_total ? parseFloat(formData.valor_total) : null,
+          fornecedor_id: formData.fornecedor_id,
+          created_by: user.id,
+        },
+      ]).select("id").single();
 
-    if (error) {
-      if (error.message.includes("row-level security") || error.code === "42501") {
-        toast({
-          variant: "destructive",
-          title: "Sem permissão",
-          description: "Você não tem permissão para criar contratos. Verifique seu acesso.",
-        });
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Erro ao criar contrato",
-          description: error.message,
-        });
+      if (error) {
+        if (error.message.includes("row-level security") || error.code === "42501") {
+          toast({
+            variant: "destructive",
+            title: "Sem permissão",
+            description: "Você não tem permissão para criar contratos. Verifique seu acesso.",
+          });
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Erro ao criar contrato",
+            description: error.message,
+          });
+        }
+        return;
       }
-    } else {
+
+      // Upload attachments to Storage and insert into contract_attachments
+      if (data && uploadedFiles.length > 0) {
+        for (const file of uploadedFiles) {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${organization.id}/${user.id}/${Date.now()}-${file.name}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('contratos-documentos')
+            .upload(fileName, file);
+
+          if (uploadError) {
+            console.error('Upload error:', uploadError);
+            continue;
+          }
+
+          const { data: { publicUrl } } = supabase.storage
+            .from('contratos-documentos')
+            .getPublicUrl(fileName);
+
+          await supabase.from("contract_attachments").insert({
+            organization_id: organization.id,
+            contrato_id: data.id,
+            nome_arquivo: file.name,
+            arquivo_url: publicUrl,
+            tipo_documento: file.type,
+            tamanho_bytes: file.size,
+            uploaded_by: user.id,
+          });
+        }
+      }
+
       toast({
         title: "Contrato criado com sucesso!",
+        description: uploadedFiles.length > 0 ? `${uploadedFiles.length} anexo(s) adicionado(s)` : undefined,
       });
       setDialogOpen(false);
       setFormData({
@@ -342,9 +328,11 @@ const Contratos = () => {
         data_fim: "",
         fornecedor_id: "",
       });
-      setUploadedFile(null);
+      setUploadedFiles([]);
       fetchContratos();
       generateNextContractNumber();
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -459,194 +447,18 @@ const Contratos = () => {
               <Download className="h-4 w-4 mr-1.5" />
               Exportar
             </Button>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm" className="btn-cta">
-                  <Plus className="h-4 w-4 mr-1.5" />
-                  Novo Contrato de Serviço
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Novo Contrato</DialogTitle>
-                  <DialogDescription>
-                    Preencha os dados do contrato
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="numero_contrato">Número do Contrato *</Label>
-                      <Input
-                        id="numero_contrato"
-                        value={formData.numero_contrato}
-                        onChange={(e) =>
-                          setFormData({ ...formData, numero_contrato: e.target.value })
-                        }
-                        required
-                        placeholder="Ex: CT-2024-001"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="tipo">Tipo *</Label>
-                      <Select
-                        value={formData.tipo}
-                        onValueChange={(value) =>
-                          setFormData({ ...formData, tipo: value })
-                        }
-                        required
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o tipo" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="prestacao_servicos">Prestação de Serviço</SelectItem>
-                          <SelectItem value="fornecimento">Fornecimento</SelectItem>
-                          <SelectItem value="locacao">Locação</SelectItem>
-                          <SelectItem value="confidencialidade">Confidencialidade</SelectItem>
-                          <SelectItem value="parceria">Parceria</SelectItem>
-                          <SelectItem value="outro">Outro</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="titulo">Título *</Label>
-                    <Input
-                      id="titulo"
-                      value={formData.titulo}
-                      onChange={(e) =>
-                        setFormData({ ...formData, titulo: e.target.value })
-                      }
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="descricao">Descrição</Label>
-                    <Textarea
-                      id="descricao"
-                      value={formData.descricao}
-                      onChange={(e) =>
-                        setFormData({ ...formData, descricao: e.target.value })
-                      }
-                      rows={3}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="arquivo">Anexar Contrato (PDF)</Label>
-                    <Input
-                      id="arquivo"
-                      type="file"
-                      accept=".pdf,.doc,.docx"
-                      onChange={handleFileUpload}
-                      disabled={isAnalyzing}
-                    />
-                    {isAnalyzing && (
-                      <p className="text-sm text-muted-foreground">
-                        Enviando arquivo...
-                      </p>
-                    )}
-                    {uploadedFile && !isAnalyzing && (
-                      <p className="text-sm text-success flex items-center gap-1">
-                        ✓ Arquivo anexado: {uploadedFile.name}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="fornecedor">Fornecedor *</Label>
-                    <Select
-                      value={formData.fornecedor_id}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, fornecedor_id: value })
-                      }
-                      required
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione um fornecedor" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {fornecedores.map((fornecedor) => (
-                          <SelectItem key={fornecedor.id} value={fornecedor.id}>
-                            {fornecedor.nome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="valor_total">Valor Total</Label>
-                      <Input
-                        id="valor_total"
-                        type="number"
-                        step="0.01"
-                        value={formData.valor_total}
-                        onChange={(e) =>
-                          setFormData({ ...formData, valor_total: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="moeda">Moeda</Label>
-                      <Select
-                        value={formData.moeda}
-                        onValueChange={(value) =>
-                          setFormData({ ...formData, moeda: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="BRL">BRL (R$)</SelectItem>
-                          <SelectItem value="USD">USD ($)</SelectItem>
-                          <SelectItem value="EUR">EUR (€)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="data_inicio">Data de Início *</Label>
-                      <Input
-                        id="data_inicio"
-                        type="date"
-                        value={formData.data_inicio}
-                        onChange={(e) =>
-                          setFormData({ ...formData, data_inicio: e.target.value })
-                        }
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="data_fim">Data de Término *</Label>
-                      <Input
-                        id="data_fim"
-                        type="date"
-                        value={formData.data_fim}
-                        onChange={(e) =>
-                          setFormData({ ...formData, data_fim: e.target.value })
-                        }
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                      Cancelar
-                    </Button>
-                    <Button type="submit">Criar Contrato</Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
+            <ContratoFormDialog
+              open={dialogOpen}
+              onOpenChange={(open) => { setDialogOpen(open); if (!open) setUploadedFiles([]); }}
+              formData={formData}
+              onFormDataChange={setFormData}
+              uploadedFiles={uploadedFiles}
+              onFileSelect={handleFileSelect}
+              onRemoveFile={removeFile}
+              fornecedores={fornecedores}
+              onSubmit={handleSubmit}
+              submitting={submitting}
+            />
           </div>
         }
       />

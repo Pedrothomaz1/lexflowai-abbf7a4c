@@ -6,7 +6,6 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -18,18 +17,11 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft,
-  Upload,
   FileText,
-  Calendar,
-  DollarSign,
-  User,
   Building,
-  Clock,
   CheckCircle2,
-  XCircle,
   Download,
   Brain,
-  AlertTriangle,
   Info,
   Tag,
   Hash,
@@ -59,8 +51,12 @@ import {
   ContractRedlineEditor,
   NegotiationMetrics,
 } from "@/components/ContractDetails";
+import { ContractInfoCard } from "@/components/ContractDetails/ContractInfoCard";
+import { ContractAIAnalysis } from "@/components/ContractDetails/ContractAIAnalysis";
+import { ContractApprovalCard } from "@/components/ContractDetails/ContractApprovalCard";
 import { FinanceNotificationModal } from "@/components/FinanceNotificationModal";
 import { useAuditLog } from "@/hooks/useAuditLog";
+import { useOrganization } from "@/contexts/OrganizationContext";
 
 type Contrato = {
   id: string;
@@ -97,6 +93,7 @@ const ContratoDetalhes = () => {
   const { toast } = useToast();
   const { canApprove } = useUserRole();
   const { logView, logApprove, logExport, logAnalyze } = useAuditLog();
+  const { organization } = useOrganization();
   const [contrato, setContrato] = useState<Contrato | null>(null);
   const [aprovacoes, setAprovacoes] = useState<Aprovacao[]>([]);
   const [loading, setLoading] = useState(true);
@@ -113,6 +110,10 @@ const ContratoDetalhes = () => {
   const [userAlreadyApproved, setUserAlreadyApproved] = useState(false);
 
   useEffect(() => {
+    // Reset analysis state when switching contracts
+    setAnalise(null);
+    setShowAnalise(false);
+
     const initData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -259,9 +260,25 @@ const ContratoDetalhes = () => {
     const file = e.target.files[0];
     setUploading(true);
 
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setUploading(false);
+      return;
+    }
+
+    // Get organization for storage RLS isolation
+    const { data: orgMember } = await supabase
+      .from('organization_members')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single();
+
     const fileExt = file.name.split(".").pop();
-    const fileName = `${contrato.id}-${Date.now()}.${fileExt}`;
-    const filePath = `${fileName}`;
+    // Use organization.id as first folder for RLS isolation
+    const filePath = orgMember?.organization_id
+      ? `${orgMember.organization_id}/${user.id}/${contrato.id}-${Date.now()}.${fileExt}`
+      : `${user.id}/${contrato.id}-${Date.now()}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from("contratos-documentos")
@@ -324,6 +341,7 @@ const ContratoDetalhes = () => {
         status: novaAprovacao.status,
         comentario: novaAprovacao.comentario,
         data_aprovacao: new Date().toISOString(),
+        organization_id: organization?.id,
       },
     ]);
 
@@ -491,95 +509,7 @@ const ContratoDetalhes = () => {
         <StaggerContainer className="lg:col-span-2 space-y-6">
           {/* Contract Details */}
           <StaggerItem>
-            <AnimatedCard>
-              <AnimatedCardHeader>
-                <div className="flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-primary" />
-                  <h3 className="text-lg font-semibold">Informações do Contrato</h3>
-                </div>
-              </AnimatedCardHeader>
-              <AnimatedCardContent className="space-y-6">
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                  {contrato.valor_total && (
-                    <InfoItem
-                      icon={DollarSign}
-                      label="Valor Total"
-                      value={new Intl.NumberFormat("pt-BR", {
-                        style: "currency",
-                        currency: contrato.moeda || "BRL",
-                      }).format(contrato.valor_total)}
-                      highlight
-                    />
-                  )}
-                  {contrato.data_inicio && (
-                    <InfoItem
-                      icon={Calendar}
-                      label="Data de Início"
-                      value={new Date(contrato.data_inicio).toLocaleDateString("pt-BR")}
-                    />
-                  )}
-                  {contrato.data_fim && (
-                    <InfoItem
-                      icon={Calendar}
-                      label="Data de Término"
-                      value={new Date(contrato.data_fim).toLocaleDateString("pt-BR")}
-                    />
-                  )}
-                  {contrato.data_assinatura && (
-                    <InfoItem
-                      icon={Calendar}
-                      label="Data de Assinatura"
-                      value={new Date(contrato.data_assinatura).toLocaleDateString("pt-BR")}
-                    />
-                  )}
-                  <InfoItem
-                    icon={Clock}
-                    label="Última Atualização"
-                    value={new Date(contrato.updated_at).toLocaleDateString("pt-BR")}
-                  />
-                </div>
-
-                {/* Tags */}
-                {contrato.tags && contrato.tags.length > 0 && (
-                  <>
-                    <Separator />
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                        <Tag className="h-4 w-4" />
-                        Tags
-                      </h4>
-                      <div className="flex flex-wrap gap-2">
-                        {contrato.tags.map((tag, index) => (
-                          <Badge key={index} variant="secondary">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {contrato.descricao && (
-                  <>
-                    <Separator />
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium text-muted-foreground">Descrição</h4>
-                      <p className="text-sm leading-relaxed">{contrato.descricao}</p>
-                    </div>
-                  </>
-                )}
-
-                {contrato.observacoes && (
-                  <>
-                    <Separator />
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium text-muted-foreground">Observações</h4>
-                      <p className="text-sm leading-relaxed text-muted-foreground">{contrato.observacoes}</p>
-                    </div>
-                  </>
-                )}
-              </AnimatedCardContent>
-            </AnimatedCard>
+            <ContractInfoCard contrato={contrato} />
           </StaggerItem>
 
           {/* AI Analysis Card */}
@@ -591,122 +521,7 @@ const ContratoDetalhes = () => {
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
                 >
-                  <AnimatedCard className="border-primary/20">
-                    <AnimatedCardHeader>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Brain className="h-5 w-5 text-primary" />
-                          <div>
-                            <h3 className="text-lg font-semibold">Análise com IA</h3>
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(analise.analisado_em).toLocaleString("pt-BR")}
-                            </p>
-                          </div>
-                        </div>
-                        {analise.score_risco !== null && (
-                          <motion.div
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            transition={{ type: "spring", stiffness: 300 }}
-                          >
-                            <Badge 
-                              variant={
-                                analise.score_risco >= 7 ? "destructive" : 
-                                analise.score_risco >= 4 ? "outline" : 
-                                "default"
-                              }
-                              className="text-base px-4 py-1.5"
-                            >
-                              Score: {Number(analise.score_risco).toFixed(1)}/10
-                            </Badge>
-                          </motion.div>
-                        )}
-                      </div>
-                    </AnimatedCardHeader>
-                    <AnimatedCardContent className="space-y-6">
-                      {analise.riscos_identificados?.length > 0 && (
-                        <div className="space-y-3">
-                          <h4 className="text-sm font-semibold flex items-center gap-2">
-                            <AlertTriangle className="h-4 w-4 text-destructive" />
-                            Riscos Identificados
-                          </h4>
-                          <div className="space-y-2">
-                            {analise.riscos_identificados.map((risco: any, i: number) => (
-                              <motion.div
-                                key={i}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: i * 0.1 }}
-                                className="p-3 rounded-lg border border-destructive/20 bg-destructive/5"
-                              >
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="flex-1">
-                                    <p className="font-medium text-sm">{risco.tipo}</p>
-                                    <p className="text-sm text-muted-foreground mt-1">{risco.descricao}</p>
-                                  </div>
-                                  <Badge variant="destructive" className="shrink-0">
-                                    {risco.gravidade}
-                                  </Badge>
-                                </div>
-                              </motion.div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {analise.clausulas_importantes?.length > 0 && (
-                        <div className="space-y-3">
-                          <h4 className="text-sm font-semibold flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-primary" />
-                            Cláusulas Importantes
-                          </h4>
-                          <div className="space-y-2">
-                            {analise.clausulas_importantes.map((clausula: any, i: number) => (
-                              <motion.div
-                                key={i}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: i * 0.1 }}
-                                className="p-3 rounded-lg border bg-muted/30"
-                              >
-                                <p className="font-medium text-sm">{clausula.titulo}</p>
-                                <p className="text-sm text-muted-foreground mt-1">{clausula.descricao}</p>
-                                {clausula.atencao && (
-                                  <p className="text-sm text-warning mt-2 flex items-center gap-1">
-                                    <AlertTriangle className="h-3 w-3" />
-                                    {clausula.atencao}
-                                  </p>
-                                )}
-                              </motion.div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {analise.sugestoes_melhoria?.length > 0 && (
-                        <div className="space-y-3">
-                          <h4 className="text-sm font-semibold flex items-center gap-2">
-                            <CheckCircle2 className="h-4 w-4 text-success" />
-                            Sugestões de Melhoria
-                          </h4>
-                          <ul className="space-y-2">
-                            {analise.sugestoes_melhoria.map((sugestao: string, i: number) => (
-                              <motion.li
-                                key={i}
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ delay: i * 0.1 }}
-                                className="text-sm text-muted-foreground flex items-start gap-2"
-                              >
-                                <CheckCircle2 className="h-4 w-4 text-success mt-0.5 shrink-0" />
-                                <span>{sugestao}</span>
-                              </motion.li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </AnimatedCardContent>
-                  </AnimatedCard>
+                  <ContractAIAnalysis analise={analise} />
                 </motion.div>
               </StaggerItem>
             )}
@@ -831,76 +646,13 @@ const ContratoDetalhes = () => {
 
           {/* Approval Card */}
           <StaggerItem>
-            {canApprove && !userAlreadyApproved ? (
-              <AnimatedCard>
-                <AnimatedCardHeader>
-                  <h3 className="text-lg font-semibold">Nova Aprovação</h3>
-                </AnimatedCardHeader>
-                <AnimatedCardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-muted-foreground">Status</Label>
-                    <Select
-                      value={novaAprovacao.status}
-                      onValueChange={(value) =>
-                        setNovaAprovacao({ ...novaAprovacao, status: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="aprovado">Aprovado</SelectItem>
-                        <SelectItem value="rejeitado">Rejeitado</SelectItem>
-                        <SelectItem value="pendente">Pendente</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-muted-foreground">Comentário</Label>
-                    <Textarea
-                      value={novaAprovacao.comentario}
-                      onChange={(e) =>
-                        setNovaAprovacao({ ...novaAprovacao, comentario: e.target.value })
-                      }
-                      rows={3}
-                      placeholder="Adicione um comentário..."
-                      className="resize-none"
-                    />
-                  </div>
-
-                  <AnimatedButton onClick={handleAddAprovacao} className="w-full">
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Registrar Aprovação
-                  </AnimatedButton>
-                </AnimatedCardContent>
-              </AnimatedCard>
-            ) : canApprove && userAlreadyApproved ? (
-              <AnimatedCard className="border-primary/30 bg-primary/5">
-                <AnimatedCardHeader>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-5 w-5 text-primary" />
-                    <h3 className="text-lg font-semibold text-primary">Aprovação Registrada</h3>
-                  </div>
-                </AnimatedCardHeader>
-                <AnimatedCardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Você já registrou sua aprovação para este contrato. Cada usuário pode aprovar apenas uma vez.
-                  </p>
-                </AnimatedCardContent>
-              </AnimatedCard>
-            ) : (
-              <AnimatedCard className="border-muted">
-                <AnimatedCardHeader>
-                  <h3 className="text-lg font-semibold text-muted-foreground">Aprovação</h3>
-                </AnimatedCardHeader>
-                <AnimatedCardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Apenas usuários com perfil de <strong>Consultoria Jurídica</strong> ou <strong>Administrador</strong> podem aprovar contratos.
-                  </p>
-                </AnimatedCardContent>
-              </AnimatedCard>
-            )}
+            <ContractApprovalCard
+              canApprove={canApprove}
+              userAlreadyApproved={userAlreadyApproved}
+              novaAprovacao={novaAprovacao}
+              onNovaAprovacaoChange={setNovaAprovacao}
+              onAddAprovacao={handleAddAprovacao}
+            />
           </StaggerItem>
         </StaggerContainer>
       </div>
@@ -1053,30 +805,5 @@ const ContratoDetalhes = () => {
     </div>
   );
 };
-
-// Helper component for info items
-const InfoItem = ({
-  icon: Icon,
-  label,
-  value,
-  capitalize = false,
-  highlight = false,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  value: string;
-  capitalize?: boolean;
-  highlight?: boolean;
-}) => (
-  <div className="space-y-1.5">
-    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-      <Icon className="h-4 w-4" />
-      <span>{label}</span>
-    </div>
-    <p className={`font-medium ${capitalize ? "capitalize" : ""} ${highlight ? "text-primary text-lg" : ""}`}>
-      {value}
-    </p>
-  </div>
-);
 
 export default ContratoDetalhes;

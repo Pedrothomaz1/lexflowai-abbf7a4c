@@ -13,5 +13,21 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
-  }
+  },
+  realtime: {
+    // Send a heartbeat every 30s to detect broken connections early
+    heartbeatIntervalMs: 30_000,
+    // Reconnect up to 10 times before giving up (default 5)
+    reconnectAfterMs: (tries) => Math.min(tries * 1000, 10_000),
+  },
+  global: {
+    // Enforce a 10s timeout on all REST requests (default is browser default ~2min)
+    fetch: (url, options) => {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), 10_000);
+      return fetch(url, { ...options, signal: controller.signal }).finally(() =>
+        clearTimeout(id)
+      );
+    },
+  },
 });

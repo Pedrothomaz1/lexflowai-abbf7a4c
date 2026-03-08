@@ -77,3 +77,13 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+
+## Security Notes
+
+Este projeto segue boas práticas de segurança para proteger dados sensíveis.
+
+- **Segredos**: Nunca commite arquivos `.env` com valores reais. Use `.env.example` como referência.
+- **Chaves de API**: Apenas a `anon key` é permitida no frontend. Chaves privadas devem ficar no backend.
+- **RLS**: Todas as tabelas com dados sensíveis possuem Row Level Security habilitado.
+
+Para mais detalhes, consulte o arquivo [SECURITY.md](./SECURITY.md).

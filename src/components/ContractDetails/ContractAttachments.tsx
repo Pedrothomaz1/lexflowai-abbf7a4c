@@ -76,8 +76,8 @@ export function ContractAttachments({ contratoId }: ContractAttachmentsProps) {
       }
 
       const fileExt = file.name.split(".").pop();
-      // Use user.id as folder to comply with storage RLS policies
-      const fileName = `${user.id}/${Date.now()}-${file.name}`;
+      // Use organization.id as first folder for RLS isolation
+      const fileName = `${organization.id}/${user.id}/${Date.now()}-${file.name}`;
 
       const { error: uploadError } = await supabase.storage
         .from("contratos-documentos")

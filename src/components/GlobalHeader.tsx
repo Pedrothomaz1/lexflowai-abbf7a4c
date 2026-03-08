@@ -11,11 +11,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bell, Search, Moon, Sun, X, Calendar, Settings, LogOut, User, Building2 } from "lucide-react";
+import { Bell, Search, Moon, Sun, X, Calendar, Settings, LogOut, User, Building2, ShieldCheck, ShieldAlert } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useNotifications } from "@/contexts/NotificationContext";
+import { NotificationPanel } from "@/components/notifications/NotificationPanel";
 
 const routeTitles: Record<string, { title: string; description?: string }> = {
   "/dashboard": { title: "Dashboard", description: "Visão geral do sistema" },
@@ -36,15 +39,15 @@ export function GlobalHeader() {
   const location = useLocation();
   const navigate = useNavigate();
   const { organization } = useOrganization();
+  const { unreadCount } = useNotifications();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [pendingAlerts, setPendingAlerts] = useState(0);
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [userProfile, setUserProfile] = useState<{
     full_name: string;
     avatar_url: string | null;
   } | null>(null);
-
+  const [is2FAEnabled, setIs2FAEnabled] = useState<boolean | null>(null);
   const currentRoute = routeTitles[location.pathname] || { title: "LexFlow" };
 
   useEffect(() => {
@@ -54,7 +57,6 @@ export function GlobalHeader() {
   }, []);
 
   useEffect(() => {
-    // Fetch pending alerts count and user profile
     const fetchData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       
@@ -69,14 +71,18 @@ export function GlobalHeader() {
         if (profile) {
           setUserProfile(profile);
         }
+
+        // Fetch 2FA status
+        const { data: twoFA } = await supabase
+          .from("user_2fa_settings")
+          .select("is_enabled")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        
+        setIs2FAEnabled(twoFA?.is_enabled ?? false);
       }
       
-      // Fetch alerts count
-      const { count } = await supabase
-        .from("contract_alerts")
-        .select("*", { count: "exact", head: true })
-        .eq("enviado", false);
-      setPendingAlerts(count || 0);
+      // Alertas agora gerenciados pelo NotificationContext
     };
     fetchData();
   }, []);
@@ -193,6 +199,37 @@ export function GlobalHeader() {
         )}
       </div>
 
+      {/* 2FA Security Indicator */}
+      {is2FAEnabled !== null && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/settings/two-factor")}
+              className={cn(
+                "h-9 w-9",
+                is2FAEnabled
+                  ? "text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300"
+                  : "text-amber-500 dark:text-amber-400 hover:text-amber-600 dark:hover:text-amber-300"
+              )}
+            >
+              {is2FAEnabled ? (
+                <ShieldCheck className="h-4 w-4" />
+              ) : (
+                <ShieldAlert className="h-4 w-4" />
+              )}
+              <span className="sr-only">Status 2FA</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {is2FAEnabled
+              ? "2FA ativo — sua conta está protegida"
+              : "2FA inativo — clique para ativar e proteger sua conta"}
+          </TooltipContent>
+        </Tooltip>
+      )}
+
       {/* Calendar - Quick Access */}
       <Button
         variant="ghost"
@@ -228,48 +265,20 @@ export function GlobalHeader() {
             className="relative h-9 w-9 text-muted-foreground hover:text-foreground"
           >
             <Bell className="h-4 w-4" />
-            {pendingAlerts > 0 && (
+            {unreadCount > 0 && (
               <Badge
                 className={cn(
                   "absolute -right-0.5 -top-0.5 h-4 min-w-4 px-1 text-2xs",
                   "bg-destructive text-destructive-foreground border-0"
                 )}
               >
-                {pendingAlerts > 9 ? "9+" : pendingAlerts}
+                {unreadCount > 9 ? "9+" : unreadCount}
               </Badge>
             )}
             <span className="sr-only">Notificações</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-72">
-          <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-            <span className="text-sm font-medium">Notificações</span>
-            {pendingAlerts > 0 && (
-              <Badge variant="secondary" className="text-xs">
-                {pendingAlerts} pendente{pendingAlerts !== 1 ? "s" : ""}
-              </Badge>
-            )}
-          </div>
-          {pendingAlerts === 0 ? (
-            <div className="py-6 text-center text-sm text-muted-foreground">
-              Nenhuma notificação pendente
-            </div>
-          ) : (
-            <div className="py-2">
-              <DropdownMenuItem
-                onClick={() => navigate("/alertas")}
-                className="cursor-pointer"
-              >
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-sm font-medium">Ver todos os alertas</span>
-                  <span className="text-xs text-muted-foreground">
-                    {pendingAlerts} alerta{pendingAlerts !== 1 ? "s" : ""} aguardando ação
-                  </span>
-                </div>
-              </DropdownMenuItem>
-            </div>
-          )}
-        </DropdownMenuContent>
+        <NotificationPanel />
       </DropdownMenu>
 
       {/* User Avatar Menu */}

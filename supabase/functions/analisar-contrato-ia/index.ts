@@ -1,31 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// Allowed origins for CORS - add your production domain here
-const ALLOWED_ORIGINS = [
-  'http://localhost:8080',
-  'http://localhost:5173',
-  'http://localhost:3000',
-  Deno.env.get('ALLOWED_ORIGIN') || '',
-].filter(Boolean);
-
-// Get CORS headers based on request origin
-function getCorsHeaders(req: Request): Record<string, string> | null {
-  const origin = req.headers.get('Origin') || '';
-  const isAllowedOrigin = ALLOWED_ORIGINS.includes(origin);
-  if (!isAllowedOrigin && origin) {
-    // Reject requests from unknown origins (except empty origin for same-origin requests)
-    return null;
-  }
-  const allowedOrigin = isAllowedOrigin ? origin : (ALLOWED_ORIGINS[0] || 'http://localhost:8080');
-
-  return {
-    'Access-Control-Allow-Origin': allowedOrigin,
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Max-Age': '86400',
-  };
-}
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
 
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -41,15 +21,6 @@ function sanitizeContent(content: string): string {
 }
 
 serve(async (req) => {
-  const corsHeaders = getCorsHeaders(req);
-
-  // Reject requests from unauthorized origins
-  if (!corsHeaders) {
-    return new Response(
-      JSON.stringify({ error: 'Origin not allowed' }),
-      { status: 403, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
 
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -121,7 +92,7 @@ serve(async (req) => {
     // Verify contract exists and user has permission to analyze it
     const { data: contrato, error: contratoError } = await supabase
       .from('contratos')
-      .select('id, created_by')
+      .select('id, created_by, organization_id')
       .eq('id', contratoId)
       .single();
 
@@ -284,6 +255,7 @@ Avisos importantes:
       .from('contract_analysis')
       .insert({
         contrato_id: contratoId,
+        organization_id: contrato.organization_id,
         riscos_identificados: analise.riscos_identificados,
         clausulas_importantes: analise.clausulas_importantes,
         sugestoes_melhoria: analise.sugestoes_melhoria,
