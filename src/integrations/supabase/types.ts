@@ -1812,6 +1812,53 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          lida: boolean
+          mensagem: string | null
+          organization_id: string
+          referencia_id: string | null
+          referencia_tipo: string | null
+          tipo: string
+          titulo: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lida?: boolean
+          mensagem?: string | null
+          organization_id: string
+          referencia_id?: string | null
+          referencia_tipo?: string | null
+          tipo?: string
+          titulo: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lida?: boolean
+          mensagem?: string | null
+          organization_id?: string
+          referencia_id?: string | null
+          referencia_tipo?: string | null
+          tipo?: string
+          titulo?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_members: {
         Row: {
           id: string
