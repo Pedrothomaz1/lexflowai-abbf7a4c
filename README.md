@@ -60,6 +60,12 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## Security notes
+
+- Keep real secrets out of the repo. Use `.env` locally and deployment secrets in your hosting platform.
+- Only the Supabase anon key should be used in the frontend; never expose service-role keys in client code.
+- Review `SECURITY.md` for additional guidance.
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/9b5e925d-516b-4c9a-8bf5-96cde5168edd) and click on Share -> Publish.
