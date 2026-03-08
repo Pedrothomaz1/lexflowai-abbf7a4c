@@ -1,4 +1,4 @@
-import React, { Suspense } from "react";
+import React, { Suspense, Component } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -55,7 +55,50 @@ const AcceptInvite = React.lazy(() => import("./pages/AcceptInvite"));
 const TermosDeUso = React.lazy(() => import("./pages/TermosDeUso"));
 const CentralAjuda = React.lazy(() => import("./pages/CentralAjuda"));
 
-const queryClient = new QueryClient();
+// Catches chunk load failures (e.g. deploy after user session, offline)
+class AppErrorBoundary extends Component<
+  { children: React.ReactNode },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex min-h-screen items-center justify-center flex-col gap-4 text-center p-8">
+          <p className="text-lg font-semibold">Algo deu errado ao carregar a página.</p>
+          <p className="text-sm text-muted-foreground">
+            Verifique sua conexão e tente novamente.
+          </p>
+          <button
+            className="mt-2 px-4 py-2 rounded bg-primary text-primary-foreground text-sm"
+            onClick={() => window.location.reload()}
+          >
+            Recarregar
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Data considered fresh for 1 minute — avoids refetch on every navigation
+      staleTime: 60_000,
+      // Keep unused data in cache for 5 minutes
+      gcTime: 300_000,
+      // Only retry once on error (default 3 is too aggressive for user-facing errors)
+      retry: 1,
+      // Don't refetch when window regains focus (noisy in enterprise apps)
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 function App() {
   return (
@@ -68,6 +111,7 @@ function App() {
               <BrowserRouter>
                 <Toaster />
                 <Sonner />
+                <AppErrorBoundary>
                 <Suspense fallback={<PageSkeleton />}>
                   <Routes>
                     {/* Public routes */}
@@ -124,6 +168,7 @@ function App() {
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </Suspense>
+                </AppErrorBoundary>
                 <CookieBanner />
               </BrowserRouter>
             </ModuloProvider>
