@@ -1,59 +1,39 @@
 
 
-## Plano: Multiplos Anexos na Criacao de Contrato + Correcao do Botao de Analise IA
+## Plano: Executar migrations de notificacoes e agendar cron job
+
+A tabela `notifications`, as funcoes helper e os triggers ainda nao existem no banco. Preciso executar as duas migrations e agendar o cron.
 
 ---
 
-### Problema 1: Upload de apenas 1 anexo na criacao de contrato
+### Passo 1: Criar tabela `notifications` + RLS + Realtime
 
-Atualmente, o formulario de "Novo Contrato" em `Contratos.tsx` aceita apenas um arquivo (`uploadedFile` e um unico `<Input type="file">`). Os arquivos sao enviados ao Storage mas nao sao inseridos na tabela `contract_attachments` apos a criacao do contrato.
+Executar o conteudo de `supabase/migrations/20260308120000_notifications_realtime.sql`:
+- Cria tabela `notifications` com colunas: id, organization_id, user_id, tipo, titulo, mensagem, referencia_id, referencia_tipo, lida, created_at
+- Habilita RLS com policies de SELECT e UPDATE para o proprio usuario
+- Adiciona a tabela ao Realtime
+- Cria indice de performance
 
-**Solucao:**
-- Trocar `uploadedFile: File | null` para `uploadedFiles: File[]` (array)
-- Adicionar `multiple` ao input de arquivo para permitir selecao de varios arquivos
-- Exibir lista de arquivos selecionados com opcao de remover individualmente
-- Apos criar o contrato com sucesso, fazer upload de todos os arquivos para o Storage e inserir cada um na tabela `contract_attachments` com o `contrato_id` recem-criado
+### Passo 2: Criar triggers de notificacao
 
-### Problema 2: Botao mostra "Reanalisar" em contrato novo
+Executar o conteudo de `supabase/migrations/20260308130000_notification_triggers.sql`:
+- Funcao `notify_org_members()` — helper que insere notificacao para todos os membros ativos
+- Trigger `trg_contrato_status_change` — dispara ao alterar status de contrato
+- Trigger `trg_nova_obrigacao` — dispara ao inserir nova obrigacao
+- Trigger `trg_novo_contrato` — dispara ao inserir novo contrato
+- Funcao `job_notificar_vencimentos()` atualizada — alerta em 30, 15 e 7 dias
 
-Em `ContratoDetalhes.tsx`, linha 805, o botao usa `analise ? "Reanalisar" : "Analisar Contrato"`. Quando o usuario navega de um contrato (que ja tem analise) para outro contrato novo, o estado `analise` pode ficar com o valor antigo ate o `fetchAnalise` completar, causando o texto errado momentaneamente.
+### Passo 3: Agendar cron job diario
 
-**Solucao:**
-- Resetar `analise` para `null` e `showAnalise` para `false` no inicio do `useEffect` que depende de `[id]`, antes de chamar os fetchers
-- Isso garante que ao abrir qualquer contrato, o botao comeca sempre como "Analisar Contrato" ate que a busca confirme que existe analise previa
+Agendar via `cron.schedule` para rodar todo dia as 8h UTC.
 
----
+### Passo 4: Inserir notificacao de teste
 
-### Detalhes Tecnicos
-
-**Arquivo: `src/pages/Contratos.tsx`**
-
-1. Mudar estado:
-   - `uploadedFile: File | null` -> `uploadedFiles: File[]` (inicializa `[]`)
-2. Atualizar `handleFileUpload`:
-   - Aceitar `e.target.files` como lista e concatenar ao array `uploadedFiles`
-   - Nao fazer upload imediato ao Storage (apenas coleta os arquivos)
-3. Atualizar o input:
-   - Adicionar atributo `multiple`
-   - Renderizar lista de arquivos com botao X para remover
-4. Atualizar `handleSubmit`:
-   - Apos o `insert` do contrato, obter o `id` retornado
-   - Para cada arquivo em `uploadedFiles`, fazer upload ao Storage e inserir na tabela `contract_attachments`
-   - Ajustar o insert para usar `.select()` e obter o ID do contrato criado
-5. Limpar `uploadedFiles` ao fechar dialog
-
-**Arquivo: `src/pages/ContratoDetalhes.tsx`**
-
-1. No `useEffect` que depende de `[id]` (linha 117-130):
-   - Adicionar `setAnalise(null)` e `setShowAnalise(false)` antes de chamar `fetchContrato()` / `fetchAnalise()`
-   - Isso forca o reset do estado ao trocar de contrato
+Inserir um registro de teste para validar que o sino de notificacoes funciona em tempo real.
 
 ---
 
-### Arquivos Modificados
+### Arquivos — nenhuma alteracao de codigo
 
-| Arquivo | Mudanca |
-|---|---|
-| `src/pages/Contratos.tsx` | Upload multiplo de anexos na criacao, salvar em `contract_attachments` |
-| `src/pages/ContratoDetalhes.tsx` | Reset de `analise` ao trocar de contrato |
+Todas as mudancas sao exclusivamente no banco de dados, executadas via migration tool.
 
