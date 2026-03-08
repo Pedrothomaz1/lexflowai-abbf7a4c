@@ -9,43 +9,23 @@ import {
   Plus,
   AlertTriangle,
   CheckCircle2,
-  Clock,
   Building2,
   Calendar,
   RefreshCcw,
-  Filter,
   ShoppingCart,
   XCircle,
-  Search,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { PageHeader } from "@/components/ui/page-header";
-import { StatCard } from "@/components/ui/stat-card";
 import { DataTable, DataTableColumn } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { PageSkeleton, StatCardSkeleton } from "@/components/ui/skeleton-loaders";
-import { Progress } from "@/components/ui/progress";
+import { PageSkeleton } from "@/components/ui/skeleton-loaders";
 import { FinanceNotificationModal } from "@/components/FinanceNotificationModal";
+import { ServicosStats } from "@/components/Servicos/ServicosStats";
+import { ServicosFilters } from "@/components/Servicos/ServicosFilters";
+import { ServicoFormDialog } from "@/components/Servicos/ServicoFormDialog";
 
 interface Servico {
   id: string;
@@ -139,16 +119,13 @@ export default function Servicos() {
   const [unidadeFilter, setUnidadeFilter] = useState("all");
   const [categoriaFilter, setCategoriaFilter] = useState("all");
 
-  // Dialog states
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingServico, setEditingServico] = useState<Servico | null>(null);
-  
-  // Finance notification modal state
+
   const [showFinanceModal, setShowFinanceModal] = useState(false);
   const [selectedServiceForNotification, setSelectedServiceForNotification] = useState<string | null>(null);
 
-  // Form state
   const [formData, setFormData] = useState({
     unidade_id: "",
     especificacao_id: "",
@@ -169,7 +146,6 @@ export default function Servicos() {
     fetchData();
   }, []);
 
-  // Open dialog if ?novo=true in URL
   useEffect(() => {
     if (searchParams.get("novo") === "true") {
       resetForm();
@@ -181,15 +157,10 @@ export default function Servicos() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      // Fetch all data in parallel
       const [servicosRes, unidadesRes, especificacoesRes, fornecedoresRes, profilesRes] = await Promise.all([
         supabase
           .from("servicos_periodicos")
-          .select(`
-            *,
-            unidades(nome, cidade),
-            especificacoes_servico(nome, categoria)
-          `)
+          .select(`*, unidades(nome, cidade), especificacoes_servico(nome, categoria)`)
           .order("data_validade", { ascending: true }),
         supabase.from("unidades").select("id, nome").eq("is_active", true),
         supabase.from("especificacoes_servico").select("*").eq("is_active", true),
@@ -201,37 +172,28 @@ export default function Servicos() {
       if (unidadesRes.error) throw unidadesRes.error;
       if (especificacoesRes.error) throw especificacoesRes.error;
 
-      // Get responsavel names
       const profilesMap: Record<string, string> = {};
       if (profilesRes.data) {
-        profilesRes.data.forEach(p => {
-          profilesMap[p.id] = p.full_name;
-        });
+        profilesRes.data.forEach((p) => { profilesMap[p.id] = p.full_name; });
       }
 
-      // Get latest solicitacoes for each servico
-      const servicoIds = servicosRes.data?.map(s => s.id) || [];
+      const servicoIds = servicosRes.data?.map((s) => s.id) || [];
       const { data: solicitacoesData } = await supabase
         .from("solicitacoes_compras")
         .select("servico_id, status_envio, codigo_solicitacao, created_at")
         .in("servico_id", servicoIds)
         .order("created_at", { ascending: false });
 
-      // Group by servico_id and get latest
       const solicitacoesMap: Record<string, { status_envio: string; codigo_solicitacao: string | null }> = {};
       if (solicitacoesData) {
-        solicitacoesData.forEach(s => {
+        solicitacoesData.forEach((s) => {
           if (!solicitacoesMap[s.servico_id]) {
-            solicitacoesMap[s.servico_id] = {
-              status_envio: s.status_envio,
-              codigo_solicitacao: s.codigo_solicitacao,
-            };
+            solicitacoesMap[s.servico_id] = { status_envio: s.status_envio, codigo_solicitacao: s.codigo_solicitacao };
           }
         });
       }
 
-      // Enrich servicos
-      const enrichedServicos: Servico[] = (servicosRes.data || []).map(s => ({
+      const enrichedServicos: Servico[] = (servicosRes.data || []).map((s) => ({
         ...s,
         responsavel_nome: s.responsavel_id ? profilesMap[s.responsavel_id] : null,
         ultima_solicitacao: solicitacoesMap[s.id] || null,
@@ -243,20 +205,16 @@ export default function Servicos() {
       setFornecedores(fornecedoresRes.data || []);
       setProfiles(profilesRes.data || []);
     } catch (error: any) {
-      toast({
-        title: "Erro ao carregar dados",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Erro ao carregar dados", description: error.message, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleEspecificacaoChange = (especificacaoId: string) => {
-    const spec = especificacoes.find(e => e.id === especificacaoId);
+    const spec = especificacoes.find((e) => e.id === especificacaoId);
     if (spec) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         especificacao_id: especificacaoId,
         validade_meses: spec.validade_padrao_meses,
@@ -278,11 +236,7 @@ export default function Servicos() {
 
   const handleSubmit = async () => {
     if (!formData.unidade_id || !formData.especificacao_id) {
-      toast({
-        title: "Campos obrigatórios",
-        description: "Selecione a unidade e o tipo de serviço.",
-        variant: "destructive",
-      });
+      toast({ title: "Campos obrigatórios", description: "Selecione a unidade e o tipo de serviço.", variant: "destructive" });
       return;
     }
 
@@ -311,10 +265,7 @@ export default function Servicos() {
 
     try {
       if (editingServico) {
-        const { error } = await supabase
-          .from("servicos_periodicos")
-          .update(payload)
-          .eq("id", editingServico.id);
+        const { error } = await supabase.from("servicos_periodicos").update(payload).eq("id", editingServico.id);
         if (error) throw error;
         toast({ title: "Serviço atualizado com sucesso!" });
       } else {
@@ -326,11 +277,7 @@ export default function Servicos() {
       resetForm();
       fetchData();
     } catch (error: any) {
-      toast({
-        title: "Erro ao salvar",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
@@ -382,7 +329,6 @@ export default function Servicos() {
     novoAlerta.setDate(novoAlerta.getDate() - servico.dias_antecedencia_alerta);
 
     try {
-      // Update servico
       const { error: updateError } = await supabase
         .from("servicos_periodicos")
         .update({
@@ -395,7 +341,6 @@ export default function Servicos() {
 
       if (updateError) throw updateError;
 
-      // Insert history
       await supabase.from("servico_historico").insert({
         servico_id: servico.id,
         tipo_acao: "renovacao",
@@ -405,49 +350,38 @@ export default function Servicos() {
 
       toast({ title: "Serviço renovado com sucesso!" });
       fetchData();
-      
-      // Abrir modal de notificação ao financeiro
+
       setSelectedServiceForNotification(servico.id);
       setShowFinanceModal(true);
     } catch (error: any) {
-      toast({
-        title: "Erro ao renovar",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Erro ao renovar", description: error.message, variant: "destructive" });
     }
   };
 
-  // Filter logic
-  const filteredServicos = servicos.filter(s => {
-    const matchesSearch = 
+  const filteredServicos = servicos.filter((s) => {
+    const matchesSearch =
       !searchQuery ||
       s.especificacoes_servico?.nome.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.unidades?.nome.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.itens_detalhados?.toLowerCase().includes(searchQuery.toLowerCase());
-    
     const matchesStatus = statusFilter === "all" || s.status === statusFilter;
     const matchesUnidade = unidadeFilter === "all" || s.unidade_id === unidadeFilter;
     const matchesCategoria = categoriaFilter === "all" || s.especificacoes_servico?.categoria === categoriaFilter;
-
     return matchesSearch && matchesStatus && matchesUnidade && matchesCategoria;
   });
 
-  // Stats
   const stats = {
     total: servicos.length,
-    dentroPrazo: servicos.filter(s => s.status === "dentro_prazo").length,
-    emAlerta: servicos.filter(s => s.status === "alerta").length,
-    vencidos: servicos.filter(s => s.status === "vencido").length,
+    dentroPrazo: servicos.filter((s) => s.status === "dentro_prazo").length,
+    emAlerta: servicos.filter((s) => s.status === "alerta").length,
+    vencidos: servicos.filter((s) => s.status === "vencido").length,
   };
 
   const proximoVencimento = servicos
-    .filter(s => s.status !== "vencido")
+    .filter((s) => s.status !== "vencido")
     .sort((a, b) => new Date(a.data_validade).getTime() - new Date(b.data_validade).getTime())[0];
 
-  const completionRate = stats.total > 0 
-    ? Math.round((stats.dentroPrazo / stats.total) * 100) 
-    : 0;
+  const completionRate = stats.total > 0 ? Math.round((stats.dentroPrazo / stats.total) * 100) : 0;
 
   const columns: DataTableColumn<Servico>[] = [
     {
@@ -471,9 +405,7 @@ export default function Servicos() {
         <div>
           <div className="font-medium">{value?.nome || "-"}</div>
           {row.itens_detalhados && (
-            <div className="text-xs text-muted-foreground truncate max-w-[200px]">
-              {row.itens_detalhados}
-            </div>
+            <div className="text-xs text-muted-foreground truncate max-w-[200px]">{row.itens_detalhados}</div>
           )}
         </div>
       ),
@@ -481,7 +413,7 @@ export default function Servicos() {
     {
       key: "categoria",
       header: "Categoria",
-      render: (_, row: Servico) => {
+      render: (_: any, row: Servico) => {
         const cat = row.especificacoes_servico?.categoria || "outros";
         const config = categoriaConfig[cat] || categoriaConfig.outros;
         return <Badge className={config.color}>{config.label}</Badge>;
@@ -500,7 +432,7 @@ export default function Servicos() {
     {
       key: "data_validade",
       header: "Vencimento",
-      render: (value: string, row: Servico) => {
+      render: (value: string) => {
         const dias = differenceInDays(new Date(value), new Date());
         return (
           <div>
@@ -519,9 +451,7 @@ export default function Servicos() {
       key: "ultima_solicitacao",
       header: "Compras",
       render: (value: Servico["ultima_solicitacao"]) => {
-        if (!value) {
-          return <span className="text-muted-foreground text-sm">-</span>;
-        }
+        if (!value) return <span className="text-muted-foreground text-sm">-</span>;
         const statusColors: Record<string, string> = {
           pendente: "bg-yellow-100 text-yellow-800",
           enviado: "bg-blue-100 text-blue-800",
@@ -531,13 +461,9 @@ export default function Servicos() {
         return (
           <div className="flex items-center gap-2">
             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-            <Badge className={statusColors[value.status_envio] || "bg-gray-100"}>
-              {value.status_envio}
-            </Badge>
+            <Badge className={statusColors[value.status_envio] || "bg-gray-100"}>{value.status_envio}</Badge>
             {value.codigo_solicitacao && (
-              <span className="text-xs text-muted-foreground">
-                #{value.codigo_solicitacao}
-              </span>
+              <span className="text-xs text-muted-foreground">#{value.codigo_solicitacao}</span>
             )}
           </div>
         );
@@ -546,7 +472,7 @@ export default function Servicos() {
     {
       key: "actions",
       header: "",
-      render: (_, row: Servico) => (
+      render: (_: any, row: Servico) => (
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
@@ -554,31 +480,24 @@ export default function Servicos() {
             onClick={async () => {
               setSendingCompras(row.id);
               try {
-                const { data, error } = await supabase.functions.invoke('enviar-solicitacao-compras', {
+                const { data, error } = await supabase.functions.invoke("enviar-solicitacao-compras", {
                   body: { servicoId: row.id },
                 });
                 if (error) throw error;
                 if (data?.success) {
                   toast({
                     title: "Solicitação enviada!",
-                    description: data.status === "pendente" 
-                      ? "Registrada como pendente (integração não configurada)." 
-                      : `Código: ${data.codigo_solicitacao || data.solicitacao_id}`,
+                    description:
+                      data.status === "pendente"
+                        ? "Registrada como pendente (integração não configurada)."
+                        : `Código: ${data.codigo_solicitacao || data.solicitacao_id}`,
                   });
                 } else {
-                  toast({
-                    title: "Erro ao enviar",
-                    description: data?.message || "Erro desconhecido",
-                    variant: "destructive",
-                  });
+                  toast({ title: "Erro ao enviar", description: data?.message || "Erro desconhecido", variant: "destructive" });
                 }
                 fetchData();
               } catch (err: any) {
-                toast({
-                  title: "Erro ao enviar para compras",
-                  description: err.message,
-                  variant: "destructive",
-                });
+                toast({ title: "Erro ao enviar para compras", description: err.message, variant: "destructive" });
               } finally {
                 setSendingCompras(null);
               }
@@ -597,11 +516,7 @@ export default function Servicos() {
             <RefreshCcw className="h-4 w-4 mr-1" />
             Renovar
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleEdit(row)}
-          >
+          <Button variant="ghost" size="sm" onClick={() => handleEdit(row)}>
             Editar
           </Button>
         </div>
@@ -626,311 +541,50 @@ export default function Servicos() {
         }
       />
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <StatCard
-          title="Total de Serviços"
-          value={stats.total}
-          icon={Wrench}
-        />
-        <StatCard
-          title="No Prazo"
-          value={stats.dentroPrazo}
-          icon={CheckCircle2}
-          className="border-l-4 border-l-success"
-        />
-        <StatCard
-          title="Em Alerta"
-          value={stats.emAlerta}
-          icon={AlertTriangle}
-          className="border-l-4 border-l-warning"
-        />
-        <StatCard
-          title="Vencidos"
-          value={stats.vencidos}
-          icon={XCircle}
-          className="border-l-4 border-l-destructive"
-        />
-        <div className="rounded-lg border bg-card p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-muted-foreground">Taxa de Conformidade</span>
-            <span className="text-lg font-bold">{completionRate}%</span>
-          </div>
-          <Progress value={completionRate} className="h-2" />
-          {proximoVencimento && (
-            <p className="text-xs text-muted-foreground mt-2">
-              Próximo: {proximoVencimento.especificacoes_servico?.nome} em{" "}
-              {format(new Date(proximoVencimento.data_validade), "dd/MM", { locale: ptBR })}
-            </p>
-          )}
-        </div>
-      </div>
+      <ServicosStats
+        stats={stats}
+        completionRate={completionRate}
+        proximoVencimento={proximoVencimento}
+      />
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-4 items-center">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar serviços..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[160px]">
-            <Filter className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os status</SelectItem>
-            <SelectItem value="dentro_prazo">No prazo</SelectItem>
-            <SelectItem value="alerta">Em alerta</SelectItem>
-            <SelectItem value="vencido">Vencido</SelectItem>
-            <SelectItem value="em_execucao">Em execução</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={unidadeFilter} onValueChange={setUnidadeFilter}>
-          <SelectTrigger className="w-[180px]">
-            <Building2 className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="Unidade" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas unidades</SelectItem>
-            {unidades.map(u => (
-              <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={categoriaFilter} onValueChange={setCategoriaFilter}>
-          <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="Categoria" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas categorias</SelectItem>
-            {Object.entries(categoriaConfig).map(([key, val]) => (
-              <SelectItem key={key} value={key}>{val.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <ServicosFilters
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        statusFilter={statusFilter}
+        onStatusChange={setStatusFilter}
+        unidadeFilter={unidadeFilter}
+        onUnidadeChange={setUnidadeFilter}
+        categoriaFilter={categoriaFilter}
+        onCategoriaChange={setCategoriaFilter}
+        unidades={unidades}
+      />
 
-      {/* Table */}
       <DataTable
         columns={columns}
         data={filteredServicos}
-        emptyState={{ 
-          title: "Comece a gerenciar seus serviços", 
+        emptyState={{
+          title: "Comece a gerenciar seus serviços",
           description: "Cadastre serviços periódicos para receber alertas automáticos de vencimento e manter a conformidade operacional.",
-          action: {
-            label: "Cadastrar Primeiro Serviço",
-            onClick: () => setIsDialogOpen(true),
-          },
+          action: { label: "Cadastrar Primeiro Serviço", onClick: () => setIsDialogOpen(true) },
         }}
       />
 
-      {/* Dialog for Create/Edit */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingServico ? "Editar Serviço" : "Novo Serviço Periódico"}
-            </DialogTitle>
-            <DialogDescription>
-              Cadastre um serviço com prazo de validade para acompanhamento automático.
-            </DialogDescription>
-          </DialogHeader>
+      <ServicoFormDialog
+        isOpen={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        editingServico={editingServico}
+        formData={formData}
+        onFormDataChange={setFormData}
+        especificacoes={especificacoes}
+        unidades={unidades}
+        profiles={profiles}
+        fornecedores={fornecedores}
+        isSubmitting={isSubmitting}
+        onSubmit={handleSubmit}
+        onReset={resetForm}
+        onEspecificacaoChange={handleEspecificacaoChange}
+      />
 
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="unidade">Unidade *</Label>
-                <Select
-                  value={formData.unidade_id}
-                  onValueChange={(v) => setFormData(prev => ({ ...prev, unidade_id: v }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a unidade" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {unidades.map(u => (
-                      <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="especificacao">Tipo de Serviço *</Label>
-                <Select
-                  value={formData.especificacao_id}
-                  onValueChange={handleEspecificacaoChange}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o serviço" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {especificacoes.map(e => (
-                      <SelectItem key={e.id} value={e.id}>
-                        {e.nome} ({categoriaConfig[e.categoria]?.label})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="itens">Itens/Detalhamento</Label>
-              <Input
-                id="itens"
-                value={formData.itens_detalhados}
-                onChange={(e) => setFormData(prev => ({ ...prev, itens_detalhados: e.target.value }))}
-                placeholder="Ex: 2 Extintores CO2 6kg + 1 PQS 4kg"
-              />
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="quantidade">Quantidade</Label>
-                <Input
-                  id="quantidade"
-                  type="number"
-                  min={1}
-                  value={formData.quantidade}
-                  onChange={(e) => setFormData(prev => ({ ...prev, quantidade: parseInt(e.target.value) || 1 }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="localizacao">Localização</Label>
-                <Input
-                  id="localizacao"
-                  value={formData.localizacao_fisica}
-                  onChange={(e) => setFormData(prev => ({ ...prev, localizacao_fisica: e.target.value }))}
-                  placeholder="Ex: 2º andar, corredor"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="prioridade">Prioridade</Label>
-                <Select
-                  value={formData.prioridade}
-                  onValueChange={(v) => setFormData(prev => ({ ...prev, prioridade: v }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="baixa">Baixa</SelectItem>
-                    <SelectItem value="normal">Normal</SelectItem>
-                    <SelectItem value="alta">Alta</SelectItem>
-                    <SelectItem value="critica">Crítica</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="data_ultima_troca">Data Última Execução *</Label>
-                <Input
-                  id="data_ultima_troca"
-                  type="date"
-                  value={formData.data_ultima_troca}
-                  onChange={(e) => setFormData(prev => ({ ...prev, data_ultima_troca: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="validade_meses">Validade (meses)</Label>
-                <Input
-                  id="validade_meses"
-                  type="number"
-                  min={1}
-                  value={formData.validade_meses}
-                  onChange={(e) => setFormData(prev => ({ ...prev, validade_meses: parseInt(e.target.value) || 12 }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="dias_alerta">Dias Antecedência Alerta</Label>
-                <Input
-                  id="dias_alerta"
-                  type="number"
-                  min={1}
-                  value={formData.dias_antecedencia_alerta}
-                  onChange={(e) => setFormData(prev => ({ ...prev, dias_antecedencia_alerta: parseInt(e.target.value) || 30 }))}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="responsavel">Responsável</Label>
-                <Select
-                  value={formData.responsavel_id}
-                  onValueChange={(v) => setFormData(prev => ({ ...prev, responsavel_id: v }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o responsável" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {profiles.map(p => (
-                      <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="fornecedor">Fornecedor Preferencial</Label>
-                <Select
-                  value={formData.fornecedor_preferencial_id}
-                  onValueChange={(v) => setFormData(prev => ({ ...prev, fornecedor_preferencial_id: v }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o fornecedor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {fornecedores.map(f => (
-                      <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="valor">Valor Estimado (R$)</Label>
-              <Input
-                id="valor"
-                type="number"
-                step="0.01"
-                value={formData.valor_estimado}
-                onChange={(e) => setFormData(prev => ({ ...prev, valor_estimado: e.target.value }))}
-                placeholder="0,00"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="observacoes">Observações</Label>
-              <Textarea
-                id="observacoes"
-                value={formData.observacoes}
-                onChange={(e) => setFormData(prev => ({ ...prev, observacoes: e.target.value }))}
-                placeholder="Observações adicionais..."
-                rows={3}
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsDialogOpen(false); resetForm(); }}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSubmit} disabled={isSubmitting}>
-              {isSubmitting ? "Salvando..." : editingServico ? "Salvar Alterações" : "Cadastrar Serviço"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Finance Notification Modal */}
       <FinanceNotificationModal
         isOpen={showFinanceModal}
         onClose={() => {
