@@ -2978,6 +2978,7 @@ export type Database = {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
       }
+      job_notificar_vencimentos: { Args: never; Returns: undefined }
       mask_pii: {
         Args: { field_type?: string; value: string }
         Returns: string
