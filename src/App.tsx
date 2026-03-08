@@ -8,6 +8,7 @@ import { DashboardLayout } from "./components/DashboardLayout";
 import { ModuloProvider } from "./contexts/ModuloContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { OrganizationProvider } from "./contexts/OrganizationContext";
+import { NotificationProvider } from "./contexts/NotificationContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { CookieBanner } from "./components/CookieBanner";
 import { PageSkeleton } from "./components/ui/skeleton-loaders";
@@ -62,6 +63,7 @@ function App() {
       <TooltipProvider>
         <AuthProvider>
           <OrganizationProvider>
+            <NotificationProvider>
             <ModuloProvider>
               <BrowserRouter>
                 <Toaster />
@@ -125,6 +127,7 @@ function App() {
                 <CookieBanner />
               </BrowserRouter>
             </ModuloProvider>
+            </NotificationProvider>
           </OrganizationProvider>
         </AuthProvider>
       </TooltipProvider>
