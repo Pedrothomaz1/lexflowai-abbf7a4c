@@ -3030,6 +3030,17 @@ export type Database = {
         Args: { field_type?: string; value: string }
         Returns: string
       }
+      notify_org_members: {
+        Args: {
+          _mensagem?: string
+          _org_id: string
+          _referencia_id?: string
+          _referencia_tipo?: string
+          _tipo: string
+          _titulo: string
+        }
+        Returns: undefined
+      }
       record_login_attempt: {
         Args: {
           _email: string
