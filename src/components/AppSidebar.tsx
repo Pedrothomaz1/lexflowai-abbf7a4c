@@ -329,7 +329,7 @@ export function AppSidebar() {
                     "hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
                     moduloAtivo === "contratos"
                       ? "bg-[hsl(var(--lexflow-verde-principal))] text-white focus-visible:ring-[hsl(var(--lexflow-verde-principal))]"
-                      : "bg-[hsl(var(--lexflow-mostarda))] text-white focus-visible:ring-[hsl(var(--lexflow-mostarda))]"
+                      : "bg-[hsl(var(--lexflow-verde-principal))] text-white focus-visible:ring-[hsl(var(--lexflow-verde-principal))]"
                   )}
                 >
                   <span className="text-[10px] opacity-80 uppercase tracking-wide">Módulo:</span>
