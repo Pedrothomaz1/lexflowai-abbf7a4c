@@ -307,9 +307,7 @@ export function AppSidebar() {
     return location.pathname === baseUrl;
   };
 
-  const accentColor = moduloAtivo === "contratos" 
-    ? "hsl(var(--lexflow-verde-principal))" 
-    : "hsl(var(--lexflow-mostarda))";
+  const accentColor = "hsl(var(--lexflow-verde-principal))";
 
   return (
     <Sidebar className={cn("border-r-0", collapsed ? "w-16" : "w-64")}>
@@ -331,7 +329,7 @@ export function AppSidebar() {
                     "hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
                     moduloAtivo === "contratos"
                       ? "bg-[hsl(var(--lexflow-verde-principal))] text-white focus-visible:ring-[hsl(var(--lexflow-verde-principal))]"
-                      : "bg-[hsl(var(--lexflow-mostarda))] text-white focus-visible:ring-[hsl(var(--lexflow-mostarda))]"
+                      : "bg-[hsl(var(--lexflow-verde-principal))] text-white focus-visible:ring-[hsl(var(--lexflow-verde-principal))]"
                   )}
                 >
                   <span className="text-[10px] opacity-80 uppercase tracking-wide">Módulo:</span>
@@ -343,7 +341,7 @@ export function AppSidebar() {
                     "text-xs w-fit",
                     moduloAtivo === "contratos" 
                       ? "bg-[hsl(var(--lexflow-verde-principal)/0.2)] text-[hsl(var(--lexflow-verde-principal))]" 
-                      : "bg-[hsl(var(--lexflow-mostarda)/0.2)] text-[hsl(var(--lexflow-mostarda))]"
+                      : "bg-[hsl(var(--lexflow-verde-principal)/0.2)] text-[hsl(var(--lexflow-verde-principal))]"
                   )}
                 >
                   {moduloAtivo === "contratos" ? "Jurídico" : "Operacional"}
@@ -381,7 +379,7 @@ export function AppSidebar() {
                     <SectionIcon className={cn(
                       "h-4 w-4 shrink-0 transition-colors",
                       hasActiveItem && moduloAtivo === "contratos" && "text-[hsl(var(--lexflow-verde-principal))]",
-                      hasActiveItem && moduloAtivo === "servicos" && "text-[hsl(var(--lexflow-mostarda))]"
+                      hasActiveItem && moduloAtivo === "servicos" && "text-[hsl(var(--lexflow-verde-principal))]"
                     )} />
                     {!collapsed && (
                       <>
@@ -532,13 +530,9 @@ interface MenuItemProps {
 function MenuItem({ item, collapsed, isActive, moduloAtivo }: MenuItemProps) {
   const Icon = item.icon;
 
-  const activeStyles = moduloAtivo === "contratos"
-    ? "bg-[hsl(var(--lexflow-verde-principal)/0.15)] text-[hsl(var(--lexflow-verde-principal))]"
-    : "bg-[hsl(var(--lexflow-mostarda)/0.15)] text-[hsl(var(--lexflow-mostarda))]";
+  const activeStyles = "bg-[hsl(var(--lexflow-verde-principal)/0.15)] text-[hsl(var(--lexflow-verde-principal))]";
 
-  const iconActiveColor = moduloAtivo === "contratos"
-    ? "text-[hsl(var(--lexflow-verde-principal))]"
-    : "text-[hsl(var(--lexflow-mostarda))]";
+  const iconActiveColor = "text-[hsl(var(--lexflow-verde-principal))]";
 
   return (
     <SidebarMenuItem>
@@ -575,13 +569,9 @@ function CollapsibleMenuItem({ item, collapsed, isActive, moduloAtivo }: Collaps
   const Icon = item.icon;
   const navigate = useNavigate();
 
-  const activeStyles = moduloAtivo === "contratos"
-    ? "bg-[hsl(var(--lexflow-verde-principal)/0.15)] text-[hsl(var(--lexflow-verde-principal))]"
-    : "bg-[hsl(var(--lexflow-mostarda)/0.15)] text-[hsl(var(--lexflow-mostarda))]";
+  const activeStyles = "bg-[hsl(var(--lexflow-verde-principal)/0.15)] text-[hsl(var(--lexflow-verde-principal))]";
 
-  const iconActiveColor = moduloAtivo === "contratos"
-    ? "text-[hsl(var(--lexflow-verde-principal))]"
-    : "text-[hsl(var(--lexflow-mostarda))]";
+  const iconActiveColor = "text-[hsl(var(--lexflow-verde-principal))]";
 
   if (!item.subItems || item.subItems.length === 0) {
     return <MenuItem item={item} collapsed={collapsed} isActive={isActive} moduloAtivo={moduloAtivo} />;
