@@ -121,12 +121,23 @@ export function ContractQuickActions({
   const handleArchive = async () => {
     setIsArchiving(true);
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("contratos")
         .update({ status: 'encerrado' })
-        .eq("id", contratoId);
+        .eq("id", contratoId)
+        .select()
+        .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes("row-level security") || error.code === "42501") {
+          throw new Error("Sem permissão para arquivar contrato. Verifique seu acesso.");
+        }
+        throw error;
+      }
+
+      if (!data) {
+        throw new Error("Sem permissão para arquivar este contrato. Somente administradores ou consultoria jurídica podem arquivar.");
+      }
 
       toast({
         title: "Contrato arquivado",
