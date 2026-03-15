@@ -341,7 +341,7 @@ export function AppSidebar() {
                     "text-xs w-fit",
                     moduloAtivo === "contratos" 
                       ? "bg-[hsl(var(--lexflow-verde-principal)/0.2)] text-[hsl(var(--lexflow-verde-principal))]" 
-                      : "bg-[hsl(var(--lexflow-mostarda)/0.2)] text-[hsl(var(--lexflow-mostarda))]"
+                      : "bg-[hsl(var(--lexflow-verde-principal)/0.2)] text-[hsl(var(--lexflow-verde-principal))]"
                   )}
                 >
                   {moduloAtivo === "contratos" ? "Jurídico" : "Operacional"}
