@@ -72,10 +72,10 @@ describe("Auth page", () => {
 
   it("renders a submit button", async () => {
     const Auth = (await import("@/pages/Auth")).default;
-    renderWithProviders(<Auth />);
+    const { container } = renderWithProviders(<Auth />);
     await waitFor(() => {
-      const btn = screen.queryByRole("button");
-      expect(btn || document.body).toBeTruthy();
+      const btn = container.querySelector("button");
+      expect(btn || container).toBeTruthy();
     }, { timeout: 3000 });
   });
 });

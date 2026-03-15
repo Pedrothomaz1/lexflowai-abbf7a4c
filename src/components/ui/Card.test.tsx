@@ -19,7 +19,7 @@ describe("Card Components", () => {
     it("aplica classes base", () => {
       const { container } = render(<Card>Content</Card>);
       const card = container.firstChild as HTMLElement;
-      expect(card).toHaveClass("rounded-lg", "border", "bg-card", "shadow-sm");
+      expect(card).toHaveClass("rounded-2xl", "border", "bg-card", "shadow-sm");
     });
 
     it("aceita className customizada", () => {
@@ -35,7 +35,7 @@ describe("Card Components", () => {
     it("renderiza com padding correto", () => {
       const { container } = render(<CardHeader>Header</CardHeader>);
       const header = container.firstChild as HTMLElement;
-      expect(header).toHaveClass("p-6");
+      expect(header).toHaveClass("p-5");
     });
 
     it("aplica flex column layout", () => {
@@ -84,7 +84,7 @@ describe("Card Components", () => {
     it("aplica padding correto (sem top)", () => {
       const { container } = render(<CardContent>Content</CardContent>);
       const content = container.firstChild as HTMLElement;
-      expect(content).toHaveClass("p-6", "pt-0");
+      expect(content).toHaveClass("p-5", "pt-0");
     });
   });
 

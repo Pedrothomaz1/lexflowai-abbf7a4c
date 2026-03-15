@@ -9,6 +9,19 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      reportOnFailure: true,
+      exclude: [
+        'node_modules/',
+        'dist/',
+        '.next/',
+        'coverage/',
+        '**/*.d.ts',
+        '**/index.ts'
+      ]
+    }
   },
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },

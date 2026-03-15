@@ -1,0 +1,22 @@
+version: "2"
+type: backend
+tech_stack:
+  - React
+  - Vite
+  - Supabase
+  - TailwindCSS
+  - shadcn/ui
+features:
+  - name: App UI
+    description: React UI application
+    files:
+      - src/App.tsx
+    endpoints:
+      - method: GET
+        path: /
+        description: Load the frontend app
+        auth_required: false
+        response_schema:
+          "200": HTML String
+    depends_on: []
+known_limitations: []

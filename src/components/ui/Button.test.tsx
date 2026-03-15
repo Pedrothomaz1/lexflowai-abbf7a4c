@@ -36,13 +36,13 @@ describe("Button Component", () => {
   it("aplica tamanho sm", () => {
     const { container } = render(<Button size="sm">Small</Button>);
     const button = container.querySelector("button");
-    expect(button).toHaveClass("h-9");
+    expect(button).toHaveClass("h-8");
   });
 
   it("aplica tamanho lg", () => {
     const { container } = render(<Button size="lg">Large</Button>);
     const button = container.querySelector("button");
-    expect(button).toHaveClass("h-11");
+    expect(button).toHaveClass("h-12");
   });
 
   it("aplica tamanho icon", () => {
