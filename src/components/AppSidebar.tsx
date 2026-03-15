@@ -379,7 +379,7 @@ export function AppSidebar() {
                     <SectionIcon className={cn(
                       "h-4 w-4 shrink-0 transition-colors",
                       hasActiveItem && moduloAtivo === "contratos" && "text-[hsl(var(--lexflow-verde-principal))]",
-                      hasActiveItem && moduloAtivo === "servicos" && "text-[hsl(var(--lexflow-mostarda))]"
+                      hasActiveItem && moduloAtivo === "servicos" && "text-[hsl(var(--lexflow-verde-principal))]"
                     )} />
                     {!collapsed && (
                       <>
