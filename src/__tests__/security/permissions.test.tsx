@@ -88,9 +88,9 @@ describe('Permissions Tests', () => {
       mockSupabaseClient.rpc.mockImplementation((fnName: string, params: any) => {
         if (fnName === 'has_permission') {
           // User does NOT have system:admin permission
-          return Promise.resolve({ 
-            data: params._permission !== 'system:admin' ? false : true, 
-            error: null 
+          return Promise.resolve({
+            data: false,
+            error: null
           });
         }
         return Promise.resolve({ data: null, error: null });

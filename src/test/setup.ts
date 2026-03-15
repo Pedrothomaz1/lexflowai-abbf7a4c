@@ -45,6 +45,20 @@ if (!crypto.randomUUID) {
   };
 }
 
+// Mock localStorage
+const localStorageMock = {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+  length: 0,
+  key: vi.fn(),
+};
+
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+});
+
 // Mock Supabase client
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
@@ -94,4 +108,13 @@ vi.mock("react-router-dom", async () => {
     ...actual,
     useNavigate: () => vi.fn(),
   };
+});
+
+// Cleanup after each test
+import { afterEach } from 'vitest';
+import { cleanup } from '@testing-library/react';
+
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
 });

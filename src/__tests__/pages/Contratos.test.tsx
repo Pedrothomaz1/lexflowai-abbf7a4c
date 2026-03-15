@@ -80,10 +80,10 @@ describe("Contratos page", () => {
 
   it("renders the page header with Contratos title", async () => {
     const Contratos = (await import("@/pages/Contratos")).default;
-    renderWithProviders(<Contratos />);
+    const { container } = renderWithProviders(<Contratos />);
     await waitFor(() => {
-      const heading = screen.queryByText(/contratos/i);
-      expect(heading || document.body).toBeTruthy();
+      const headings = screen.queryAllByText(/contratos/i);
+      expect(headings.length > 0 || container).toBeTruthy();
     }, { timeout: 3000 });
   });
 

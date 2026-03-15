@@ -17,6 +17,7 @@ interface ComplianceLog {
   tipo_evento: string;
   entidade: string;
   entidade_id: string | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   dados_afetados: Record<string, any> | null;
   justificativa: string | null;
   base_legal: string | null;
