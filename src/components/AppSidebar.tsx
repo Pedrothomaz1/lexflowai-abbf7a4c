@@ -530,13 +530,9 @@ interface MenuItemProps {
 function MenuItem({ item, collapsed, isActive, moduloAtivo }: MenuItemProps) {
   const Icon = item.icon;
 
-  const activeStyles = moduloAtivo === "contratos"
-    ? "bg-[hsl(var(--lexflow-verde-principal)/0.15)] text-[hsl(var(--lexflow-verde-principal))]"
-    : "bg-[hsl(var(--lexflow-mostarda)/0.15)] text-[hsl(var(--lexflow-mostarda))]";
+  const activeStyles = "bg-[hsl(var(--lexflow-verde-principal)/0.15)] text-[hsl(var(--lexflow-verde-principal))]";
 
-  const iconActiveColor = moduloAtivo === "contratos"
-    ? "text-[hsl(var(--lexflow-verde-principal))]"
-    : "text-[hsl(var(--lexflow-mostarda))]";
+  const iconActiveColor = "text-[hsl(var(--lexflow-verde-principal))]";
 
   return (
     <SidebarMenuItem>
