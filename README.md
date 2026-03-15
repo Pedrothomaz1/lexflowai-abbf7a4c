@@ -1,5 +1,11 @@
 # Welcome to your Lovable project
 
+## Project Status
+
+![Tests](https://img.shields.io/github/actions/workflow/status/YOUR_ORG/lexflowai/test.yml?label=Tests)
+![Coverage](https://img.shields.io/badge/coverage-70%25-brightgreen?style=flat)
+![License](https://img.shields.io/badge/license-MIT-blue?style=flat)
+
 ## Project info
 
 **URL**: https://lovable.dev/projects/9b5e925d-516b-4c9a-8bf5-96cde5168edd
@@ -50,6 +56,62 @@ npm run dev
 - Click on "New codespace" to launch a new Codespace environment.
 - Edit files directly within the Codespace and commit and push your changes once you're done.
 
+## Testing
+
+### Unit Tests
+
+Run unit tests with Vitest:
+
+```sh
+npm run test
+```
+
+Run with coverage report (HTML, JSON, LCOV):
+
+```sh
+npm run test:coverage
+```
+
+View coverage report:
+
+```sh
+# Open HTML report in browser
+open coverage/index.html
+```
+
+**Coverage Thresholds**: Minimum 70% required (lines, functions, branches, statements). CI pipeline enforces these thresholds and blocks merges below the threshold.
+
+### E2E Tests
+
+Run end-to-end tests with Playwright:
+
+```sh
+# Run all E2E tests
+npx playwright test
+
+# Run tests in UI mode (interactive)
+npx playwright test --ui
+
+# Run specific test file
+npx playwright test e2e/tests/example.spec.ts
+
+# Run tests for specific browser
+npx playwright test --project=chromium
+npx playwright test --project=firefox
+npx playwright test --project=webkit
+
+# Run with debugging
+npx playwright test --debug
+```
+
+View test report:
+
+```sh
+npx playwright show-report
+```
+
+**Browser Support**: Chrome, Firefox, Safari, Mobile Chrome, Mobile Safari
+
 ## What technologies are used for this project?
 
 This project is built with:
@@ -59,6 +121,8 @@ This project is built with:
 - React
 - shadcn-ui
 - Tailwind CSS
+- Playwright (E2E Testing)
+- Vitest (Unit Testing)
 
 ## How can I deploy this project?
 
