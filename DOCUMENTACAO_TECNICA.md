@@ -144,11 +144,7 @@ VITE_SUPABASE_URL=https://xxx.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=eyJxxx
 ```
 
-> **⚠️ Nota de Segurança:** O arquivo `.env` deve ser mantido apenas localmente e 
-> NUNCA commitado no repositório. Use `.env.example` como referência para as 
-> variáveis necessárias. As chaves `VITE_*` são públicas e seguras para o frontend.
-> Chaves privadas como `SERVICE_ROLE_KEY` devem ser configuradas apenas no backend
-> via Lovable Cloud > Secrets.
+> **Nota de seguranca:** mantenha `.env` apenas localmente e use `.env.example` como referencia sem valores reais.
 
 ### Supabase (Dashboard > Settings > Edge Functions)
 ```bash
