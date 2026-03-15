@@ -307,9 +307,7 @@ export function AppSidebar() {
     return location.pathname === baseUrl;
   };
 
-  const accentColor = moduloAtivo === "contratos" 
-    ? "hsl(var(--lexflow-verde-principal))" 
-    : "hsl(var(--lexflow-mostarda))";
+  const accentColor = "hsl(var(--lexflow-verde-principal))";
 
   return (
     <Sidebar className={cn("border-r-0", collapsed ? "w-16" : "w-64")}>
