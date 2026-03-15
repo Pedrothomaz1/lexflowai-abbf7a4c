@@ -569,13 +569,9 @@ function CollapsibleMenuItem({ item, collapsed, isActive, moduloAtivo }: Collaps
   const Icon = item.icon;
   const navigate = useNavigate();
 
-  const activeStyles = moduloAtivo === "contratos"
-    ? "bg-[hsl(var(--lexflow-verde-principal)/0.15)] text-[hsl(var(--lexflow-verde-principal))]"
-    : "bg-[hsl(var(--lexflow-mostarda)/0.15)] text-[hsl(var(--lexflow-mostarda))]";
+  const activeStyles = "bg-[hsl(var(--lexflow-verde-principal)/0.15)] text-[hsl(var(--lexflow-verde-principal))]";
 
-  const iconActiveColor = moduloAtivo === "contratos"
-    ? "text-[hsl(var(--lexflow-verde-principal))]"
-    : "text-[hsl(var(--lexflow-mostarda))]";
+  const iconActiveColor = "text-[hsl(var(--lexflow-verde-principal))]";
 
   if (!item.subItems || item.subItems.length === 0) {
     return <MenuItem item={item} collapsed={collapsed} isActive={isActive} moduloAtivo={moduloAtivo} />;
