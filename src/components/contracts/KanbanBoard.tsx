@@ -273,6 +273,7 @@ const ContratoCard = ({
   fornecedorNome: string;
   isDragging?: boolean;
   onView?: (id: string) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   dragHandleProps?: any;
 }) => {
   return (

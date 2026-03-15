@@ -91,6 +91,7 @@ describe('ContratoDetalhes Component — AC 1-8: Form Validation, Workflow, Appr
     });
 
     it('Required fields validation — todos inválidos', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = validateRequiredFields(contractTestData.invalidContract as any);
       expect(result.valid).toBe(false);
       expect(Object.keys(result.errors).length).toBeGreaterThan(0);

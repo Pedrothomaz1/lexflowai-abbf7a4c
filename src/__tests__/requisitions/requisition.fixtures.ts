@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { vi } from 'vitest';
 
 /**
@@ -18,6 +19,7 @@ import { vi } from 'vitest';
 /**
  * Valida campos obrigatórios de requisição
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const validateRequisitionFields = (
   fields: Record<string, any>
 ): { valid: boolean; errors: Record<string, string> } => {
@@ -45,6 +47,7 @@ export const validateRequisitionFields = (
 /**
  * Cria nova requisição com dados validados
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const createRequisition = (
   data: Record<string, any>
 ): { success: boolean; requisition?: any; error?: string } => {

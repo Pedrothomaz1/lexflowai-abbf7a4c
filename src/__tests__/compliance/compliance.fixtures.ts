@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { vi } from 'vitest';
 
 /**
@@ -18,6 +19,7 @@ import { vi } from 'vitest';
 /**
  * Exporta todos dados do usuário em formato portável (JSON)
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const exportUserData = (
   userId: string,
   userData: Record<string, any>

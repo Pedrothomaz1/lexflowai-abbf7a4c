@@ -467,6 +467,7 @@ describe('Requisições Component — AC 1-8: Creation, Routing, Approval, Notif
       ];
 
       transitions.forEach((t) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const notif = sendNotification('req-001', t.event as any, 'Manager');
         expect(notif.sent).toBe(true);
       });

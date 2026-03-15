@@ -365,6 +365,7 @@ describe('ComplianceLGPD — AC 1-8: Data Export, Retention, Deletion, Consent, 
     });
 
     it('Invalid user data é tratado em export', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = exportUserData('user-001', null as any);
 
       expect(result.success).toBe(false);

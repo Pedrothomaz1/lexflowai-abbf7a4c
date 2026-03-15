@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { vi } from 'vitest';
 
 /**
@@ -41,6 +42,7 @@ export const validateMonetaryValue = (valor: number): boolean => {
 /**
  * Valida campos obrigatórios
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const validateRequiredFields = (
   fields: Record<string, any>
 ): { valid: boolean; errors: Record<string, string> } => {
