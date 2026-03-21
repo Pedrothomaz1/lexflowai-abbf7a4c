@@ -234,8 +234,8 @@ export default function WorkflowAprovacoes() {
 
   const getTipoLabel = (tipo: string) => {
     const labels: Record<string, string> = {
-      prestacao_servico: "Prestação de Serviço",
-      compra_venda: "Compra e Venda",
+      prestacao_servicos: "Prestação de Serviços",
+      fornecimento: "Fornecimento",
       locacao: "Locação",
       parceria: "Parceria",
       confidencialidade: "Confidencialidade",
