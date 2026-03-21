@@ -40,21 +40,14 @@ const AcceptInvite = () => {
       const { data: { session } } = await supabase.auth.getSession();
       setIsAuthenticated(!!session);
 
-      // Fetch invite details
+      // Fetch invite details - query without join to avoid relationship issues
       const { data: invite, error } = await supabase
         .from("organization_invites")
-        .select(`
-          id,
-          email,
-          role_in_org,
-          expires_at,
-          accepted_at,
-          organizations!inner (
-            nome
-          )
-        `)
+        .select("id, email, role_in_org, expires_at, accepted_at, organization_id")
         .eq("token", token)
         .maybeSingle();
+
+      console.log("Invite lookup result:", { invite, error });
 
       if (error || !invite) {
         setStatus("invalid");
