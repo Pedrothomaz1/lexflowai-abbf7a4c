@@ -75,14 +75,10 @@ const SeletorModulo = () => {
                     className={cn(
                       "w-full text-left rounded-2xl p-8 transition-all duration-300",
                       "bg-[hsl(var(--lexflow-off-white))] hover:bg-white",
-                      isContratos 
-                        ? "border-2 border-transparent hover:border-[hsl(var(--lexflow-verde-principal))]"
-                        : "border-2 border-transparent hover:border-[hsl(var(--lexflow-mostarda))]",
+                      "border-2 border-transparent hover:border-[hsl(var(--lexflow-verde-principal))]",
                       "hover:shadow-[0_20px_40px_-10px_rgba(56,78,70,0.25)]",
                       "hover:scale-[1.02] focus-visible:scale-[1.02]",
-                      isContratos
-                        ? "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--lexflow-verde-principal))] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--lexflow-verde-escuro))]"
-                        : "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--lexflow-mostarda))] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--lexflow-verde-escuro))]",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--lexflow-verde-principal))] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--lexflow-verde-escuro))]",
                       "group cursor-pointer"
                     )}
                   >
