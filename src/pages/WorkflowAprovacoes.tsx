@@ -46,7 +46,7 @@ export default function WorkflowAprovacoes() {
   
   const [formData, setFormData] = useState({
     nome: "",
-    tipo_contrato: "prestacao_servico",
+    tipo_contrato: "prestacao_servicos",
     aprovacao_paralela: false,
     is_active: true,
   });
