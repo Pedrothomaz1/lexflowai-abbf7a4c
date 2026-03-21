@@ -164,7 +164,7 @@ export default function WorkflowAprovacoes() {
   const resetForm = () => {
     setFormData({
       nome: "",
-      tipo_contrato: "prestacao_servico",
+      tipo_contrato: "prestacao_servicos",
       aprovacao_paralela: false,
       is_active: true,
     });
