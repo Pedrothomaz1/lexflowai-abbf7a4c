@@ -18,7 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { supabase } from "@/integrations/supabase/client";
-import { Scale } from "lucide-react";
+
 
 const requisicaoSchema = z.object({
   solicitante_nome: z.string().min(3, "Nome deve ter no mínimo 3 caracteres").max(100),
