@@ -205,7 +205,7 @@ const Auth = () => {
           {/* Logo */}
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center border border-white/20">
-              <img src={logoVeridiana} alt="Veridiana" className="h-6 w-6 object-contain" />
+              <Scale className="h-6 w-6 text-white" />
             </div>
             <span className="text-xl font-semibold">LexFlow</span>
           </div>
