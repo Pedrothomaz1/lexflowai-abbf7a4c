@@ -114,15 +114,8 @@ const SeletorModulo = () => {
                         <p className="text-sm leading-relaxed text-[hsl(var(--lexflow-verde-principal))]">
                           {module.description}
                         </p>
-                          {module.description}
-                        </p>
                       </div>
-                      <div className={cn(
-                        "flex items-center gap-2 font-medium text-sm group-hover:gap-3 transition-all",
-                        isContratos 
-                          ? "text-[hsl(var(--lexflow-verde-principal))]"
-                          : "text-[hsl(var(--lexflow-mostarda))]"
-                      )}>
+                      <div className="flex items-center gap-2 font-medium text-sm group-hover:gap-3 transition-all text-[hsl(var(--lexflow-verde-principal))]">
                         <span>{module.ctaText}</span>
                         <ArrowRight className="h-4 w-4" />
                       </div>
