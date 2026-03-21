@@ -145,9 +145,8 @@ serve(async (req) => {
 
     // Send email
     const { error: emailError } = await resend.emails.send({
-      from: "LexFlow <alertas@porveri.com.br>",
+      from: "LexFlow <onboarding@resend.dev>",
       to: [email],
-      replyTo: "suporte@porveri.com.br",
       subject: `Convite para ${org.nome} - LexFlow`,
       html: `
 <!DOCTYPE html>
@@ -237,7 +236,7 @@ Se você não esperava este convite, pode ignorar este e-mail.
 
     if (emailError) {
       console.error("Email error:", emailError);
-      throw new Error("Failed to send invite email");
+      throw new Error(emailError.message || "Failed to send invite email");
     }
 
     console.log("Invite email sent successfully to:", email);
