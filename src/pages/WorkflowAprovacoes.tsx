@@ -299,8 +299,8 @@ export default function WorkflowAprovacoes() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="prestacao_servico">Prestação de Serviço</SelectItem>
-                      <SelectItem value="compra_venda">Compra e Venda</SelectItem>
+                      <SelectItem value="prestacao_servicos">Prestação de Serviços</SelectItem>
+                      <SelectItem value="fornecimento">Fornecimento</SelectItem>
                       <SelectItem value="locacao">Locação</SelectItem>
                       <SelectItem value="parceria">Parceria</SelectItem>
                       <SelectItem value="confidencialidade">Confidencialidade</SelectItem>
