@@ -51,8 +51,8 @@ describe("validateCPF", () => {
   });
 
   it("valida outros CPFs válidos conhecidos", () => {
-    expect(validateCPF("347.066.120-98")).toBe(true);
-    expect(validateCPF("012.345.678-90")).toBe(true);
+    expect(validateCPF("539.532.944-74")).toBe(true);
+    expect(validateCPF("014.954.976-82")).toBe(true);
   });
 });
 
