@@ -1522,6 +1522,7 @@ export type Database = {
           id: string
           incident_type: string
           is_active: boolean | null
+          organization_id: string
           responsible_roles: string[]
           severity: string
           steps: Json
@@ -1535,6 +1536,7 @@ export type Database = {
           id?: string
           incident_type: string
           is_active?: boolean | null
+          organization_id: string
           responsible_roles: string[]
           severity: string
           steps?: Json
@@ -1548,6 +1550,7 @@ export type Database = {
           id?: string
           incident_type?: string
           is_active?: boolean | null
+          organization_id?: string
           responsible_roles?: string[]
           severity?: string
           steps?: Json
@@ -1555,7 +1558,15 @@ export type Database = {
           title?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "incident_playbooks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       integracao_config: {
         Row: {
@@ -1652,6 +1663,7 @@ export type Database = {
           grace_period_days: number | null
           id: string
           is_required: boolean | null
+          organization_id: string
           role: Database["public"]["Enums"]["app_role"]
           updated_at: string | null
         }
@@ -1660,6 +1672,7 @@ export type Database = {
           grace_period_days?: number | null
           id?: string
           is_required?: boolean | null
+          organization_id: string
           role: Database["public"]["Enums"]["app_role"]
           updated_at?: string | null
         }
@@ -1668,10 +1681,19 @@ export type Database = {
           grace_period_days?: number | null
           id?: string
           is_required?: boolean | null
+          organization_id?: string
           role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "mfa_requirements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       negotiation_metrics: {
         Row: {
