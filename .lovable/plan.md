@@ -1,33 +1,75 @@
 
 
-## Plan: Add inline supplier creation within contract form
+# Security RLS Fixes - Migration Plan
 
-### Problem
-When creating a contract, if the needed supplier doesn't exist, the user must abandon the form (losing all data), go create the supplier separately, then start over.
+## Summary
+7 security vulnerabilities identified. After investigation, here is the adjusted plan accounting for actual database state.
 
-### Solution
-Add a "+ Novo Fornecedor" button next to the supplier select in `ContratoFormDialog`. Clicking it opens an inline sub-dialog with a simplified supplier form (name, document type, CNPJ/CPF, email). On success, the new supplier is added to the list and auto-selected.
+## Current State Findings
+- **incident_playbooks**: Has NO `organization_id` column — must add it before applying org-scoped policies
+- **mfa_requirements**: Has NO `organization_id` column — must add it before applying org-scoped policies
+- **on_auth_user_created trigger**: Already exists — FIX 5 is NOT needed
+- **organization_invites**: The old "Anyone can view invites" anon policy STILL exists, plus there are duplicate authenticated policies
+- All other tables confirmed to have the expected structure
 
-### Changes
+## Migration Plan (single migration file)
 
-**1. `src/components/contracts/ContratoFormDialog.tsx`**
-- Add state for `showFornecedorForm` (boolean) and `creatingFornecedor` (boolean)
-- Add a simplified inline fornecedor creation form (collapsible section or nested dialog) with fields: Nome, Tipo Pessoa (PF/PJ), CNPJ/CPF, Email
-- On submit: insert into `fornecedores` table via Supabase, then call a new `onFornecedorCreated` callback
-- Auto-select the newly created supplier in the form
-- Add a `+ Novo Fornecedor` button next to the supplier Select
+### FIX 1 — organization_invites (anon exposure)
+- Drop "Anyone can view invites" (anon SELECT with `true`)
+- Drop duplicate "Authenticated users can view invites" 
+- Drop duplicate "Authenticated users can view invites by token"
+- Create `anon_view_invite_by_token` for anon using header-based token lookup
+- Keep the "Org admins can manage invites" policy unchanged
+- Create a single authenticated policy scoped to org membership OR token match
 
-**2. Update props interface**
-- Add `onFornecedorCreated: (fornecedor: Fornecedor) => void` prop to `ContratoFormDialogProps`
+### FIX 2 — incident_playbooks (missing org_id)
+- Add `organization_id UUID` column (nullable initially, with FK to organizations)
+- Backfill existing rows with the default org `00000000-0000-0000-0000-000000000001`
+- Set column to NOT NULL after backfill
+- Drop both existing policies
+- Recreate with `organization_id = current_user_org()` filter
 
-**3. `src/pages/Contratos.tsx`**
-- Add `handleFornecedorCreated` function that appends the new supplier to `fornecedores` state
-- Pass it as `onFornecedorCreated` prop to `ContratoFormDialog`
+### FIX 3 — solicitacoes_compras INSERT (no role check)
+- Drop existing INSERT policy
+- Recreate with `has_any_role` check for `analista_juridico` and `administrador`
 
-### Technical Details
-- The inline form inserts into `fornecedores` with `organization_id` from `useOrganization()`
-- Uses existing RLS policies (org members can insert)
-- Validates CNPJ/CPF using existing `validateCPF`/`validateCNPJ` utils
-- After insert, auto-sets `formData.fornecedor_id` to the new supplier's ID
-- The sub-form appears as a collapsible card within the dialog, keeping the contract form data intact
+### FIX 4 — contract_requests INSERT (no role check)
+- Drop existing INSERT policy
+- Recreate with role restriction (analista_juridico, consultoria_juridica, administrador) plus service_role bypass
+
+### FIX 5 — profiles INSERT trigger
+- **SKIP** — trigger `on_auth_user_created` already exists on `auth.users`
+
+### FIX 6 — mfa_requirements SELECT (no org filter)
+- Add `organization_id UUID` column (nullable initially, with FK to organizations)
+- Backfill existing rows with default org
+- Set column to NOT NULL after backfill
+- Drop existing SELECT policy
+- Recreate with `organization_id = current_user_org()` filter
+- Update the admin ALL policy to also include org filter
+
+### FIX 7 — permissions + role_permissions (open reconnaissance)
+- Drop both SELECT policies
+- Recreate restricted to `administrador` role only
+
+## Technical Details
+
+```text
+Migration file: supabase/migrations/<timestamp>_security_rls_fixes.sql
+
+Tables affected:
+  - organization_invites  (policy changes only)
+  - incident_playbooks    (add column + policy changes)
+  - solicitacoes_compras  (policy change only)
+  - contract_requests     (policy change only)
+  - mfa_requirements      (add column + policy changes)
+  - permissions           (policy change only)
+  - role_permissions      (policy change only)
+
+No application code changes needed.
+```
+
+## Risk Notes
+- Adding `organization_id` to `incident_playbooks` and `mfa_requirements` requires backfilling existing data. Using the legacy default org UUID for consistency with the project's established migration pattern.
+- FIX 7 restricts permissions/role_permissions to admins only. The `usePermissions` hook will need admin role to function — this is the intended security posture per the audit.
 
