@@ -44,8 +44,8 @@ interface Member {
   is_active: boolean;
   joined_at: string;
   profile: {
-    full_name: string;
-    email: string;
+    full_name: string | null;
+    email: string | null;
   } | null;
 }
 
