@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Scale, ArrowRight, Shield, BarChart3, Bell, Lock, Eye, EyeOff, Wrench, FileText } from "lucide-react";
-import logoVeridiana from "@/assets/logo-veridiana.png";
+
 import { cn } from "@/lib/utils";
 
 const TERMS_VERSION = "1.0";
