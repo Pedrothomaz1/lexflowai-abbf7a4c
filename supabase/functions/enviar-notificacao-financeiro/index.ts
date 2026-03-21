@@ -239,7 +239,7 @@ const handler = async (req: Request): Promise<Response> => {
       subject: emailSubject,
       html: emailHtml,
       text: emailText,
-      replyTo: "suporte@veridianaquirino.com.br",
+      replyTo: "suporte@lexflowai.com.br",
       headers: { "X-Organization-Id": organizationId, "X-Idempotency-Key": idempotencyKey },
     });
 
