@@ -2,6 +2,7 @@ import { render, RenderOptions } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ReactElement, ReactNode } from 'react';
 import { BrowserRouter } from 'react-router-dom';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { vi, beforeEach, afterEach, expect } from 'vitest';
 
 // =====================
@@ -13,7 +14,11 @@ interface WrapperProps {
 }
 
 function AllProviders({ children }: WrapperProps) {
-  return <BrowserRouter>{children}</BrowserRouter>;
+  return (
+    <BrowserRouter>
+      <TooltipProvider>{children}</TooltipProvider>
+    </BrowserRouter>
+  );
 }
 
 export function renderWithProviders(

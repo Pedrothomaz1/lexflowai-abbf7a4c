@@ -89,7 +89,7 @@ describe('Permissions Tests', () => {
         if (fnName === 'has_permission') {
           // User does NOT have system:admin permission
           return Promise.resolve({ 
-            data: params._permission !== 'system:admin' ? false : true, 
+            data: params._permission === 'system:admin' ? false : true, 
             error: null 
           });
         }
