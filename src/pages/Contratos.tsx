@@ -458,6 +458,9 @@ const Contratos = () => {
               fornecedores={fornecedores}
               onSubmit={handleSubmit}
               submitting={submitting}
+              onFornecedorCreated={(newFornecedor) => {
+                setFornecedores(prev => [...prev, newFornecedor].sort((a, b) => a.nome.localeCompare(b.nome)));
+              }}
             />
           </div>
         }

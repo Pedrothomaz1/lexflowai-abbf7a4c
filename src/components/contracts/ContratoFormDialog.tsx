@@ -168,23 +168,49 @@ export function ContratoFormDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="fornecedor">Fornecedor *</Label>
-            <Select
-              value={formData.fornecedor_id}
-              onValueChange={(value) => onFormDataChange({ ...formData, fornecedor_id: value })}
-              required
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione um fornecedor" />
-              </SelectTrigger>
-              <SelectContent>
-                {fornecedores.map((fornecedor) => (
-                  <SelectItem key={fornecedor.id} value={fornecedor.id}>
-                    {fornecedor.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="fornecedor">Fornecedor *</Label>
+              {!showNewFornecedor && (
+                <Button
+                  type="button"
+                  variant="link"
+                  size="sm"
+                  className="h-auto p-0 text-xs"
+                  onClick={() => setShowNewFornecedor(true)}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Novo Fornecedor
+                </Button>
+              )}
+            </div>
+
+            {showNewFornecedor ? (
+              <InlineFornecedorForm
+                onCreated={(newFornecedor) => {
+                  onFornecedorCreated?.(newFornecedor);
+                  onFormDataChange({ ...formData, fornecedor_id: newFornecedor.id });
+                  setShowNewFornecedor(false);
+                }}
+                onCancel={() => setShowNewFornecedor(false)}
+              />
+            ) : (
+              <Select
+                value={formData.fornecedor_id}
+                onValueChange={(value) => onFormDataChange({ ...formData, fornecedor_id: value })}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um fornecedor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {fornecedores.map((fornecedor) => (
+                    <SelectItem key={fornecedor.id} value={fornecedor.id}>
+                      {fornecedor.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
