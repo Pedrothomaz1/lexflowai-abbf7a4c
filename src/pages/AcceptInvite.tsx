@@ -3,8 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, CheckCircle, XCircle, LogIn } from "lucide-react";
-import logoVeridiana from "@/assets/logo-veridiana.png";
+import { Loader2, CheckCircle, XCircle, LogIn, Scale } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type InviteStatus = "loading" | "valid" | "invalid" | "expired" | "accepted" | "error";
