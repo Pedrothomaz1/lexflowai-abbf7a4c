@@ -2,8 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mail, LogOut, RefreshCw, Building2, Loader2 } from "lucide-react";
-import logoVeridiana from "@/assets/logo-veridiana.png";
+import { Mail, LogOut, RefreshCw, Building2, Loader2, Scale } from "lucide-react";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -85,7 +84,7 @@ const WaitingForInvite = () => {
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
             <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-primary/10">
-              <img src={logoVeridiana} alt="LexFlow" className="h-10 w-10 object-contain" />
+              <Scale className="h-8 w-8 text-primary" />
             </div>
           </div>
           <CardTitle className="text-2xl">Aguardando Convite</CardTitle>
