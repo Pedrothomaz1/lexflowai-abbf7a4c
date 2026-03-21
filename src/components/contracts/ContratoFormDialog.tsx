@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, FileText, X, Loader2 } from "lucide-react";
+import { InlineFornecedorForm } from "./InlineFornecedorForm";
 
 type Fornecedor = {
   id: string;
@@ -50,6 +52,7 @@ interface ContratoFormDialogProps {
   fornecedores: Fornecedor[];
   onSubmit: (e: React.FormEvent) => void;
   submitting: boolean;
+  onFornecedorCreated?: (fornecedor: Fornecedor) => void;
 }
 
 export function ContratoFormDialog({
@@ -63,7 +66,9 @@ export function ContratoFormDialog({
   fornecedores,
   onSubmit,
   submitting,
+  onFornecedorCreated,
 }: ContratoFormDialogProps) {
+  const [showNewFornecedor, setShowNewFornecedor] = useState(false);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
