@@ -83,18 +83,8 @@ const SeletorModulo = () => {
                     )}
                   >
                     <div className="space-y-5">
-                      <div className={cn(
-                        "h-14 w-14 rounded-xl flex items-center justify-center transition-colors",
-                        isContratos 
-                          ? "bg-[hsl(var(--lexflow-verde-principal)/0.15)] group-hover:bg-[hsl(var(--lexflow-verde-principal)/0.2)]"
-                          : "bg-[hsl(var(--lexflow-mostarda)/0.15)] group-hover:bg-[hsl(var(--lexflow-mostarda)/0.2)]"
-                      )}>
-                        <Icon className={cn(
-                          "h-7 w-7",
-                          isContratos 
-                            ? "text-[hsl(var(--lexflow-verde-principal))]"
-                            : "text-[hsl(var(--lexflow-mostarda))]"
-                        )} />
+                      <div className="h-14 w-14 rounded-xl flex items-center justify-center transition-colors bg-[hsl(var(--lexflow-verde-principal)/0.15)] group-hover:bg-[hsl(var(--lexflow-verde-principal)/0.2)]">
+                        <Icon className="h-7 w-7 text-[hsl(var(--lexflow-verde-principal))]" />
                       </div>
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
