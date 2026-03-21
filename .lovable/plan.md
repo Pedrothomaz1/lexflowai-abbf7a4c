@@ -1,28 +1,33 @@
 
 
-## Fix: Invite Edge Function CORS Blocking Production Requests
+## Plan: Add inline supplier creation within contract form
 
 ### Problem
-The `enviar-convite-organizacao` edge function has a hardcoded `ALLOWED_ORIGINS` list that only includes `localhost` URLs. Requests from the published app (`lexflowai.lovable.app`) and the preview (`id-preview--...lovable.app`) are rejected with a 403 "Origin not allowed" before any logic runs.
+When creating a contract, if the needed supplier doesn't exist, the user must abandon the form (losing all data), go create the supplier separately, then start over.
 
 ### Solution
-Replace the restrictive CORS origin list with the standard `Access-Control-Allow-Origin: '*'` pattern used by all other edge functions in the project. Since the function already validates the user via the `Authorization` header (JWT), origin-based CORS restrictions add no meaningful security.
+Add a "+ Novo Fornecedor" button next to the supplier select in `ContratoFormDialog`. Clicking it opens an inline sub-dialog with a simplified supplier form (name, document type, CNPJ/CPF, email). On success, the new supplier is added to the list and auto-selected.
 
 ### Changes
 
-**1. Update `supabase/functions/enviar-convite-organizacao/index.ts`**
-- Remove the `ALLOWED_ORIGINS` array and `getCorsHeaders()` function
-- Replace with the standard `corsHeaders` object (`'Access-Control-Allow-Origin': '*'`)
-- Update all response headers to use the simplified `corsHeaders`
-- Remove the 403 origin-check block
+**1. `src/components/contracts/ContratoFormDialog.tsx`**
+- Add state for `showFornecedorForm` (boolean) and `creatingFornecedor` (boolean)
+- Add a simplified inline fornecedor creation form (collapsible section or nested dialog) with fields: Nome, Tipo Pessoa (PF/PJ), CNPJ/CPF, Email
+- On submit: insert into `fornecedores` table via Supabase, then call a new `onFornecedorCreated` callback
+- Auto-select the newly created supplier in the form
+- Add a `+ Novo Fornecedor` button next to the supplier Select
 
-**2. Redeploy the edge function**
-- Deploy via `deploy_edge_functions` so the fix takes effect immediately
+**2. Update props interface**
+- Add `onFornecedorCreated: (fornecedor: Fornecedor) => void` prop to `ContratoFormDialogProps`
 
-### Technical Detail
-The current restrictive CORS list:
-```
-localhost:8080, localhost:5173, localhost:3000, ALLOWED_ORIGIN env var
-```
-None of these match `lexflowai.lovable.app` or the preview domain, so every production request is blocked before reaching the invite logic.
+**3. `src/pages/Contratos.tsx`**
+- Add `handleFornecedorCreated` function that appends the new supplier to `fornecedores` state
+- Pass it as `onFornecedorCreated` prop to `ContratoFormDialog`
+
+### Technical Details
+- The inline form inserts into `fornecedores` with `organization_id` from `useOrganization()`
+- Uses existing RLS policies (org members can insert)
+- Validates CNPJ/CPF using existing `validateCPF`/`validateCNPJ` utils
+- After insert, auto-sets `formData.fornecedor_id` to the new supplier's ID
+- The sub-form appears as a collapsible card within the dialog, keeping the contract form data intact
 
