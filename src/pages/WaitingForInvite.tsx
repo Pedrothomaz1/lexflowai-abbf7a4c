@@ -84,7 +84,7 @@ const WaitingForInvite = () => {
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
             <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-primary/10">
-              <img src={logoVeridiana} alt="LexFlow" className="h-10 w-10 object-contain" />
+              <Scale className="h-8 w-8 text-primary" />
             </div>
           </div>
           <CardTitle className="text-2xl">Aguardando Convite</CardTitle>

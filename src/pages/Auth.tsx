@@ -257,7 +257,7 @@ const Auth = () => {
           {/* Mobile Logo */}
           <div className="flex items-center justify-center gap-3 mb-8 lg:hidden">
             <div className="h-12 w-12 rounded-xl bg-primary flex items-center justify-center">
-              <img src={logoVeridiana} alt="Veridiana" className="h-7 w-7 object-contain" />
+              <Scale className="h-7 w-7 text-primary-foreground" />
             </div>
             <span className="text-2xl font-bold text-foreground">LexFlow</span>
           </div>

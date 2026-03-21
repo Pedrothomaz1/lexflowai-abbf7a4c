@@ -315,7 +315,7 @@ export function AppSidebar() {
       <SidebarHeader className="border-b border-sidebar-border px-4 py-4">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[hsl(var(--lexflow-off-white)/0.1)]">
-            <img src={logoVeridiana} alt="Veridiana" className="h-6 w-6 object-contain" />
+            <Scale className="h-5 w-5 text-sidebar-foreground" />
           </div>
           {!collapsed && (
             <div className="flex flex-col gap-1.5">

@@ -179,7 +179,7 @@ export default function RequisicaoPublica() {
           {/* Logo Container with Glassmorphism */}
           <div className="flex justify-center">
             <div className="h-20 w-20 rounded-2xl bg-white/15 flex items-center justify-center backdrop-blur-sm border border-white/20 shadow-xl">
-              <img src={logoVeridiana} alt="Veridiana" className="h-12 w-12 object-contain" />
+              <Scale className="h-10 w-10 text-white" />
             </div>
           </div>
 
