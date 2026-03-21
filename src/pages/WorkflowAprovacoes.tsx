@@ -46,7 +46,7 @@ export default function WorkflowAprovacoes() {
   
   const [formData, setFormData] = useState({
     nome: "",
-    tipo_contrato: "prestacao_servico",
+    tipo_contrato: "prestacao_servicos",
     aprovacao_paralela: false,
     is_active: true,
   });
@@ -164,7 +164,7 @@ export default function WorkflowAprovacoes() {
   const resetForm = () => {
     setFormData({
       nome: "",
-      tipo_contrato: "prestacao_servico",
+      tipo_contrato: "prestacao_servicos",
       aprovacao_paralela: false,
       is_active: true,
     });
@@ -234,8 +234,8 @@ export default function WorkflowAprovacoes() {
 
   const getTipoLabel = (tipo: string) => {
     const labels: Record<string, string> = {
-      prestacao_servico: "Prestação de Serviço",
-      compra_venda: "Compra e Venda",
+      prestacao_servicos: "Prestação de Serviços",
+      fornecimento: "Fornecimento",
       locacao: "Locação",
       parceria: "Parceria",
       confidencialidade: "Confidencialidade",
@@ -299,8 +299,8 @@ export default function WorkflowAprovacoes() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="prestacao_servico">Prestação de Serviço</SelectItem>
-                      <SelectItem value="compra_venda">Compra e Venda</SelectItem>
+                      <SelectItem value="prestacao_servicos">Prestação de Serviços</SelectItem>
+                      <SelectItem value="fornecimento">Fornecimento</SelectItem>
                       <SelectItem value="locacao">Locação</SelectItem>
                       <SelectItem value="parceria">Parceria</SelectItem>
                       <SelectItem value="confidencialidade">Confidencialidade</SelectItem>
