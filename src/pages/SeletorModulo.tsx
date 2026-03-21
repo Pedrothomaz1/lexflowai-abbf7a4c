@@ -1,8 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useModulo } from "@/contexts/ModuloContext";
 import { FadeIn, StaggerContainer, StaggerItem } from "@/components/ui/motion-container";
-import { FileText, Wrench, ArrowRight, HelpCircle } from "lucide-react";
-import logoVeridiana from "@/assets/logo-veridiana.png";
+import { FileText, Wrench, ArrowRight, HelpCircle, Scale } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
