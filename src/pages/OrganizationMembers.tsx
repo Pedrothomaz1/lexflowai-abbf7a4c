@@ -229,10 +229,27 @@ const OrganizationMembers = () => {
         throw new Error(data?.error || "Erro ao enviar convite");
       }
 
-      toast({
-        title: "Convite enviado!",
-        description: `Um email de convite foi enviado para ${emailLower}`,
-      });
+      if (data.email_sent) {
+        toast({
+          title: "Convite enviado!",
+          description: `Um email de convite foi enviado para ${emailLower}`,
+        });
+      } else {
+        // Email failed but invite was created - show link
+        const inviteLink = data.invite_url;
+        if (inviteLink) {
+          await navigator.clipboard.writeText(inviteLink);
+          toast({
+            title: "Convite criado!",
+            description: "O email não pôde ser enviado. O link do convite foi copiado para a área de transferência.",
+          });
+        } else {
+          toast({
+            title: "Convite criado!",
+            description: "O convite foi registrado, mas o email não pôde ser enviado.",
+          });
+        }
+      }
 
       setInviteEmail("");
       setInviteRole("member");
