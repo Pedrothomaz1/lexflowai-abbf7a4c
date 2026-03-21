@@ -58,7 +58,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { useModulo, ModuloAtivo } from "@/contexts/ModuloContext";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { cn } from "@/lib/utils";
-import logoVeridiana from "@/assets/logo-veridiana.png";
+import { Scale } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 // Interface para itens com submenus
