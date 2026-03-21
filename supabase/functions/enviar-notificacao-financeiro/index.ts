@@ -116,9 +116,67 @@ const handler = async (req: Request): Promise<Response> => {
       const obrigacoes = [...(obrigacoesDb || []), ...(parcelasAdicionais || []).filter(p => 
         !obrigacoesDb?.some(o => o.titulo === p.titulo && o.data_vencimento === p.data_vencimento))];
 
+      const parcelasHtml = obrigacoes.length > 0
+        ? `<table style="width:100%;border-collapse:collapse;margin:16px 0;">
+            <thead>
+              <tr style="background:#f4f4f5;">
+                <th style="text-align:left;padding:10px 12px;border-bottom:2px solid #e4e4e7;font-size:13px;color:#71717a;">Parcela</th>
+                <th style="text-align:left;padding:10px 12px;border-bottom:2px solid #e4e4e7;font-size:13px;color:#71717a;">Vencimento</th>
+                <th style="text-align:right;padding:10px 12px;border-bottom:2px solid #e4e4e7;font-size:13px;color:#71717a;">Valor</th>
+                <th style="text-align:center;padding:10px 12px;border-bottom:2px solid #e4e4e7;font-size:13px;color:#71717a;">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${obrigacoes.map((o: any, i: number) => `
+                <tr style="background:${i % 2 === 0 ? '#fff' : '#fafafa'};">
+                  <td style="padding:10px 12px;border-bottom:1px solid #e4e4e7;font-size:14px;">${o.titulo}</td>
+                  <td style="padding:10px 12px;border-bottom:1px solid #e4e4e7;font-size:14px;">${formatDate(o.data_vencimento)}</td>
+                  <td style="padding:10px 12px;border-bottom:1px solid #e4e4e7;font-size:14px;text-align:right;font-weight:600;">${formatCurrency(o.valor)}</td>
+                  <td style="padding:10px 12px;border-bottom:1px solid #e4e4e7;font-size:14px;text-align:center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:${(o.status === 'concluida' || o.status === 'pago') ? '#dcfce7;color:#166534' : '#fef9c3;color:#854d0e'};">${o.status || 'pendente'}</span>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>`
+        : '<p style="color:#71717a;font-size:14px;">Nenhuma parcela cadastrada para este contrato.</p>';
+
+      const fornecedorInfo = fornecedor 
+        ? `<p style="margin:4px 0;color:#3f3f46;font-size:14px;"><strong>Fornecedor:</strong> ${fornecedor.nome}${fornecedor.cnpj ? ` (CNPJ: ${fornecedor.cnpj})` : fornecedor.cpf ? ` (CPF: ${fornecedor.cpf})` : ''}</p>`
+        : '';
+
+      const obsSection = observacoes 
+        ? `<div style="margin-top:16px;padding:12px;background:#eff6ff;border-left:4px solid #3b82f6;border-radius:4px;"><strong style="color:#1e40af;">Observações:</strong><p style="margin:4px 0 0;color:#1e3a5f;font-size:14px;">${observacoes}</p></div>`
+        : '';
+
       emailSubject = `[LexFlow] Aprovação de Contrato - ${contrato.numero_contrato}`;
-      emailHtml = `<html><body><h1>Contrato ${contrato.numero_contrato} aprovado</h1><p>${contrato.titulo}</p><p>Valor: ${formatCurrency(contrato.valor_total)}</p></body></html>`;
-      emailText = `Contrato ${contrato.numero_contrato} aprovado - ${contrato.titulo} - Valor: ${formatCurrency(contrato.valor_total)}`;
+      emailHtml = `
+        <html><body style="font-family:'Segoe UI',Arial,sans-serif;color:#18181b;max-width:640px;margin:0 auto;padding:24px;">
+          <div style="border-bottom:3px solid #2563eb;padding-bottom:16px;margin-bottom:20px;">
+            <h1 style="margin:0;font-size:22px;color:#18181b;">Contrato ${contrato.numero_contrato} aprovado</h1>
+            <p style="margin:6px 0 0;font-size:15px;color:#52525b;">${contrato.titulo}</p>
+          </div>
+          
+          <div style="background:#f4f4f5;border-radius:8px;padding:16px;margin-bottom:20px;">
+            <table style="width:100%;"><tr>
+              <td><span style="font-size:12px;color:#71717a;">Valor Total</span><br/><strong style="font-size:20px;color:#18181b;">${formatCurrency(contrato.valor_total)}</strong></td>
+              <td><span style="font-size:12px;color:#71717a;">Vigência</span><br/><strong style="font-size:14px;color:#18181b;">${formatDate(contrato.data_inicio)} a ${formatDate(contrato.data_fim)}</strong></td>
+              <td><span style="font-size:12px;color:#71717a;">Moeda</span><br/><strong style="font-size:14px;color:#18181b;">${contrato.moeda || 'BRL'}</strong></td>
+            </tr></table>
+          </div>
+
+          ${fornecedorInfo}
+
+          <h2 style="font-size:16px;color:#18181b;margin:24px 0 8px;border-bottom:1px solid #e4e4e7;padding-bottom:8px;">📋 Parcelas e Vencimentos</h2>
+          ${parcelasHtml}
+
+          ${obsSection}
+
+          <p style="margin-top:28px;font-size:13px;color:#a1a1aa;border-top:1px solid #e4e4e7;padding-top:12px;">
+            Este email foi gerado automaticamente pelo LexFlow. Em caso de dúvidas, entre em contato com o gestor do contrato.
+          </p>
+        </body></html>`;
+      emailText = `Contrato ${contrato.numero_contrato} aprovado\n${contrato.titulo}\nValor Total: ${formatCurrency(contrato.valor_total)}\nVigência: ${formatDate(contrato.data_inicio)} a ${formatDate(contrato.data_fim)}\n${fornecedor ? `Fornecedor: ${fornecedor.nome}\n` : ''}${obrigacoes.length > 0 ? `\nParcelas:\n${obrigacoes.map((o: any) => `- ${o.titulo}: ${formatCurrency(o.valor)} | Vencimento: ${formatDate(o.data_vencimento)} | Status: ${o.status || 'pendente'}`).join('\n')}` : '\nNenhuma parcela cadastrada.'}${observacoes ? `\n\nObservações: ${observacoes}` : ''}`;
     } else if (tipo === "servico" && servicoId) {
       const { data: servico, error: servicoError } = await supabase
         .from("servicos_periodicos").select("*").eq("id", servicoId).single();
