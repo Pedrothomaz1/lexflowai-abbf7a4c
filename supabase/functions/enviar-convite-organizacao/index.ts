@@ -234,15 +234,23 @@ Se você não esperava este convite, pode ignorar este e-mail.
       `.trim(),
     });
 
+    let emailSent = true;
     if (emailError) {
       console.error("Email error:", emailError);
-      throw new Error(emailError.message || "Failed to send invite email");
+      emailSent = false;
+    } else {
+      console.log("Invite email sent successfully to:", email);
     }
 
-    console.log("Invite email sent successfully to:", email);
-
     return new Response(
-      JSON.stringify({ success: true, message: "Convite enviado com sucesso" }),
+      JSON.stringify({
+        success: true,
+        email_sent: emailSent,
+        invite_url: emailSent ? undefined : inviteUrl,
+        message: emailSent
+          ? "Convite enviado com sucesso"
+          : "Convite criado. O email não pôde ser enviado, mas você pode compartilhar o link diretamente.",
+      }),
       {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },
