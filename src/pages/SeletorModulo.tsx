@@ -38,7 +38,7 @@ const SeletorModulo = () => {
       description: "Controle de manutenções periódicas e conformidade operacional. Integração com sistema de compras e alertas automáticos.",
       tooltip: "Acompanhe serviços periódicos, manutenções preventivas e renovações. Ideal para equipes de facilities e operações.",
       icon: Wrench,
-      accentColor: "lexflow-mostarda",
+      accentColor: "lexflow-verde-principal",
       ctaText: "Acessar Serviços",
     },
   ];
