@@ -196,9 +196,30 @@ const handler = async (req: Request): Promise<Response> => {
         especificacao = data;
       }
 
+      const obsSection = observacoes 
+        ? `<div style="margin-top:16px;padding:12px;background:#eff6ff;border-left:4px solid #3b82f6;border-radius:4px;"><strong style="color:#1e40af;">Observações:</strong><p style="margin:4px 0 0;color:#1e3a5f;font-size:14px;">${observacoes}</p></div>`
+        : '';
+
       emailSubject = `[LexFlow] Renovação de Serviço - ${especificacao?.nome || "Serviço"}`;
-      emailHtml = `<html><body><h1>Serviço ${especificacao?.nome || "N/A"} renovado</h1><p>Valor: ${formatCurrency(servico.valor)}</p></body></html>`;
-      emailText = `Serviço ${especificacao?.nome || "N/A"} renovado - Valor: ${formatCurrency(servico.valor)}`;
+      emailHtml = `
+        <html><body style="font-family:'Segoe UI',Arial,sans-serif;color:#18181b;max-width:640px;margin:0 auto;padding:24px;">
+          <div style="border-bottom:3px solid #2563eb;padding-bottom:16px;margin-bottom:20px;">
+            <h1 style="margin:0;font-size:22px;color:#18181b;">Serviço Renovado</h1>
+            <p style="margin:6px 0 0;font-size:15px;color:#52525b;">${especificacao?.nome || "N/A"}${especificacao?.categoria ? ` — ${especificacao.categoria}` : ''}</p>
+          </div>
+          <div style="background:#f4f4f5;border-radius:8px;padding:16px;margin-bottom:20px;">
+            <table style="width:100%;"><tr>
+              <td><span style="font-size:12px;color:#71717a;">Valor</span><br/><strong style="font-size:20px;color:#18181b;">${formatCurrency(servico.valor)}</strong></td>
+              <td><span style="font-size:12px;color:#71717a;">Frequência</span><br/><strong style="font-size:14px;color:#18181b;">${servico.frequencia || 'N/A'}</strong></td>
+              <td><span style="font-size:12px;color:#71717a;">Próx. Vencimento</span><br/><strong style="font-size:14px;color:#18181b;">${formatDate(servico.proximo_vencimento)}</strong></td>
+            </tr></table>
+          </div>
+          ${obsSection}
+          <p style="margin-top:28px;font-size:13px;color:#a1a1aa;border-top:1px solid #e4e4e7;padding-top:12px;">
+            Este email foi gerado automaticamente pelo LexFlow.
+          </p>
+        </body></html>`;
+      emailText = `Serviço Renovado: ${especificacao?.nome || "N/A"}\nValor: ${formatCurrency(servico.valor)}\nFrequência: ${servico.frequencia || 'N/A'}\nPróximo Vencimento: ${formatDate(servico.proximo_vencimento)}${observacoes ? `\n\nObservações: ${observacoes}` : ''}`;
     }
 
     if (!organizationId) {
