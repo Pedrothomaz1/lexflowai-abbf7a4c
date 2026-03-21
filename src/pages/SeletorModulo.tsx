@@ -111,12 +111,9 @@ const SeletorModulo = () => {
                             </TooltipContent>
                           </Tooltip>
                         </div>
-                        <p className={cn(
-                          "text-sm leading-relaxed",
-                          isContratos 
-                            ? "text-[hsl(var(--lexflow-verde-principal))]"
-                            : "text-[hsl(var(--lexflow-mostarda))]"
-                        )}>
+                        <p className="text-sm leading-relaxed text-[hsl(var(--lexflow-verde-principal))]">
+                          {module.description}
+                        </p>
                           {module.description}
                         </p>
                       </div>
