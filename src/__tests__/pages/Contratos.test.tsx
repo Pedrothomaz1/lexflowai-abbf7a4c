@@ -82,8 +82,8 @@ describe("Contratos page", () => {
     const Contratos = (await import("@/pages/Contratos")).default;
     renderWithProviders(<Contratos />);
     await waitFor(() => {
-      const heading = screen.queryByText(/contratos/i);
-      expect(heading || document.body).toBeTruthy();
+      const heading = screen.queryByText("Contratos de Serviço");
+      expect(heading).toBeTruthy();
     }, { timeout: 3000 });
   });
 
