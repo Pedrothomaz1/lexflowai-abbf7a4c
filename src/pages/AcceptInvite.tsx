@@ -80,8 +80,15 @@ const AcceptInvite = () => {
         }
       }
 
+      // Fetch organization name separately
+      const { data: org } = await supabase
+        .from("organizations")
+        .select("nome")
+        .eq("id", invite.organization_id)
+        .single();
+
       setInviteDetails({
-        organization_name: (invite.organizations as any)?.nome || "Organização",
+        organization_name: org?.nome || "Organização",
         role: invite.role_in_org,
         expires_at: invite.expires_at,
       });
