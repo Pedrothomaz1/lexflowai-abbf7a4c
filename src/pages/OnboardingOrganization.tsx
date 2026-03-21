@@ -8,8 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Building2, Loader2 } from "lucide-react";
-import logoVeridiana from "@/assets/logo-veridiana.png";
+import { Building2, Loader2, Scale } from "lucide-react";
 
 const OnboardingOrganization = () => {
   const navigate = useNavigate();
