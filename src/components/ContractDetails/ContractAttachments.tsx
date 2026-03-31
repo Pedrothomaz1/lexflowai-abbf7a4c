@@ -227,7 +227,10 @@ export function ContractAttachments({ contratoId }: ContractAttachmentsProps) {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8"
-                      onClick={() => window.open(attachment.arquivo_url, '_blank')}
+                      onClick={async () => {
+                        const url = await getSignedFileUrl(attachment.arquivo_url);
+                        if (url) window.open(url, '_blank');
+                      }}
                     >
                       <Download className="h-4 w-4" />
                     </Button>

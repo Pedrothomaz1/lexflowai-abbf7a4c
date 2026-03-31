@@ -152,18 +152,13 @@ export function FornecedorAnexos({
 
       if (uploadError) throw uploadError;
 
-      // Obtém URL pública
-      const { data: urlData } = supabase.storage
-        .from("contratos-documentos")
-        .getPublicUrl(fileName);
-
-      // Salva registro no banco
+      // Salva registro no banco com o path do storage
       const { error: insertError } = await supabase
         .from("fornecedor_anexos")
         .insert({
           fornecedor_id: fornecedorId,
           nome_arquivo: file.name,
-          arquivo_url: urlData.publicUrl,
+          arquivo_url: fileName,
           tipo_documento: tipoDocumento,
           tamanho_bytes: file.size,
           uploaded_by: user.id,
