@@ -344,7 +344,7 @@ export function ContractImport({
         
         if (contratoError) {
           results.failed++;
-          results.errors.push(`Linha ${contract.rowIndex}: ${contratoError.message}`);
+          results.errors.push(`Linha ${contract.rowIndex}: ${handleDbError(contratoError).message}`);
         } else {
           results.success++;
         }
