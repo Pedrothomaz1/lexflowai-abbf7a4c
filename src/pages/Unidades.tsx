@@ -152,7 +152,7 @@ export default function Unidades() {
     } catch (error: any) {
       toast({
         title: "Erro ao carregar unidades",
-        description: error.message,
+        description: handleDbError(error).message,
         variant: "destructive",
       });
     } finally {
