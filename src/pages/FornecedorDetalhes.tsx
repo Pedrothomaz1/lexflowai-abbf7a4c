@@ -18,8 +18,8 @@ import { PageSkeleton } from "@/components/ui/skeleton-loaders";
 import { FornecedorAnexos } from "@/components/Fornecedores/FornecedorAnexos";
 import { FornecedorCategorias } from "@/components/Fornecedores/FornecedorCategorias";
 import { formatCNPJ, formatCPF } from "@/utils/documentValidation";
-import {
 import { handleDbError } from "@/utils/dbErrorHandler";
+import {
   ArrowLeft,
   Building2,
   Mail,
