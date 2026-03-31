@@ -22,6 +22,7 @@ import { DocumentInput } from "@/components/ui/document-input";
 import { validateCPF, validateCNPJ, cleanDocument } from "@/utils/documentValidation";
 import { FornecedorCategorias, saveFornecedorCategorias } from "./FornecedorCategorias";
 import { Loader2 } from "lucide-react";
+import { handleDbError } from "@/utils/dbErrorHandler";
 
 const ESTADOS_BR = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
@@ -235,7 +236,7 @@ export function FornecedorForm({ onSuccess, onCancel }: FornecedorFormProps) {
       toast({
         variant: "destructive",
         title: "Erro ao criar fornecedor",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } finally {
       setLoading(false);

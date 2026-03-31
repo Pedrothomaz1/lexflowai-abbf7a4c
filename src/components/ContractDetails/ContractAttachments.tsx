@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { handleDbError } from "@/utils/dbErrorHandler";
 
 interface Attachment {
   id: string;
@@ -118,7 +119,7 @@ export function ContractAttachments({ contratoId }: ContractAttachmentsProps) {
       toast({
         variant: "destructive",
         title: "Erro no upload",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } finally {
       setUploading(false);
@@ -146,7 +147,7 @@ export function ContractAttachments({ contratoId }: ContractAttachmentsProps) {
       toast({
         variant: "destructive",
         title: "Erro ao remover",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     }
   };

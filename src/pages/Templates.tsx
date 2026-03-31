@@ -24,6 +24,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from "@/components/ui/use-toast";
 import { Plus, FileText, Edit, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { handleDbError } from "@/utils/dbErrorHandler";
 
 type ContractTemplate = {
   id: string;
@@ -67,7 +68,7 @@ const Templates = () => {
     } catch (error: any) {
       toast({
         title: "Erro ao carregar templates",
-        description: error.message,
+        description: handleDbError(error).message,
         variant: "destructive",
       });
     } finally {
@@ -142,7 +143,7 @@ const Templates = () => {
     } catch (error: any) {
       toast({
         title: "Erro ao salvar template",
-        description: error.message,
+        description: handleDbError(error).message,
         variant: "destructive",
       });
     }
@@ -179,7 +180,7 @@ const Templates = () => {
     } catch (error: any) {
       toast({
         title: "Erro ao excluir template",
-        description: error.message,
+        description: handleDbError(error).message,
         variant: "destructive",
       });
     }

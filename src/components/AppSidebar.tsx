@@ -60,6 +60,7 @@ import { useOrganization } from "@/contexts/OrganizationContext";
 import { cn } from "@/lib/utils";
 import { Scale } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { handleDbError } from "@/utils/dbErrorHandler";
 
 // Interface para itens com submenus
 interface MenuItemType {
@@ -267,7 +268,7 @@ export function AppSidebar() {
       toast({
         variant: "destructive",
         title: "Erro ao sair",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } else {
       navigate("/auth");

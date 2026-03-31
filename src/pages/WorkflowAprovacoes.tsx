@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Edit, UserPlus, ArrowDown, ArrowRight } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { handleDbError } from "@/utils/dbErrorHandler";
 
 type ApprovalLevel = {
   nivel: number;
@@ -73,7 +74,7 @@ export default function WorkflowAprovacoes() {
       toast({
         variant: "destructive",
         title: "Erro ao carregar workflows",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } finally {
       setLoading(false);
@@ -156,7 +157,7 @@ export default function WorkflowAprovacoes() {
       toast({
         variant: "destructive",
         title: "Erro ao salvar workflow",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     }
   };
@@ -200,7 +201,7 @@ export default function WorkflowAprovacoes() {
       toast({
         variant: "destructive",
         title: "Erro ao excluir workflow",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     }
   };

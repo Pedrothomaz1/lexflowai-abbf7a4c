@@ -24,6 +24,7 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Separator } from "@/components/ui/separator";
+import { handleDbError } from "@/utils/dbErrorHandler";
 
 type Signature = {
   id: string;
@@ -89,7 +90,7 @@ export function ContractSignature({ contratoId, contratoTitulo, arquivoUrl }: Co
       toast({
         variant: "destructive",
         title: "Erro ao carregar assinaturas",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } finally {
       setLoading(false);
@@ -217,7 +218,7 @@ export function ContractSignature({ contratoId, contratoTitulo, arquivoUrl }: Co
       toast({
         variant: "destructive",
         title: "Erro ao criar solicitação",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } finally {
       setSending(false);

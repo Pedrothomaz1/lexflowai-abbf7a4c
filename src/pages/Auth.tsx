@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Scale, ArrowRight, Shield, BarChart3, Bell, Lock, Eye, EyeOff, Wrench, FileText } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { handleDbError } from "@/utils/dbErrorHandler";
 
 const TERMS_VERSION = "1.0";
 const PRIVACY_VERSION = "1.0";
@@ -83,7 +84,7 @@ const Auth = () => {
       toast({
         variant: "destructive",
         title: "Erro ao fazer login com Google",
-        description: error.message,
+        description: handleDbError(error).message,
       });
       setLoading(false);
     }
@@ -113,7 +114,7 @@ const Auth = () => {
       toast({
         variant: "destructive",
         title: "Erro ao fazer login",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } else if (data.user) {
       // Register LGPD consent after successful login
@@ -157,7 +158,7 @@ const Auth = () => {
       toast({
         variant: "destructive",
         title: "Erro ao criar conta",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } else {
       // Register LGPD consent after successful signup

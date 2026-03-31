@@ -40,6 +40,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+import { handleDbError } from "@/utils/dbErrorHandler";
 
 const financeNotificationSchema = z.object({
   emailFinanceiro: z.string()
@@ -206,7 +207,7 @@ export function FinanceNotificationModal({
       toast({
         variant: "destructive",
         title: "Erro ao carregar dados",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } finally {
       setIsLoading(false);
@@ -273,7 +274,7 @@ export function FinanceNotificationModal({
       toast({
         variant: "destructive",
         title: "Erro ao carregar dados",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } finally {
       setIsLoading(false);
@@ -374,7 +375,7 @@ export function FinanceNotificationModal({
       toast({
         variant: "destructive",
         title: "Erro ao enviar",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } finally {
       setIsSending(false);

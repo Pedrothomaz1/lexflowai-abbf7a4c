@@ -13,6 +13,7 @@ import { StatCard, StatCardGrid } from "@/components/ui/stat-card";
 import { AnimatedButton } from "@/components/ui/animated-button";
 import { StaggerContainer, StaggerItem, FadeIn } from "@/components/ui/motion-container";
 import { AnimatedCard, AnimatedCardContent, AnimatedCardHeader } from "@/components/ui/animated-card";
+import { handleDbError } from "@/utils/dbErrorHandler";
 
 type Obligation = {
   id: string;
@@ -63,7 +64,7 @@ const Calendario = () => {
     } catch (error: any) {
       toast({
         title: "Erro ao carregar obrigações",
-        description: error.message,
+        description: handleDbError(error).message,
         variant: "destructive",
       });
     } finally {

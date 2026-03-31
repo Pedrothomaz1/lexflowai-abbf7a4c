@@ -18,6 +18,7 @@ import { CalendarView, CalendarObligation } from "@/components/contracts/Calenda
 import { ContratoFormDialog } from "@/components/contracts/ContratoFormDialog";
 import { helpTexts } from "@/lib/help-texts";
 import { HelpTooltip } from "@/components/ui/help-tooltip";
+import { handleDbError } from "@/utils/dbErrorHandler";
 
 type Contrato = {
   id: string;
@@ -152,7 +153,7 @@ const Contratos = () => {
       toast({
         variant: "destructive",
         title: "Erro ao carregar contratos",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } else {
       setContratos(data || []);
@@ -196,7 +197,7 @@ const Contratos = () => {
       toast({
         variant: "destructive",
         title: "Erro ao atualizar status",
-        description: error.message,
+        description: handleDbError(error).message,
       });
       fetchContratos();
     } else {
@@ -275,7 +276,7 @@ const Contratos = () => {
           toast({
             variant: "destructive",
             title: "Erro ao criar contrato",
-            description: error.message,
+            description: handleDbError(error).message,
           });
         }
         return;

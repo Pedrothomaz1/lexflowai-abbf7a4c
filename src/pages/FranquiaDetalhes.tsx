@@ -32,6 +32,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { FranquiaRenovacaoWorkflow } from "@/components/Franquias";
 import { cn } from "@/lib/utils";
+import { handleDbError } from "@/utils/dbErrorHandler";
 
 interface Franquia {
   id: string;
@@ -121,7 +122,7 @@ export default function FranquiaDetalhes() {
       toast({
         variant: "destructive",
         title: "Erro ao atualizar",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     },
   });

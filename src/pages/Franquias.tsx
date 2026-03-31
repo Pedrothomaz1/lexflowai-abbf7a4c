@@ -38,6 +38,7 @@ import { ptBR } from "date-fns/locale";
 import { FranquiaForm, FranquiaImport, FranquiaRenovacaoWorkflow, FranquiaQuickStats } from "@/components/Franquias";
 import { FranquiaImportResult } from "@/utils/franquiaXlsxParser";
 import { cn } from "@/lib/utils";
+import { handleDbError } from "@/utils/dbErrorHandler";
 
 interface Franquia {
   id: string;
@@ -135,7 +136,7 @@ export default function Franquias() {
       toast({
         variant: "destructive",
         title: "Erro ao cadastrar franquia",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     },
   });
@@ -171,7 +172,7 @@ export default function Franquias() {
       toast({
         variant: "destructive",
         title: "Erro na importação",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     },
   });
@@ -190,7 +191,7 @@ export default function Franquias() {
       toast({
         variant: "destructive",
         title: "Erro ao excluir franquia",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     },
   });

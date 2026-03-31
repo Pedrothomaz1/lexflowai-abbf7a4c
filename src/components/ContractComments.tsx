@@ -24,6 +24,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { handleDbError } from "@/utils/dbErrorHandler";
 
 type Comment = {
   id: string;
@@ -101,7 +102,7 @@ export function ContractComments({ contratoId, secao }: ContractCommentsProps) {
       toast({
         variant: "destructive",
         title: "Erro ao carregar comentários",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } finally {
       setLoading(false);
@@ -205,7 +206,7 @@ export function ContractComments({ contratoId, secao }: ContractCommentsProps) {
       toast({
         variant: "destructive",
         title: "Erro ao salvar comentário",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     }
   };
@@ -229,7 +230,7 @@ export function ContractComments({ contratoId, secao }: ContractCommentsProps) {
       toast({
         variant: "destructive",
         title: "Erro ao excluir comentário",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     }
   };
@@ -251,7 +252,7 @@ export function ContractComments({ contratoId, secao }: ContractCommentsProps) {
       toast({
         variant: "destructive",
         title: "Erro ao atualizar status",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     }
   };

@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { AvatarUpload } from "@/components/Settings/AvatarUpload";
 import { SettingsIntegracaoCard } from "@/components/Settings/SettingsIntegracaoCard";
+import { handleDbError } from "@/utils/dbErrorHandler";
 
 interface IntegracaoConfig {
   id: string;
@@ -141,7 +142,7 @@ const Settings = () => {
       toast({
         variant: "destructive",
         title: "Erro ao atualizar perfil",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } else {
       toast({
@@ -206,7 +207,7 @@ const Settings = () => {
       toast({
         variant: "destructive",
         title: "Erro ao salvar",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } finally {
       setSavingIntegracao(false);
