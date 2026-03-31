@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { handleDbError } from "@/utils/dbErrorHandler";
+import { getSignedFileUrl } from "@/utils/storageUtils";
 
 interface Attachment {
   id: string;
