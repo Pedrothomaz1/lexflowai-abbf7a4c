@@ -330,15 +330,15 @@ export function FornecedorAnexos({
                       <Button
                         variant="ghost"
                         size="icon"
-                        asChild
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={async () => {
+                          const url = await getSignedFileUrl(anexo.arquivo_url);
+                          if (url) window.open(url, '_blank');
+                        }}
                       >
-                        <a
-                          href={anexo.arquivo_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <Download className="h-4 w-4" />
-                        </a>
+                        <Download className="h-4 w-4" />
                       </Button>
                       {!readOnly && (
                         <Button
