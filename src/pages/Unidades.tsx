@@ -222,7 +222,7 @@ export default function Unidades() {
     } catch (error: any) {
       toast({
         title: "Erro ao salvar",
-        description: error.message,
+        description: handleDbError(error).message,
         variant: "destructive",
       });
     } finally {
