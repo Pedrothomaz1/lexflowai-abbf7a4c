@@ -162,7 +162,7 @@ export function ContractImport({
       toast({
         variant: "destructive",
         title: "Erro ao processar arquivo",
-        description: error instanceof Error ? error.message : "Erro desconhecido",
+        description: handleDbError(error).message,
       });
     }
   };
