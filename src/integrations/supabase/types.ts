@@ -3007,6 +3007,10 @@ export type Database = {
       }
     }
     Functions: {
+      accept_organization_invite: {
+        Args: { invite_token: string }
+        Returns: Json
+      }
       belongs_to_org: {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
