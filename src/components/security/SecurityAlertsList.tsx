@@ -99,7 +99,7 @@ export function SecurityAlertsList({ onUpdate }: SecurityAlertsListProps) {
       console.error("Error fetching alerts:", error);
       toast({
         title: "Erro ao carregar alertas",
-        description: error.message,
+        description: handleDbError(error).message,
         variant: "destructive",
       });
     } finally {
