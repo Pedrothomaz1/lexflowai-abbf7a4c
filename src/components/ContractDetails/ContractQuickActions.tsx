@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { handleDbError } from "@/utils/dbErrorHandler";
+import { getSignedFileUrl } from "@/utils/storageUtils";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
