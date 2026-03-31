@@ -222,7 +222,10 @@ export function ContractQuickActions({
       id: 'view-doc',
       label: 'Ver Documento',
       icon: FileText,
-      onClick: () => window.open(arquivoUrl!, '_blank'),
+      onClick: async () => {
+        const url = await getSignedFileUrl(arquivoUrl!);
+        if (url) window.open(url, '_blank');
+      },
       show: !!arquivoUrl,
     },
   ].filter(action => action.show);
