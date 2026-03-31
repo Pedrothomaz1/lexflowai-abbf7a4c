@@ -150,7 +150,7 @@ export function ContractQuickActions({
       toast({
         variant: "destructive",
         title: "Erro ao arquivar",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } finally {
       setIsArchiving(false);
