@@ -86,17 +86,13 @@ export function ContractAttachments({ contratoId }: ContractAttachmentsProps) {
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from("contratos-documentos")
-        .getPublicUrl(fileName);
-
       const { error: insertError } = await supabase
         .from("contract_attachments")
         .insert([{
           organization_id: organization.id,
           contrato_id: contratoId,
           nome_arquivo: file.name,
-          arquivo_url: publicUrl,
+          arquivo_url: fileName,
           tipo_documento: file.type,
           tamanho_bytes: file.size,
           uploaded_by: user.id,
