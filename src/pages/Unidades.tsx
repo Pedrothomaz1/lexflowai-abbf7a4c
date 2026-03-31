@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { handleDbError } from "@/utils/dbErrorHandler";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -152,7 +153,7 @@ export default function Unidades() {
     } catch (error: any) {
       toast({
         title: "Erro ao carregar unidades",
-        description: error.message,
+        description: handleDbError(error).message,
         variant: "destructive",
       });
     } finally {
@@ -222,7 +223,7 @@ export default function Unidades() {
     } catch (error: any) {
       toast({
         title: "Erro ao salvar",
-        description: error.message,
+        description: handleDbError(error).message,
         variant: "destructive",
       });
     } finally {
@@ -277,7 +278,7 @@ export default function Unidades() {
     } catch (error: any) {
       toast({
         title: "Erro ao excluir",
-        description: error.message,
+        description: handleDbError(error).message,
         variant: "destructive",
       });
     }
@@ -295,7 +296,7 @@ export default function Unidades() {
     } catch (error: any) {
       toast({
         title: "Erro ao atualizar",
-        description: error.message,
+        description: handleDbError(error).message,
         variant: "destructive",
       });
     }

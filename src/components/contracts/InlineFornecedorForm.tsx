@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { handleDbError } from "@/utils/dbErrorHandler";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -73,7 +74,7 @@ export function InlineFornecedorForm({ onCreated, onCancel }: InlineFornecedorFo
         toast({
           variant: "destructive",
           title: "Erro ao cadastrar fornecedor",
-          description: error.message,
+          description: handleDbError(error).message,
         });
         return;
       }

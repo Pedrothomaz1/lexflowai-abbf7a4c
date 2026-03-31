@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { handleDbError } from "@/utils/dbErrorHandler";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -161,7 +162,7 @@ export function ContractImport({
       toast({
         variant: "destructive",
         title: "Erro ao processar arquivo",
-        description: error instanceof Error ? error.message : "Erro desconhecido",
+        description: handleDbError(error).message,
       });
     }
   };
@@ -344,13 +345,13 @@ export function ContractImport({
         
         if (contratoError) {
           results.failed++;
-          results.errors.push(`Linha ${contract.rowIndex}: ${contratoError.message}`);
+          results.errors.push(`Linha ${contract.rowIndex}: ${handleDbError(contratoError).message}`);
         } else {
           results.success++;
         }
       } catch (error) {
         results.failed++;
-        results.errors.push(`Linha ${contract.rowIndex}: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+        results.errors.push(`Linha ${contract.rowIndex}: ${handleDbError(error).message}`);
       }
       
       setProgress(Math.round(((i + 1) / selectedContracts.length) * 100));

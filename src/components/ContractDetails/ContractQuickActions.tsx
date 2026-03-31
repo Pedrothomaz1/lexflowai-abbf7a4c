@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { handleDbError } from "@/utils/dbErrorHandler";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -111,7 +112,7 @@ export function ContractQuickActions({
       toast({
         variant: "destructive",
         title: "Erro ao duplicar",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } finally {
       setIsDuplicating(false);
@@ -150,7 +151,7 @@ export function ContractQuickActions({
       toast({
         variant: "destructive",
         title: "Erro ao arquivar",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } finally {
       setIsArchiving(false);
@@ -195,7 +196,7 @@ export function ContractQuickActions({
       toast({
         variant: "destructive",
         title: "Erro ao criar alerta",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     }
   };
