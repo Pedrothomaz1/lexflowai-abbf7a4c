@@ -295,7 +295,7 @@ export default function Unidades() {
     } catch (error: any) {
       toast({
         title: "Erro ao atualizar",
-        description: error.message,
+        description: handleDbError(error).message,
         variant: "destructive",
       });
     }

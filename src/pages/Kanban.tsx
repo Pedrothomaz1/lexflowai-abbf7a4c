@@ -143,7 +143,7 @@ const Kanban = () => {
       toast({
         variant: "destructive",
         title: "Erro ao atualizar status",
-        description: error.message,
+        description: handleDbError(error).message,
       });
       fetchContratos();
     } else {

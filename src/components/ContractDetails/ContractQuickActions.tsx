@@ -195,7 +195,7 @@ export function ContractQuickActions({
       toast({
         variant: "destructive",
         title: "Erro ao criar alerta",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     }
   };

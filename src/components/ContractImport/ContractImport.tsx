@@ -350,7 +350,7 @@ export function ContractImport({
         }
       } catch (error) {
         results.failed++;
-        results.errors.push(`Linha ${contract.rowIndex}: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+        results.errors.push(`Linha ${contract.rowIndex}: ${handleDbError(error).message}`);
       }
       
       setProgress(Math.round(((i + 1) / selectedContracts.length) * 100));

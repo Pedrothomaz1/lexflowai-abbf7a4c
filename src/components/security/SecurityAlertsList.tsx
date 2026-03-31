@@ -134,7 +134,7 @@ export function SecurityAlertsList({ onUpdate }: SecurityAlertsListProps) {
     } catch (error: any) {
       toast({
         title: "Erro ao atualizar alerta",
-        description: error.message,
+        description: handleDbError(error).message,
         variant: "destructive",
       });
     }

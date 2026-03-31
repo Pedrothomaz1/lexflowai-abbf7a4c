@@ -73,7 +73,7 @@ export function InlineFornecedorForm({ onCreated, onCancel }: InlineFornecedorFo
         toast({
           variant: "destructive",
           title: "Erro ao cadastrar fornecedor",
-          description: error.message,
+          description: handleDbError(error).message,
         });
         return;
       }
