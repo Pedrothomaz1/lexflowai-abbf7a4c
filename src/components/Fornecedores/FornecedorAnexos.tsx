@@ -330,9 +330,6 @@ export function FornecedorAnexos({
                       <Button
                         variant="ghost"
                         size="icon"
-                      <Button
-                        variant="ghost"
-                        size="icon"
                         onClick={async () => {
                           const url = await getSignedFileUrl(anexo.arquivo_url);
                           if (url) window.open(url, '_blank');
