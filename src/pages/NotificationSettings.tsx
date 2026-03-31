@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Mail, MessageSquare, Bell, Send, Loader2, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { handleDbError } from "@/utils/dbErrorHandler";
 
 interface NotificationPreferences {
   id?: string;
@@ -159,7 +160,7 @@ const NotificationSettings = () => {
       toast({
         variant: "destructive",
         title: "Erro ao salvar",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } finally {
       setSaving(false);
@@ -193,7 +194,7 @@ const NotificationSettings = () => {
       toast({
         variant: "destructive",
         title: "Erro ao enviar teste",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } finally {
       setTesting(false);

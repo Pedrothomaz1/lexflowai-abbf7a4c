@@ -33,6 +33,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { exportContratosPDF } from "@/utils/pdfExport";
+import { handleDbError } from "@/utils/dbErrorHandler";
 
 interface ReportConfig {
   id: string;
@@ -120,7 +121,7 @@ export default function Relatorios() {
     } catch (error: any) {
       toast({
         title: "Erro ao carregar relatórios",
-        description: error.message,
+        description: handleDbError(error).message,
         variant: "destructive",
       });
     } finally {
@@ -190,7 +191,7 @@ export default function Relatorios() {
     } catch (error: any) {
       toast({
         title: "Erro ao criar relatório",
-        description: error.message,
+        description: handleDbError(error).message,
         variant: "destructive",
       });
     }
@@ -241,7 +242,7 @@ export default function Relatorios() {
     } catch (error: any) {
       toast({
         title: "Erro ao executar relatório",
-        description: error.message,
+        description: handleDbError(error).message,
         variant: "destructive",
       });
     } finally {
@@ -279,7 +280,7 @@ export default function Relatorios() {
     } catch (error: any) {
       toast({
         title: "Erro ao excluir relatório",
-        description: error.message,
+        description: handleDbError(error).message,
         variant: "destructive",
       });
     }

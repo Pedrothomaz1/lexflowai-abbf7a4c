@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Shield, User } from "lucide-react";
+import { handleDbError } from "@/utils/dbErrorHandler";
 
 type Profile = {
   id: string;
@@ -112,7 +113,7 @@ const Usuarios = () => {
       toast({
         variant: "destructive",
         title: "Erro ao atualizar perfil",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } else {
       toast({
@@ -132,7 +133,7 @@ const Usuarios = () => {
       toast({
         variant: "destructive",
         title: "Erro ao atualizar módulo",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } else {
       toast({

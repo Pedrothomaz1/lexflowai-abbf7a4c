@@ -57,6 +57,7 @@ import { ContractApprovalCard } from "@/components/ContractDetails/ContractAppro
 import { FinanceNotificationModal } from "@/components/FinanceNotificationModal";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { handleDbError } from "@/utils/dbErrorHandler";
 
 type Contrato = {
   id: string;
@@ -157,7 +158,7 @@ const ContratoDetalhes = () => {
         toast({
           variant: "destructive",
           title: "Erro ao carregar contrato",
-          description: error.message,
+          description: handleDbError(error).message,
         });
         return;
       }
@@ -178,7 +179,7 @@ const ContratoDetalhes = () => {
       toast({
         variant: "destructive",
         title: "Erro",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } finally {
       setLoading(false);
@@ -246,7 +247,7 @@ const ContratoDetalhes = () => {
     } catch (error: any) {
       toast({
         title: "Erro na análise",
-        description: error.message,
+        description: handleDbError(error).message,
         variant: "destructive",
       });
     } finally {
@@ -349,7 +350,7 @@ const ContratoDetalhes = () => {
       toast({
         variant: "destructive",
         title: "Erro ao adicionar aprovação",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } else {
       toast({
@@ -382,7 +383,7 @@ const ContratoDetalhes = () => {
       toast({
         variant: "destructive",
         title: "Erro ao atualizar status",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } else {
       toast({

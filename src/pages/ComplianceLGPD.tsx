@@ -22,6 +22,7 @@ import { format } from "date-fns";
 import { ComplianceLogsSection } from "@/components/compliance/ComplianceLogsSection";
 import { RetentionPoliciesSection } from "@/components/compliance/RetentionPoliciesSection";
 import { DataSubjectRightsGrid } from "@/components/compliance/DataSubjectRightsGrid";
+import { handleDbError } from "@/utils/dbErrorHandler";
 
 interface ComplianceLog {
   id: string;
@@ -104,7 +105,7 @@ export default function ComplianceLGPD() {
         exclusoes: logsData.filter((l) => l.tipo_evento === "exclusao").length,
       });
     } catch (error: any) {
-      toast({ title: "Erro ao carregar dados", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao carregar dados", description: handleDbError(error).message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -138,7 +139,7 @@ export default function ComplianceLGPD() {
       setNewPolicy({ nome: "", entidade: "contratos", periodo_retencao_meses: 60, acao_pos_retencao: "anonimizar", base_legal: "obrigacao_legal", descricao: "" });
       fetchData();
     } catch (error: any) {
-      toast({ title: "Erro ao criar política", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao criar política", description: handleDbError(error).message, variant: "destructive" });
     }
   };
 
@@ -149,7 +150,7 @@ export default function ComplianceLGPD() {
       toast({ title: policy.is_active ? "Política desativada" : "Política ativada" });
       fetchData();
     } catch (error: any) {
-      toast({ title: "Erro ao atualizar política", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao atualizar política", description: handleDbError(error).message, variant: "destructive" });
     }
   };
 
@@ -182,7 +183,7 @@ export default function ComplianceLGPD() {
         description: `Contratos: ${data.data?.contratos_criados || 0}, Registros de auditoria: ${data.data?.registros_auditoria || 0}`,
       });
     } catch (error: any) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
+      toast({ title: "Erro", description: handleDbError(error).message, variant: "destructive" });
     }
   };
 
@@ -201,7 +202,7 @@ export default function ComplianceLGPD() {
       URL.revokeObjectURL(url);
       toast({ title: "Dados Exportados", description: "Seus dados foram exportados com sucesso." });
     } catch (error: any) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
+      toast({ title: "Erro", description: handleDbError(error).message, variant: "destructive" });
     }
   };
 
@@ -216,7 +217,7 @@ export default function ComplianceLGPD() {
       setIsErasureDialogOpen(false);
       fetchData();
     } catch (error: any) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
+      toast({ title: "Erro", description: handleDbError(error).message, variant: "destructive" });
     } finally {
       setErasureLoading(false);
     }

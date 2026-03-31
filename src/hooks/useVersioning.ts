@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { handleDbError } from "@/utils/dbErrorHandler";
 
 export interface ContractVersion {
   id: string;
@@ -50,7 +51,7 @@ export const useVersioning = (contratoId: string) => {
       toast({
         variant: "destructive",
         title: "Erro ao carregar histórico",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } finally {
       setLoading(false);
@@ -108,7 +109,7 @@ export const useVersioning = (contratoId: string) => {
       toast({
         variant: "destructive",
         title: "Erro ao restaurar",
-        description: error.message,
+        description: handleDbError(error).message,
       });
       return false;
     }

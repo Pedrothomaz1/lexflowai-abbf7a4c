@@ -19,6 +19,7 @@ import { FornecedorAnexos } from "@/components/Fornecedores/FornecedorAnexos";
 import { FornecedorCategorias } from "@/components/Fornecedores/FornecedorCategorias";
 import { formatCNPJ, formatCPF } from "@/utils/documentValidation";
 import {
+import { handleDbError } from "@/utils/dbErrorHandler";
   ArrowLeft,
   Building2,
   Mail,
@@ -99,7 +100,7 @@ const FornecedorDetalhes = () => {
       toast({
         variant: "destructive",
         title: "Erro ao carregar fornecedor",
-        description: error.message,
+        description: handleDbError(error).message,
       });
       navigate("/fornecedores");
     } finally {

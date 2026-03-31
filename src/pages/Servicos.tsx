@@ -26,6 +26,7 @@ import { FinanceNotificationModal } from "@/components/FinanceNotificationModal"
 import { ServicosStats } from "@/components/Servicos/ServicosStats";
 import { ServicosFilters } from "@/components/Servicos/ServicosFilters";
 import { ServicoFormDialog } from "@/components/Servicos/ServicoFormDialog";
+import { handleDbError } from "@/utils/dbErrorHandler";
 
 interface Servico {
   id: string;
@@ -205,7 +206,7 @@ export default function Servicos() {
       setFornecedores(fornecedoresRes.data || []);
       setProfiles(profilesRes.data || []);
     } catch (error: any) {
-      toast({ title: "Erro ao carregar dados", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao carregar dados", description: handleDbError(error).message, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -277,7 +278,7 @@ export default function Servicos() {
       resetForm();
       fetchData();
     } catch (error: any) {
-      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao salvar", description: handleDbError(error).message, variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
@@ -354,7 +355,7 @@ export default function Servicos() {
       setSelectedServiceForNotification(servico.id);
       setShowFinanceModal(true);
     } catch (error: any) {
-      toast({ title: "Erro ao renovar", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao renovar", description: handleDbError(error).message, variant: "destructive" });
     }
   };
 

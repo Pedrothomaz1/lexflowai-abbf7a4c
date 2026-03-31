@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { handleDbError } from "@/utils/dbErrorHandler";
 
 type Obligation = {
   id: string;
@@ -140,7 +141,7 @@ const Obrigacoes = () => {
     } catch (error: any) {
       toast({
         title: "Erro ao carregar obrigações",
-        description: error.message,
+        description: handleDbError(error).message,
         variant: "destructive",
       });
     } finally {
@@ -177,7 +178,7 @@ const Obrigacoes = () => {
     } catch (error: any) {
       toast({
         title: "Erro ao atualizar obrigação",
-        description: error.message,
+        description: handleDbError(error).message,
         variant: "destructive",
       });
     }

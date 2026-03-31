@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { handleDbError } from "@/utils/dbErrorHandler";
 
 const TIPOS_DOCUMENTO = [
   "Contrato Social",
@@ -103,7 +104,7 @@ export function FornecedorAnexos({
       toast({
         variant: "destructive",
         title: "Erro ao carregar anexos",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } finally {
       setLoading(false);
@@ -177,7 +178,7 @@ export function FornecedorAnexos({
       toast({
         variant: "destructive",
         title: "Erro ao enviar anexo",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } finally {
       setUploading(false);
@@ -206,7 +207,7 @@ export function FornecedorAnexos({
       toast({
         variant: "destructive",
         title: "Erro ao remover anexo",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } finally {
       setDeleting(false);
