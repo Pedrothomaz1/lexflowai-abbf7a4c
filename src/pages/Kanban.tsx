@@ -83,7 +83,7 @@ const Kanban = () => {
       toast({
         variant: "destructive",
         title: "Erro ao carregar contratos",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } else {
       setContratos(data || []);
