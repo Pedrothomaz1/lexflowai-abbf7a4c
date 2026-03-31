@@ -292,13 +292,9 @@ const ContratoDetalhes = () => {
         description: uploadError.message,
       });
     } else {
-      const { data: { publicUrl } } = supabase.storage
-        .from("contratos-documentos")
-        .getPublicUrl(filePath);
-
       const { error: updateError } = await supabase
         .from("contratos")
-        .update({ arquivo_url: publicUrl })
+        .update({ arquivo_url: filePath })
         .eq("id", contrato.id);
 
       if (updateError) {

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { handleDbError } from "@/utils/dbErrorHandler";
+import { getSignedFileUrl } from "@/utils/storageUtils";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -221,7 +222,10 @@ export function ContractQuickActions({
       id: 'view-doc',
       label: 'Ver Documento',
       icon: FileText,
-      onClick: () => window.open(arquivoUrl!, '_blank'),
+      onClick: async () => {
+        const url = await getSignedFileUrl(arquivoUrl!);
+        if (url) window.open(url, '_blank');
+      },
       show: !!arquivoUrl,
     },
   ].filter(action => action.show);

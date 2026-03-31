@@ -297,15 +297,11 @@ const Contratos = () => {
             continue;
           }
 
-          const { data: { publicUrl } } = supabase.storage
-            .from('contratos-documentos')
-            .getPublicUrl(fileName);
-
           await supabase.from("contract_attachments").insert({
             organization_id: organization.id,
             contrato_id: data.id,
             nome_arquivo: file.name,
-            arquivo_url: publicUrl,
+            arquivo_url: fileName,
             tipo_documento: file.type,
             tamanho_bytes: file.size,
             uploaded_by: user.id,
