@@ -277,7 +277,7 @@ export default function Unidades() {
     } catch (error: any) {
       toast({
         title: "Erro ao excluir",
-        description: error.message,
+        description: handleDbError(error).message,
         variant: "destructive",
       });
     }
