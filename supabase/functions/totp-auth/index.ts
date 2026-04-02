@@ -280,8 +280,8 @@ serve(async (req) => {
         // Verify TOTP code for login
         if (!code || typeof code !== 'string') {
           return new Response(
-            JSON.stringify({ error: 'Código inválido' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ error: 'Código inválido', valid: false }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
@@ -294,7 +294,7 @@ serve(async (req) => {
         if (fetchError || !settings) {
           return new Response(
             JSON.stringify({ error: '2FA não configurado', valid: false }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
