@@ -21,6 +21,7 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [activeTab, setActiveTab] = useState("login");
 
   useEffect(() => {
     // Check if user is already logged in and redirect
