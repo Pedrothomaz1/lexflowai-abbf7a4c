@@ -67,15 +67,6 @@ const Auth = () => {
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!termsAccepted) {
-      toast({
-        variant: "destructive",
-        title: "Aceite obrigatório",
-        description: "Você precisa aceitar os Termos de Uso e a Política de Privacidade para continuar.",
-      });
-      return;
-    }
-
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
