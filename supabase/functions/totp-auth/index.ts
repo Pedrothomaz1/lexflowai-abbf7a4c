@@ -249,7 +249,7 @@ serve(async (req) => {
         if (!isValid) {
           return new Response(
             JSON.stringify({ error: 'Código incorreto', valid: false }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
