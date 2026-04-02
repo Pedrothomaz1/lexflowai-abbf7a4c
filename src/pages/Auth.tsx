@@ -288,7 +288,7 @@ const Auth = () => {
                   <Button
                     type="submit"
                     className="w-full h-11 text-sm font-medium"
-                    disabled={loading || !termsAccepted}
+                    disabled={loading}
                   >
                     {loading ? (
                       "Entrando..."
