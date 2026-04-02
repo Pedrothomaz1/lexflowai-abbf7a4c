@@ -226,8 +226,8 @@ serve(async (req) => {
         // Verify code and enable 2FA
         if (!code || typeof code !== 'string' || code.length !== 6) {
           return new Response(
-            JSON.stringify({ error: 'Código inválido' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ error: 'Código inválido', valid: false }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
