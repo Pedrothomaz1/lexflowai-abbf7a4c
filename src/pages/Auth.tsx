@@ -251,8 +251,6 @@ const Auth = () => {
               </TabsList>
 
               <TabsContent value="login" className="mt-6">
-                <div className="space-y-4">
-
                 <form onSubmit={handleLogin} className="space-y-4 mt-4">
                   <div className="space-y-2">
                     <Label htmlFor="login-email" className="text-sm font-medium">
