@@ -226,8 +226,8 @@ serve(async (req) => {
         // Verify code and enable 2FA
         if (!code || typeof code !== 'string' || code.length !== 6) {
           return new Response(
-            JSON.stringify({ error: 'Código inválido' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ error: 'Código inválido', valid: false }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
@@ -249,7 +249,7 @@ serve(async (req) => {
         if (!isValid) {
           return new Response(
             JSON.stringify({ error: 'Código incorreto', valid: false }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
@@ -280,8 +280,8 @@ serve(async (req) => {
         // Verify TOTP code for login
         if (!code || typeof code !== 'string') {
           return new Response(
-            JSON.stringify({ error: 'Código inválido' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ error: 'Código inválido', valid: false }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
@@ -294,7 +294,7 @@ serve(async (req) => {
         if (fetchError || !settings) {
           return new Response(
             JSON.stringify({ error: '2FA não configurado', valid: false }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
@@ -339,8 +339,8 @@ serve(async (req) => {
         // Disable 2FA
         if (!code || typeof code !== 'string') {
           return new Response(
-            JSON.stringify({ error: 'Código necessário para desativar' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ error: 'Código necessário para desativar', disabled: false }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
@@ -352,8 +352,8 @@ serve(async (req) => {
 
         if (fetchError || !settings?.totp_secret) {
           return new Response(
-            JSON.stringify({ error: '2FA não configurado' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ error: '2FA não configurado', disabled: false }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
@@ -361,8 +361,8 @@ serve(async (req) => {
         
         if (!isValid) {
           return new Response(
-            JSON.stringify({ error: 'Código incorreto' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ error: 'Código incorreto', disabled: false }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
