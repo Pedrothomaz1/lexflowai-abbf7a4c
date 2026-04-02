@@ -384,52 +384,54 @@ const Auth = () => {
               </TabsContent>
             </Tabs>
 
-            {/* LGPD Checkbox - Required */}
-            <div className="space-y-4 pt-2">
-              <div className="flex items-start space-x-3">
-                <Checkbox
-                  id="terms-checkbox"
-                  checked={termsAccepted}
-                  onCheckedChange={(checked) => setTermsAccepted(checked === true)}
-                  className="mt-1"
-                />
-                <Label
-                  htmlFor="terms-checkbox"
-                  className="text-sm leading-relaxed cursor-pointer text-muted-foreground"
-                >
-                  Declaro que li e concordo com os{" "}
-                  <Link
-                    to="/termos"
-                    className="text-primary underline hover:no-underline font-medium"
-                    target="_blank"
+            {/* LGPD Checkbox - Only shown on signup */}
+            {activeTab === "signup" && (
+              <div className="space-y-4 pt-2">
+                <div className="flex items-start space-x-3">
+                  <Checkbox
+                    id="terms-checkbox"
+                    checked={termsAccepted}
+                    onCheckedChange={(checked) => setTermsAccepted(checked === true)}
+                    className="mt-1"
+                  />
+                  <Label
+                    htmlFor="terms-checkbox"
+                    className="text-sm leading-relaxed cursor-pointer text-muted-foreground"
                   >
+                    Declaro que li e concordo com os{" "}
+                    <Link
+                      to="/termos"
+                      className="text-primary underline hover:no-underline font-medium"
+                      target="_blank"
+                    >
+                      Termos de Uso
+                    </Link>{" "}
+                    e estou ciente da{" "}
+                    <Link
+                      to="/privacidade"
+                      className="text-primary underline hover:no-underline font-medium"
+                      target="_blank"
+                    >
+                      Política de Privacidade
+                    </Link>
+                    .
+                  </Label>
+                </div>
+
+                {/* Legal Text */}
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Ao continuar, você declara que leu e concorda com os{" "}
+                  <Link to="/termos" className="underline hover:text-foreground transition-colors">
                     Termos de Uso
                   </Link>{" "}
-                  e estou ciente da{" "}
-                  <Link
-                    to="/privacidade"
-                    className="text-primary underline hover:no-underline font-medium"
-                    target="_blank"
-                  >
+                  e está ciente da{" "}
+                  <Link to="/privacidade" className="underline hover:text-foreground transition-colors">
                     Política de Privacidade
                   </Link>
-                  .
-                </Label>
+                  , inclusive quanto ao tratamento de dados pessoais nos termos da Lei nº 13.709/2018 (LGPD).
+                </p>
               </div>
-
-              {/* Legal Text */}
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Ao continuar, você declara que leu e concorda com os{" "}
-                <Link to="/termos" className="underline hover:text-foreground transition-colors">
-                  Termos de Uso
-                </Link>{" "}
-                e está ciente da{" "}
-                <Link to="/privacidade" className="underline hover:text-foreground transition-colors">
-                  Política de Privacidade
-                </Link>
-                , inclusive quanto ao tratamento de dados pessoais nos termos da Lei nº 13.709/2018 (LGPD).
-              </p>
-            </div>
+            )}
           </div>
         </div>
       </div>
