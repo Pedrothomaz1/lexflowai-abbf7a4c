@@ -62,33 +62,6 @@ const Auth = () => {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    if (!termsAccepted) {
-      toast({
-        variant: "destructive",
-        title: "Aceite obrigatório",
-        description: "Você precisa aceitar os Termos de Uso e a Política de Privacidade para continuar.",
-      });
-      return;
-    }
-
-    setLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-
-    if (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao fazer login com Google",
-        description: handleDbError(error).message,
-      });
-      setLoading(false);
-    }
-  };
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
