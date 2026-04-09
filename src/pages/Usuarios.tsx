@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { useNavigate } from "react-router-dom";
 import {
   Card,
@@ -32,11 +33,23 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Shield, User, Plus, Search, X, Loader2, KeyRound } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Shield, User, Plus, Search, X, Loader2, KeyRound, UserPlus, Trash2, Send } from "lucide-react";
 import { handleDbError } from "@/utils/dbErrorHandler";
 
 type Profile = {
@@ -73,9 +86,23 @@ const Usuarios = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { canManageUsers, loading: roleLoading } = useUserRole();
+  const { organization } = useOrganization();
   const [search, setSearch] = useState("");
   const [addRoleUserId, setAddRoleUserId] = useState<string | null>(null);
   const [newRole, setNewRole] = useState("");
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("analista_juridico");
+  const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
+  const [deleteUserName, setDeleteUserName] = useState("");
+
+  const { data: currentUser } = useQuery({
+    queryKey: ["current-user-id"],
+    queryFn: async () => {
+      const { data } = await supabase.auth.getUser();
+      return data.user;
+    },
+  });
 
   const { data: usuarios = [], isLoading } = useQuery({
     queryKey: ["usuarios_admin"],
@@ -154,6 +181,58 @@ const Usuarios = () => {
     },
   });
 
+  const inviteUserMutation = useMutation({
+    mutationFn: async () => {
+      if (!organization?.id) throw new Error("Organização não encontrada");
+      const { data, error } = await supabase.functions.invoke("enviar-convite-organizacao", {
+        body: {
+          email: inviteEmail.toLowerCase().trim(),
+          organization_id: organization.id,
+          role_in_org: "member",
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["usuarios_admin"] });
+      toast({ title: "Convite enviado!", description: `Um email foi enviado para ${inviteEmail}.` });
+      setInviteOpen(false);
+      setInviteEmail("");
+      setInviteRole("analista_juridico");
+    },
+    onError: (err: any) => {
+      toast({ variant: "destructive", title: "Erro ao convidar", description: err.message });
+    },
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      // Remove user roles
+      const { error: roleError } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userId);
+      if (roleError) throw roleError;
+
+      // Remove from organization members
+      const { error: memberError } = await supabase
+        .from("organization_members")
+        .delete()
+        .eq("user_id", userId);
+      if (memberError) throw memberError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["usuarios_admin"] });
+      toast({ title: "Usuário removido com sucesso!" });
+      setDeleteUserId(null);
+    },
+    onError: (err: any) => {
+      toast({ variant: "destructive", title: "Erro ao remover", description: handleDbError(err).message });
+    },
+  });
+
   const filtered = usuarios.filter(
     (u) =>
       u.full_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -179,13 +258,19 @@ const Usuarios = () => {
         <div>
           <h1 className="text-3xl font-bold">Gerenciar Usuários</h1>
           <p className="text-muted-foreground mt-1">
-            Configure perfis de acesso e módulos dos usuários
+            Configure perfis de acesso, convide e gerencie usuários
           </p>
         </div>
-        <Button variant="outline" onClick={() => navigate("/admin/permissoes")}>
-          <KeyRound className="h-4 w-4 mr-2" />
-          Matriz de Permissões
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => navigate("/admin/permissoes")}>
+            <KeyRound className="h-4 w-4 mr-2" />
+            Matriz de Permissões
+          </Button>
+          <Button onClick={() => setInviteOpen(true)}>
+            <UserPlus className="h-4 w-4 mr-2" />
+            Convidar Usuário
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -222,130 +307,228 @@ const Usuarios = () => {
                   <TableHead>E-mail</TableHead>
                   <TableHead>Perfis</TableHead>
                   <TableHead>Módulo</TableHead>
-                  <TableHead className="w-[100px]">Ações</TableHead>
+                  <TableHead className="w-[140px]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((usuario) => (
-                  <TableRow key={usuario.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        {usuario.full_name}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{usuario.email}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {usuario.roles.map((r) => {
-                          const cfg = ROLE_CONFIG[r.role] || { label: r.role, variant: "outline" as const };
-                          return (
-                            <Badge
-                              key={r.id}
-                              variant={cfg.variant}
-                              className="cursor-pointer group gap-1"
+                {filtered.map((usuario) => {
+                  const isCurrentUser = currentUser?.id === usuario.id;
+                  return (
+                    <TableRow key={usuario.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          {usuario.full_name}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{usuario.email}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {usuario.roles.map((r) => {
+                            const cfg = ROLE_CONFIG[r.role] || { label: r.role, variant: "outline" as const };
+                            return (
+                              <Badge
+                                key={r.id}
+                                variant={cfg.variant}
+                                className="cursor-pointer group gap-1"
+                                onClick={() => {
+                                  if (usuario.roles.length > 1) {
+                                    removeRoleMutation.mutate(r.id);
+                                  } else {
+                                    toast({
+                                      variant: "destructive",
+                                      title: "Não é possível remover",
+                                      description: "O usuário precisa ter pelo menos um perfil.",
+                                    });
+                                  }
+                                }}
+                              >
+                                {cfg.label}
+                                {usuario.roles.length > 1 && (
+                                  <X className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                )}
+                              </Badge>
+                            );
+                          })}
+                          {usuario.roles.length === 0 && (
+                            <span className="text-xs text-muted-foreground italic">Sem perfil</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Select
+                          value={usuario.modulo_padrao}
+                          onValueChange={(v) =>
+                            updateModuloMutation.mutate({ userId: usuario.id, modulo: v })
+                          }
+                        >
+                          <SelectTrigger className="w-[130px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="contratos">Contratos</SelectItem>
+                            <SelectItem value="servicos">Serviços</SelectItem>
+                            <SelectItem value="ambos">Ambos</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Dialog
+                            open={addRoleUserId === usuario.id}
+                            onOpenChange={(open) => {
+                              if (!open) setAddRoleUserId(null);
+                            }}
+                          >
+                            <DialogTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                title="Adicionar perfil"
+                                onClick={() => setAddRoleUserId(usuario.id)}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-[350px]">
+                              <DialogHeader>
+                                <DialogTitle>Adicionar Perfil</DialogTitle>
+                              </DialogHeader>
+                              <div className="space-y-4 pt-2">
+                                <Select value={newRole} onValueChange={setNewRole}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Selecione um perfil" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {Object.entries(ROLE_CONFIG)
+                                      .filter(
+                                        ([key]) =>
+                                          !usuario.roles.some((r) => r.role === key)
+                                      )
+                                      .map(([key, cfg]) => (
+                                        <SelectItem key={key} value={key}>
+                                          {cfg.label}
+                                        </SelectItem>
+                                      ))}
+                                  </SelectContent>
+                                </Select>
+                                <Button
+                                  className="w-full"
+                                  disabled={!newRole || addRoleMutation.isPending}
+                                  onClick={() =>
+                                    addRoleMutation.mutate({
+                                      userId: usuario.id,
+                                      role: newRole,
+                                    })
+                                  }
+                                >
+                                  Adicionar
+                                </Button>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+
+                          {!isCurrentUser && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              title="Remover usuário"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
                               onClick={() => {
-                                if (usuario.roles.length > 1) {
-                                  removeRoleMutation.mutate(r.id);
-                                } else {
-                                  toast({
-                                    variant: "destructive",
-                                    title: "Não é possível remover",
-                                    description: "O usuário precisa ter pelo menos um perfil.",
-                                  });
-                                }
+                                setDeleteUserId(usuario.id);
+                                setDeleteUserName(usuario.full_name || usuario.email);
                               }}
                             >
-                              {cfg.label}
-                              {usuario.roles.length > 1 && (
-                                <X className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                              )}
-                            </Badge>
-                          );
-                        })}
-                        {usuario.roles.length === 0 && (
-                          <span className="text-xs text-muted-foreground italic">Sem perfil</span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Select
-                        value={usuario.modulo_padrao}
-                        onValueChange={(v) =>
-                          updateModuloMutation.mutate({ userId: usuario.id, modulo: v })
-                        }
-                      >
-                        <SelectTrigger className="w-[130px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="contratos">Contratos</SelectItem>
-                          <SelectItem value="servicos">Serviços</SelectItem>
-                          <SelectItem value="ambos">Ambos</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      <Dialog
-                        open={addRoleUserId === usuario.id}
-                        onOpenChange={(open) => {
-                          if (!open) setAddRoleUserId(null);
-                        }}
-                      >
-                        <DialogTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setAddRoleUserId(usuario.id)}
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-[350px]">
-                          <DialogHeader>
-                            <DialogTitle>Adicionar Perfil</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-4 pt-2">
-                            <Select value={newRole} onValueChange={setNewRole}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione um perfil" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {Object.entries(ROLE_CONFIG)
-                                  .filter(
-                                    ([key]) =>
-                                      !usuario.roles.some((r) => r.role === key)
-                                  )
-                                  .map(([key, cfg]) => (
-                                    <SelectItem key={key} value={key}>
-                                      {cfg.label}
-                                    </SelectItem>
-                                  ))}
-                              </SelectContent>
-                            </Select>
-                            <Button
-                              className="w-full"
-                              disabled={!newRole || addRoleMutation.isPending}
-                              onClick={() =>
-                                addRoleMutation.mutate({
-                                  userId: usuario.id,
-                                  role: newRole,
-                                })
-                              }
-                            >
-                              Adicionar
+                              <Trash2 className="h-4 w-4" />
                             </Button>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
         </CardContent>
       </Card>
+
+      {/* Invite Dialog */}
+      <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Convidar Novo Usuário</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label htmlFor="invite-email">Email *</Label>
+              <Input
+                id="invite-email"
+                type="email"
+                placeholder="usuario@empresa.com"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="invite-role">Perfil inicial</Label>
+              <Select value={inviteRole} onValueChange={setInviteRole}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(ROLE_CONFIG).map(([key, cfg]) => (
+                    <SelectItem key={key} value={key}>
+                      {cfg.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setInviteOpen(false)}>Cancelar</Button>
+            <Button
+              onClick={() => inviteUserMutation.mutate()}
+              disabled={!inviteEmail || inviteUserMutation.isPending}
+            >
+              {inviteUserMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Convidando...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Convidar
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteUserId} onOpenChange={(open) => !open && setDeleteUserId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover usuário</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover <strong>{deleteUserName}</strong> da organização?
+              Todos os perfis e permissões serão removidos. Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteUserId && deleteUserMutation.mutate(deleteUserId)}
+            >
+              {deleteUserMutation.isPending ? "Removendo..." : "Remover"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Card className="border-primary/50">
         <CardHeader>
