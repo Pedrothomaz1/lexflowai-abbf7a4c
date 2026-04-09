@@ -143,6 +143,18 @@ const contratosMenuSections: MenuSectionType[] = [
     ],
   },
 ];
+
+// Items do menu do usuário (dropdown no footer) - padrão Vektor Flow
+const userSettingsItems = [
+  { title: "Meu Perfil", url: "/settings", icon: Settings },
+  { title: "Autenticação 2FA", url: "/2fa-settings", icon: Shield },
+  { title: "Integrações", url: "/settings", icon: Cog },
+];
+
+const adminSettingsItems = [
+  { title: "Usuários & Papéis", url: "/usuarios", icon: UserCog },
+  { title: "Permissões", url: "/admin/permissoes", icon: ShieldCheck },
+  { title: "Logs de Auditoria", url: "/audit-logs", icon: Activity },
 ];
 
 // Menu sections para módulo de Serviços - Hierarquia Gestor-First
@@ -173,7 +185,6 @@ const servicosMenuSections: MenuSectionType[] = [
       },
     ],
   },
-];
 ];
 
 const roleLabels: Record<string, string> = {
