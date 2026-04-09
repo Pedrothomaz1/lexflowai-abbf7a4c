@@ -117,8 +117,8 @@ const contratosMenuSections: MenuSectionType[] = [
     defaultOpen: false,
     items: [
       { title: "Fornecedores", url: "/fornecedores", icon: Users, roles: ["all"] },
-      { title: "Unidades", url: "/unidades", icon: Building2, roles: ["all"] },
-      { title: "Modelos de Contrato", url: "/templates", icon: FileStack, roles: ["all"] },
+      { title: "Unidades", url: "/unidades", icon: Building2, roles: ["administrador"] },
+      { title: "Modelos de Contrato", url: "/templates", icon: FileStack, roles: ["administrador"] },
     ],
   },
   {
@@ -127,7 +127,7 @@ const contratosMenuSections: MenuSectionType[] = [
     icon: Workflow,
     defaultOpen: false,
     items: [
-      { title: "Fluxos de Aprovação", url: "/workflows", icon: GitBranch, roles: ["all"] },
+      { title: "Fluxos de Aprovação", url: "/workflows", icon: GitBranch, roles: ["administrador"] },
     ],
   },
   {
@@ -136,7 +136,7 @@ const contratosMenuSections: MenuSectionType[] = [
     icon: Shield,
     defaultOpen: false,
     items: [
-      { title: "Relatórios", url: "/relatorios", icon: BarChart3, roles: ["all"] },
+      { title: "Relatórios", url: "/relatorios", icon: BarChart3, roles: ["administrador"] },
       { title: "Histórico de Ações", url: "/audit-logs", icon: Activity, roles: ["administrador"] },
       { title: "Segurança", url: "/security", icon: Shield, roles: ["administrador"] },
       { title: "Proteção de Dados", url: "/compliance", icon: ShieldCheck, roles: ["administrador"] },
