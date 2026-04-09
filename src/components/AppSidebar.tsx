@@ -10,7 +10,7 @@ import {
   GitBranch,
   ChevronDown,
   ChevronRight,
-  HelpCircle,
+  
   Building2,
   Cog,
   Plus,
@@ -142,20 +142,19 @@ const contratosMenuSections: MenuSectionType[] = [
       { title: "Proteção de Dados", url: "/compliance", icon: ShieldCheck, roles: ["administrador"] },
     ],
   },
-  {
-    id: "configuracoes",
-    title: "Configurações",
-    icon: Settings,
-    defaultOpen: false,
-    items: [
-      { title: "Usuários e Permissões", url: "/usuarios", icon: UserCog, roles: ["administrador"] },
-      { title: "Matriz de Permissões", url: "/admin/permissoes", icon: Shield, roles: ["administrador"] },
-      { title: "Membros", url: "/organization/members", icon: Users, roles: ["org_admin"] },
-      { title: "Organização", url: "/organization/settings", icon: Building, roles: ["org_admin"] },
-      { title: "Notificações", url: "/notification-settings", icon: Bell, roles: ["all"] },
-      { title: "Preferências", url: "/settings", icon: Settings, roles: ["all"] },
-    ],
-  },
+];
+
+// Items do menu do usuário (dropdown no footer) - padrão Vektor Flow
+const userSettingsItems = [
+  { title: "Meu Perfil", url: "/settings", icon: Settings },
+  { title: "Autenticação 2FA", url: "/2fa-settings", icon: Shield },
+  { title: "Integrações", url: "/settings", icon: Cog },
+];
+
+const adminSettingsItems = [
+  { title: "Usuários & Papéis", url: "/usuarios", icon: UserCog },
+  { title: "Permissões", url: "/admin/permissoes", icon: ShieldCheck },
+  { title: "Logs de Auditoria", url: "/audit-logs", icon: Activity },
 ];
 
 // Menu sections para módulo de Serviços - Hierarquia Gestor-First
@@ -184,18 +183,6 @@ const servicosMenuSections: MenuSectionType[] = [
         icon: Cog, 
         roles: ["all"],
       },
-    ],
-  },
-  {
-    id: "configuracoes",
-    title: "Configurações",
-    icon: Settings,
-    defaultOpen: false,
-    items: [
-      { title: "Usuários e Permissões", url: "/usuarios", icon: UserCog, roles: ["administrador"] },
-      { title: "Membros", url: "/organization/members", icon: Users, roles: ["org_admin"] },
-      { title: "Organização", url: "/organization/settings", icon: Building, roles: ["org_admin"] },
-      { title: "Preferências", url: "/settings", icon: Settings, roles: ["all"] },
     ],
   },
 ];
@@ -494,14 +481,23 @@ export function AppSidebar() {
               <p className="text-xs text-muted-foreground">{userEmail}</p>
             </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate("/settings")}>
-              <Settings className="mr-2 h-4 w-4" />
-              Preferências
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/ajuda")}>
-              <HelpCircle className="mr-2 h-4 w-4" />
-              Central de Ajuda
-            </DropdownMenuItem>
+            {userSettingsItems.map((item) => (
+              <DropdownMenuItem key={item.url + item.title} onClick={() => navigate(item.url)}>
+                <item.icon className="mr-2 h-4 w-4" />
+                {item.title}
+              </DropdownMenuItem>
+            ))}
+            {userRole === "administrador" && (
+              <>
+                <DropdownMenuSeparator />
+                {adminSettingsItems.map((item) => (
+                  <DropdownMenuItem key={item.url} onClick={() => navigate(item.url)}>
+                    <item.icon className="mr-2 h-4 w-4" />
+                    {item.title}
+                  </DropdownMenuItem>
+                ))}
+              </>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
               <LogOut className="mr-2 h-4 w-4" />
