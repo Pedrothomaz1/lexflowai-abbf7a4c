@@ -10,7 +10,7 @@ import {
   GitBranch,
   ChevronDown,
   ChevronRight,
-  HelpCircle,
+  
   Building2,
   Cog,
   Plus,
