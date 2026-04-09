@@ -55,6 +55,7 @@ const AcceptInvite = React.lazy(() => import("./pages/AcceptInvite"));
 const TermosDeUso = React.lazy(() => import("./pages/TermosDeUso"));
 const CentralAjuda = React.lazy(() => import("./pages/CentralAjuda"));
 const PermissoesAdmin = React.lazy(() => import("./pages/PermissoesAdmin"));
+const ResetPassword = React.lazy(() => import("./pages/ResetPassword"));
 
 // Catches chunk load failures (e.g. deploy after user session, offline)
 class AppErrorBoundary extends Component<
@@ -122,6 +123,7 @@ function App() {
                     <Route path="/privacidade" element={<Privacidade />} />
                     <Route path="/termos" element={<TermosDeUso />} />
                     <Route path="/requisicao" element={<RequisicaoPublica />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
 
                     {/* Organization onboarding routes */}
                     <Route path="/onboarding" element={<ProtectedRoute requireOrg={false}><OnboardingOrganization /></ProtectedRoute>} />
