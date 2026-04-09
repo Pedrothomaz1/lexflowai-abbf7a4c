@@ -481,14 +481,23 @@ export function AppSidebar() {
               <p className="text-xs text-muted-foreground">{userEmail}</p>
             </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate("/settings")}>
-              <Settings className="mr-2 h-4 w-4" />
-              Preferências
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/ajuda")}>
-              <HelpCircle className="mr-2 h-4 w-4" />
-              Central de Ajuda
-            </DropdownMenuItem>
+            {userSettingsItems.map((item) => (
+              <DropdownMenuItem key={item.url + item.title} onClick={() => navigate(item.url)}>
+                <item.icon className="mr-2 h-4 w-4" />
+                {item.title}
+              </DropdownMenuItem>
+            ))}
+            {userRole === "administrador" && (
+              <>
+                <DropdownMenuSeparator />
+                {adminSettingsItems.map((item) => (
+                  <DropdownMenuItem key={item.url} onClick={() => navigate(item.url)}>
+                    <item.icon className="mr-2 h-4 w-4" />
+                    {item.title}
+                  </DropdownMenuItem>
+                ))}
+              </>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
               <LogOut className="mr-2 h-4 w-4" />
