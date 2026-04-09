@@ -299,6 +299,44 @@ const Auth = () => {
                       </>
                     )}
                   </Button>
+                  <div className="text-center mt-2">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const emailInput = document.getElementById("login-email") as HTMLInputElement;
+                        const email = emailInput?.value?.trim();
+                        if (!email) {
+                          toast({
+                            variant: "destructive",
+                            title: "Informe seu email",
+                            description: "Digite seu email no campo acima para redefinir a senha.",
+                          });
+                          return;
+                        }
+                        setLoading(true);
+                        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                          redirectTo: `${window.location.origin}/reset-password`,
+                        });
+                        setLoading(false);
+                        if (error) {
+                          toast({
+                            variant: "destructive",
+                            title: "Erro",
+                            description: handleDbError(error).message,
+                          });
+                        } else {
+                          toast({
+                            title: "Email enviado!",
+                            description: "Verifique sua caixa de entrada para redefinir a senha.",
+                          });
+                        }
+                      }}
+                      className="text-sm text-primary hover:underline"
+                      disabled={loading}
+                    >
+                      Esqueci minha senha
+                    </button>
+                  </div>
                 </form>
               </TabsContent>
 
