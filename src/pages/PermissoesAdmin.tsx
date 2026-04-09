@@ -213,11 +213,8 @@ const PermissoesAdmin = () => {
                       {perms.map((perm) => (
                         <TableRow key={perm.id}>
                           <TableCell>
-                            <div>
+                          <div>
                               <span className="font-medium text-sm">{perm.description}</span>
-                              <span className="block text-xs text-muted-foreground font-mono">
-                                {perm.name}
-                              </span>
                             </div>
                           </TableCell>
                           {ROLES.map((role) => (
