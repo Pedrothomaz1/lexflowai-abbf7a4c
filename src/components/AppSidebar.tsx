@@ -149,6 +149,7 @@ const contratosMenuSections: MenuSectionType[] = [
     defaultOpen: false,
     items: [
       { title: "Usuários e Permissões", url: "/usuarios", icon: UserCog, roles: ["administrador"] },
+      { title: "Matriz de Permissões", url: "/admin/permissoes", icon: Shield, roles: ["administrador"] },
       { title: "Membros", url: "/organization/members", icon: Users, roles: ["org_admin"] },
       { title: "Organização", url: "/organization/settings", icon: Building, roles: ["org_admin"] },
       { title: "Notificações", url: "/notification-settings", icon: Bell, roles: ["all"] },
