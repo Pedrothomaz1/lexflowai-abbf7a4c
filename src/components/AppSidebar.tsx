@@ -148,7 +148,6 @@ const contratosMenuSections: MenuSectionType[] = [
 const userSettingsItems = [
   { title: "Meu Perfil", url: "/settings", icon: Settings },
   { title: "Autenticação 2FA", url: "/2fa-settings", icon: Shield },
-  { title: "Integrações", url: "/settings", icon: Cog },
 ];
 
 const adminSettingsItems = [
