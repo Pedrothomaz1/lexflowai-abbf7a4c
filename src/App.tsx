@@ -54,6 +54,7 @@ const OrganizationMembers = React.lazy(() => import("./pages/OrganizationMembers
 const AcceptInvite = React.lazy(() => import("./pages/AcceptInvite"));
 const TermosDeUso = React.lazy(() => import("./pages/TermosDeUso"));
 const CentralAjuda = React.lazy(() => import("./pages/CentralAjuda"));
+const PermissoesAdmin = React.lazy(() => import("./pages/PermissoesAdmin"));
 
 // Catches chunk load failures (e.g. deploy after user session, offline)
 class AppErrorBoundary extends Component<
@@ -160,6 +161,7 @@ function App() {
                     {/* Organization management routes */}
                     <Route path="/organization/settings" element={<ProtectedRoute><DashboardLayout><OrganizationSettings /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/organization/members" element={<ProtectedRoute><DashboardLayout><OrganizationMembers /></DashboardLayout></ProtectedRoute>} />
+                    <Route path="/admin/permissoes" element={<ProtectedRoute><DashboardLayout><PermissoesAdmin /></DashboardLayout></ProtectedRoute>} />
 
                     {/* Help Center */}
                     <Route path="/ajuda" element={<ProtectedRoute><DashboardLayout><CentralAjuda /></DashboardLayout></ProtectedRoute>} />
