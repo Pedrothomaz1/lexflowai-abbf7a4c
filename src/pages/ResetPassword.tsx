@@ -28,6 +28,13 @@ const ResetPassword = () => {
       setIsRecovery(true);
     }
 
+    // Check if there's already an active session (PASSWORD_RECOVERY may have fired before mount)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setIsRecovery(true);
+      }
+    });
+
     return () => subscription.unsubscribe();
   }, []);
 
