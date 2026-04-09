@@ -142,20 +142,7 @@ const contratosMenuSections: MenuSectionType[] = [
       { title: "Proteção de Dados", url: "/compliance", icon: ShieldCheck, roles: ["administrador"] },
     ],
   },
-  {
-    id: "configuracoes",
-    title: "Configurações",
-    icon: Settings,
-    defaultOpen: false,
-    items: [
-      { title: "Usuários e Permissões", url: "/usuarios", icon: UserCog, roles: ["administrador"] },
-      { title: "Matriz de Permissões", url: "/admin/permissoes", icon: Shield, roles: ["administrador"] },
-      { title: "Membros", url: "/organization/members", icon: Users, roles: ["org_admin"] },
-      { title: "Organização", url: "/organization/settings", icon: Building, roles: ["org_admin"] },
-      { title: "Notificações", url: "/notification-settings", icon: Bell, roles: ["all"] },
-      { title: "Preferências", url: "/settings", icon: Settings, roles: ["all"] },
-    ],
-  },
+];
 ];
 
 // Menu sections para módulo de Serviços - Hierarquia Gestor-First
@@ -186,18 +173,7 @@ const servicosMenuSections: MenuSectionType[] = [
       },
     ],
   },
-  {
-    id: "configuracoes",
-    title: "Configurações",
-    icon: Settings,
-    defaultOpen: false,
-    items: [
-      { title: "Usuários e Permissões", url: "/usuarios", icon: UserCog, roles: ["administrador"] },
-      { title: "Membros", url: "/organization/members", icon: Users, roles: ["org_admin"] },
-      { title: "Organização", url: "/organization/settings", icon: Building, roles: ["org_admin"] },
-      { title: "Preferências", url: "/settings", icon: Settings, roles: ["all"] },
-    ],
-  },
+];
 ];
 
 const roleLabels: Record<string, string> = {
