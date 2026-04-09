@@ -150,7 +150,8 @@ const Usuarios = () => {
 
   const addRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
-      const { error } = await supabase.from("user_roles").insert({ user_id: userId, role });
+      if (!organization?.id) throw new Error("Organização não encontrada");
+      const { error } = await supabase.from("user_roles").insert({ user_id: userId, role, organization_id: organization.id });
       if (error) throw error;
     },
     onSuccess: () => {
