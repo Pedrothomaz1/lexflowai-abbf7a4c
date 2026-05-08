@@ -59,3 +59,9 @@ verify_jwt = true
 
 [functions.registrar-aceite-lgpd]
 verify_jwt = false
+
+[functions.consultar-cnpj]
+verify_jwt = true
+
+[functions.cron-verificar-cnpjs]
+verify_jwt = false
