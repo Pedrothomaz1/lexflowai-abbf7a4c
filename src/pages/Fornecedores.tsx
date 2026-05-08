@@ -67,10 +67,18 @@ const CATEGORIA_LABELS: Record<string, string> = {
 const Fornecedores = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [categorias, setCategorias] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  const filtroAtivo = searchParams.get("filtro") === "cnpj_inativo";
+  const PROBLEM = ["baixada", "suspensa", "inapta", "nula"];
+  const fornecedoresFiltrados = useMemo(
+    () => (filtroAtivo ? fornecedores.filter((f) => PROBLEM.includes(String(f.cnpj_status))) : fornecedores),
+    [filtroAtivo, fornecedores],
+  );
 
   useEffect(() => {
     fetchFornecedores();
