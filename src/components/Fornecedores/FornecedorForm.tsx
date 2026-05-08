@@ -325,7 +325,14 @@ export function FornecedorForm({ onSuccess, onCancel }: FornecedorFormProps) {
                 {documentValid && (
                   <div className="flex items-center justify-between gap-2">
                     {cnpjResult ? (
-                      <CnpjStatusBadge status={cnpjResult.status} />
+                      <button
+                        type="button"
+                        onClick={() => setShowCnpjDetails(true)}
+                        className="hover:opacity-80 transition-opacity"
+                        title="Ver detalhes da Receita Federal"
+                      >
+                        <CnpjStatusBadge status={cnpjResult.status} />
+                      </button>
                     ) : (
                       <span className="text-xs text-muted-foreground">
                         Verifique o CNPJ na Receita Federal antes de salvar
