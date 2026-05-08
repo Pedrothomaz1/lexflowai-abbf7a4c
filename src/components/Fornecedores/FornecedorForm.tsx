@@ -372,8 +372,18 @@ export function FornecedorForm({ onSuccess, onCancel }: FornecedorFormProps) {
                 {cnpjResult?.verificado_em && (
                   <p className="text-xs text-muted-foreground">
                     Última verificação: {new Date(cnpjResult.verificado_em).toLocaleString("pt-BR")}
+                    {" • "}
+                    <button type="button" className="underline" onClick={() => setShowCnpjDetails(true)}>
+                      ver detalhes
+                    </button>
                   </p>
                 )}
+                <CnpjDetailsDialog
+                  open={showCnpjDetails}
+                  onOpenChange={setShowCnpjDetails}
+                  result={cnpjResult}
+                  cnpj={formData.cnpj}
+                />
               </div>
             ) : (
               <div className="space-y-2">
