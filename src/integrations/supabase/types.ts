@@ -126,6 +126,42 @@ export type Database = {
           },
         ]
       }
+      cnpj_verification_log: {
+        Row: {
+          cnpj: string
+          created_at: string
+          created_by: string | null
+          error_message: string | null
+          fornecedor_id: string | null
+          id: string
+          organization_id: string
+          response: Json | null
+          status: string
+        }
+        Insert: {
+          cnpj: string
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          fornecedor_id?: string | null
+          id?: string
+          organization_id: string
+          response?: Json | null
+          status: string
+        }
+        Update: {
+          cnpj?: string
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          fornecedor_id?: string | null
+          id?: string
+          organization_id?: string
+          response?: Json | null
+          status?: string
+        }
+        Relationships: []
+      }
       compliance_logs: {
         Row: {
           base_legal: string | null
@@ -1257,6 +1293,10 @@ export type Database = {
           cep: string | null
           cidade: string | null
           cnpj: string | null
+          cnpj_dados_receita: Json | null
+          cnpj_situacao_data: string | null
+          cnpj_status: string | null
+          cnpj_verificado_em: string | null
           conta: string | null
           contato_cargo: string | null
           contato_email: string | null
@@ -1290,6 +1330,10 @@ export type Database = {
           cep?: string | null
           cidade?: string | null
           cnpj?: string | null
+          cnpj_dados_receita?: Json | null
+          cnpj_situacao_data?: string | null
+          cnpj_status?: string | null
+          cnpj_verificado_em?: string | null
           conta?: string | null
           contato_cargo?: string | null
           contato_email?: string | null
@@ -1323,6 +1367,10 @@ export type Database = {
           cep?: string | null
           cidade?: string | null
           cnpj?: string | null
+          cnpj_dados_receita?: Json | null
+          cnpj_situacao_data?: string | null
+          cnpj_status?: string | null
+          cnpj_verificado_em?: string | null
           conta?: string | null
           contato_cargo?: string | null
           contato_email?: string | null
