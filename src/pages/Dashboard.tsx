@@ -33,6 +33,7 @@ import { PremiumAreaChart, PremiumBarChart, PremiumDonutChart } from "@/componen
 import { ExecutiveSummary, ProximaAcaoCard, FranquiasKPIGrid } from "@/components/Dashboard";
 import { SLAIndicatorsCard } from "@/components/Dashboard/SLAIndicatorsCard";
 import { TopFornecedoresCard } from "@/components/Dashboard/TopFornecedoresCard";
+import { CnpjProblemasCard } from "@/components/Dashboard/CnpjProblemasCard";
 import { ExpiryTimelineSection } from "@/components/Dashboard/ExpiryTimelineSection";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
