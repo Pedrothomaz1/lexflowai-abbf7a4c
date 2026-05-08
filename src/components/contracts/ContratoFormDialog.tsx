@@ -19,8 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, FileText, X, Loader2 } from "lucide-react";
+import { Plus, FileText, X, Loader2, Search, AlertTriangle } from "lucide-react";
 import { InlineFornecedorForm } from "./InlineFornecedorForm";
+import { CnpjStatusBadge, isCnpjProblem } from "@/components/cnpj/CnpjStatusBadge";
+import { useCnpjVerification } from "@/hooks/useCnpjVerification";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 type Fornecedor = {
   id: string;
