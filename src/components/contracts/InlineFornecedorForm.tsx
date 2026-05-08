@@ -42,6 +42,7 @@ export function InlineFornecedorForm({ onCreated, onCancel }: InlineFornecedorFo
   const [docValid, setDocValid] = useState(false);
   const [email, setEmail] = useState("");
   const { verify, loading: verifying, result: cnpjResult, setResult } = useCnpjVerification();
+  const [showDetails, setShowDetails] = useState(false);
 
   const handleSubmit = async () => {
     if (!nome.trim()) {
