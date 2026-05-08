@@ -82,7 +82,7 @@ const Fornecedores = () => {
     // Fetch fornecedores
     const { data: fornecedoresData, error: fornecedoresError } = await supabase
       .from("fornecedores")
-      .select("id, nome, tipo_pessoa, cnpj, cpf, email, telefone, cidade, estado, is_active, created_at")
+      .select("id, nome, tipo_pessoa, cnpj, cpf, email, telefone, cidade, estado, is_active, created_at, cnpj_status")
       .order("nome");
 
     if (fornecedoresError) {
