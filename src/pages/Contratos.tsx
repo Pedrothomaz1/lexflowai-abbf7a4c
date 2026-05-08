@@ -164,7 +164,7 @@ const Contratos = () => {
   const fetchFornecedores = async () => {
     const { data } = await supabase
       .from("fornecedores")
-      .select("id, nome, cnpj, cpf")
+      .select("id, nome, cnpj, cpf, cnpj_status")
       .order("nome");
     
     setFornecedores(data || []);
