@@ -165,9 +165,10 @@ const Fornecedores = () => {
         if (!doc) return <span className="text-muted-foreground">—</span>;
         const formatted = row.cnpj ? formatCNPJ(doc) : formatCPF(doc);
         return (
-          <span className="font-mono text-sm text-muted-foreground">
-            {formatted}
-          </span>
+          <div className="space-y-1">
+            <span className="font-mono text-sm text-muted-foreground">{formatted}</span>
+            {row.cnpj && <CnpjStatusBadge status={row.cnpj_status} className="text-[10px]" />}
+          </div>
         );
       },
     },
