@@ -226,6 +226,13 @@ export function FornecedorForm({ onSuccess, onCancel }: FornecedorFormProps) {
           titular_conta: formData.titular_conta || null,
           notas: formData.notas || null,
           created_by: user.id,
+          ...(formData.tipo_pessoa === "juridica" && cnpjResult?.status
+            ? {
+                cnpj_status: cnpjResult.status,
+                cnpj_situacao_data: cnpjResult.situacao_data ?? null,
+                cnpj_verificado_em: new Date().toISOString(),
+              }
+            : {}),
         })
         .select()
         .single();
