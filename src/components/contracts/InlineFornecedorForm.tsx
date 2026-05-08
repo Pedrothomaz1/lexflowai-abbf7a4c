@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, X, UserPlus, Search } from "lucide-react";
 import { useCnpjVerification } from "@/hooks/useCnpjVerification";
 import { CnpjStatusBadge, isCnpjProblem } from "@/components/cnpj/CnpjStatusBadge";
+import { CnpjDetailsDialog } from "@/components/cnpj/CnpjDetailsDialog";
 
 type Fornecedor = {
   id: string;
@@ -41,6 +42,7 @@ export function InlineFornecedorForm({ onCreated, onCancel }: InlineFornecedorFo
   const [docValid, setDocValid] = useState(false);
   const [email, setEmail] = useState("");
   const { verify, loading: verifying, result: cnpjResult, setResult } = useCnpjVerification();
+  const [showDetails, setShowDetails] = useState(false);
 
   const handleSubmit = async () => {
     if (!nome.trim()) {
@@ -155,7 +157,9 @@ export function InlineFornecedorForm({ onCreated, onCancel }: InlineFornecedorFo
           {tipoPessoa === "pj" && docValid && (
             <div className="flex items-center justify-between gap-2 pt-1">
               {cnpjResult ? (
-                <CnpjStatusBadge status={cnpjResult.status} />
+                <button type="button" onClick={() => setShowDetails(true)} className="hover:opacity-80">
+                  <CnpjStatusBadge status={cnpjResult.status} />
+                </button>
               ) : (
                 <span className="text-xs text-muted-foreground">Verifique na Receita Federal</span>
               )}
@@ -167,8 +171,10 @@ export function InlineFornecedorForm({ onCreated, onCancel }: InlineFornecedorFo
                 disabled={verifying}
                 onClick={async () => {
                   const r = await verify(documento, { force: true });
-                  if (r && !nome.trim() && r.nome) setNome(r.nome);
-                  if (r && !email && r.email) setEmail(r.email);
+                  if (!r) return;
+                  setShowDetails(true);
+                  if (!nome.trim() && r.nome) setNome(r.nome);
+                  if (!email && r.email) setEmail(r.email);
                 }}
               >
                 {verifying ? (
@@ -180,6 +186,12 @@ export function InlineFornecedorForm({ onCreated, onCancel }: InlineFornecedorFo
               </Button>
             </div>
           )}
+          <CnpjDetailsDialog
+            open={showDetails}
+            onOpenChange={setShowDetails}
+            result={cnpjResult}
+            cnpj={documento}
+          />
         </div>
 
         <div className="col-span-2 space-y-1.5">

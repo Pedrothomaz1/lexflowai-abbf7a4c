@@ -25,6 +25,7 @@ import { Loader2, Search } from "lucide-react";
 import { handleDbError } from "@/utils/dbErrorHandler";
 import { useCnpjVerification } from "@/hooks/useCnpjVerification";
 import { CnpjStatusBadge, isCnpjProblem } from "@/components/cnpj/CnpjStatusBadge";
+import { CnpjDetailsDialog } from "@/components/cnpj/CnpjDetailsDialog";
 
 const ESTADOS_BR = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
@@ -81,6 +82,7 @@ export function FornecedorForm({ onSuccess, onCancel }: FornecedorFormProps) {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [documentValid, setDocumentValid] = useState(false);
   const { verify, loading: verifyingCnpj, result: cnpjResult, setResult: setCnpjResult } = useCnpjVerification();
+  const [showCnpjDetails, setShowCnpjDetails] = useState(false);
 
   const [formData, setFormData] = useState<FornecedorFormData>({
     nome: "",
@@ -323,7 +325,14 @@ export function FornecedorForm({ onSuccess, onCancel }: FornecedorFormProps) {
                 {documentValid && (
                   <div className="flex items-center justify-between gap-2">
                     {cnpjResult ? (
-                      <CnpjStatusBadge status={cnpjResult.status} />
+                      <button
+                        type="button"
+                        onClick={() => setShowCnpjDetails(true)}
+                        className="hover:opacity-80 transition-opacity"
+                        title="Ver detalhes da Receita Federal"
+                      >
+                        <CnpjStatusBadge status={cnpjResult.status} />
+                      </button>
                     ) : (
                       <span className="text-xs text-muted-foreground">
                         Verifique o CNPJ na Receita Federal antes de salvar
@@ -338,6 +347,7 @@ export function FornecedorForm({ onSuccess, onCancel }: FornecedorFormProps) {
                       onClick={async () => {
                         const r = await verify(formData.cnpj, { force: true });
                         if (!r) return;
+                        setShowCnpjDetails(true);
                         if (!formData.nome && r.nome) handleChange("nome", r.nome);
                         if (!formData.email && r.email) handleChange("email", r.email);
                         if (!formData.telefone && r.telefone) handleChange("telefone", r.telefone);
@@ -362,8 +372,18 @@ export function FornecedorForm({ onSuccess, onCancel }: FornecedorFormProps) {
                 {cnpjResult?.verificado_em && (
                   <p className="text-xs text-muted-foreground">
                     Última verificação: {new Date(cnpjResult.verificado_em).toLocaleString("pt-BR")}
+                    {" • "}
+                    <button type="button" className="underline" onClick={() => setShowCnpjDetails(true)}>
+                      ver detalhes
+                    </button>
                   </p>
                 )}
+                <CnpjDetailsDialog
+                  open={showCnpjDetails}
+                  onOpenChange={setShowCnpjDetails}
+                  result={cnpjResult}
+                  cnpj={formData.cnpj}
+                />
               </div>
             ) : (
               <div className="space-y-2">
