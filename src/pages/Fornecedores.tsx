@@ -293,28 +293,41 @@ const Fornecedores = () => {
         <StaggerItem>
           <AnimatedCard hoverScale={1}>
             <AnimatedCardHeader>
-              <div className="flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-primary" />
-                <h3 className="text-lg font-semibold">Lista de Fornecedores</h3>
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-5 w-5 text-primary" />
+                    <h3 className="text-lg font-semibold">Lista de Fornecedores</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {fornecedoresFiltrados.length} fornecedor(es){filtroAtivo ? " com CNPJ inativo" : " cadastrado(s)"}
+                  </p>
+                </div>
+                <Tabs
+                  value={filtroAtivo ? "cnpj_inativo" : "todos"}
+                  onValueChange={(v) => {
+                    if (v === "cnpj_inativo") setSearchParams({ filtro: "cnpj_inativo" });
+                    else setSearchParams({});
+                  }}
+                >
+                  <TabsList>
+                    <TabsTrigger value="todos">Todos</TabsTrigger>
+                    <TabsTrigger value="cnpj_inativo">CNPJs com problemas</TabsTrigger>
+                  </TabsList>
+                </Tabs>
               </div>
-              <p className="text-sm text-muted-foreground">
-                {fornecedores.length} fornecedor(es) cadastrado(s)
-              </p>
             </AnimatedCardHeader>
             <AnimatedCardContent>
-              {fornecedores.length === 0 ? (
+              {fornecedoresFiltrados.length === 0 ? (
                 <EmptyState
                   icon={Building2}
-                  title="Nenhum fornecedor cadastrado"
-                  description="Cadastre seu primeiro fornecedor para começar a gerenciar suas parcerias."
-                  action={{
-                    label: "Novo Fornecedor",
-                    onClick: () => setDialogOpen(true),
-                  }}
+                  title={filtroAtivo ? "Nenhum CNPJ com problemas" : "Nenhum fornecedor cadastrado"}
+                  description={filtroAtivo ? "Todos os fornecedores estão com CNPJ ativo na Receita Federal." : "Cadastre seu primeiro fornecedor para começar."}
+                  action={filtroAtivo ? undefined : { label: "Novo Fornecedor", onClick: () => setDialogOpen(true) }}
                 />
               ) : (
                 <DataTable
-                  data={fornecedores}
+                  data={fornecedoresFiltrados}
                   columns={columns}
                   searchable
                   searchPlaceholder="Buscar por nome, documento..."
