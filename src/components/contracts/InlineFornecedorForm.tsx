@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, X, UserPlus, Search } from "lucide-react";
 import { useCnpjVerification } from "@/hooks/useCnpjVerification";
 import { CnpjStatusBadge, isCnpjProblem } from "@/components/cnpj/CnpjStatusBadge";
+import { CnpjDetailsDialog } from "@/components/cnpj/CnpjDetailsDialog";
 
 type Fornecedor = {
   id: string;
