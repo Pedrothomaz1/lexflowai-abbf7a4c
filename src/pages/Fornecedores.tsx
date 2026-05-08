@@ -23,6 +23,8 @@ import { AnimatedCard, AnimatedCardContent, AnimatedCardHeader } from "@/compone
 import { formatCPF, formatCNPJ } from "@/utils/documentValidation";
 import { FornecedorForm } from "@/components/Fornecedores";
 import { Button } from "@/components/ui/button";
+import { CnpjStatusBadge } from "@/components/cnpj/CnpjStatusBadge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type Fornecedor = {
   id: string;
