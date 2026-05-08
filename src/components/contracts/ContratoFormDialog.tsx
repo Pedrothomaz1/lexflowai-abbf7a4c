@@ -312,7 +312,7 @@ export function ContratoFormDialog({
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={submitting}>
+            <Button type="submit" disabled={submitting || cnpjBlocked}>
               {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Criar Contrato
             </Button>
