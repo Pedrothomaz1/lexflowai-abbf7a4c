@@ -197,7 +197,12 @@ export function InlineFornecedorForm({ onCreated, onCancel }: InlineFornecedorFo
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
           Cancelar
         </Button>
-        <Button type="button" size="sm" onClick={handleSubmit} disabled={creating || !nome.trim()}>
+        <Button
+          type="button"
+          size="sm"
+          onClick={handleSubmit}
+          disabled={creating || !nome.trim() || (tipoPessoa === "pj" && isCnpjProblem(cnpjResult?.status))}
+        >
           {creating && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
           Salvar Fornecedor
         </Button>
