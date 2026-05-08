@@ -147,10 +147,38 @@ export function InlineFornecedorForm({ onCreated, onCancel }: InlineFornecedorFo
           <DocumentInput
             documentType={tipoPessoa === "pj" ? "cnpj" : "cpf"}
             value={documento}
-            onChange={(val, valid) => { setDocumento(val); setDocValid(valid); }}
+            onChange={(val, valid) => { setDocumento(val); setDocValid(valid); setResult(null); }}
             showValidation={documento.length > 0}
             className="h-9"
           />
+          {tipoPessoa === "pj" && docValid && (
+            <div className="flex items-center justify-between gap-2 pt-1">
+              {cnpjResult ? (
+                <CnpjStatusBadge status={cnpjResult.status} />
+              ) : (
+                <span className="text-xs text-muted-foreground">Verifique na Receita Federal</span>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                disabled={verifying}
+                onClick={async () => {
+                  const r = await verify(documento, { force: true });
+                  if (r && !nome.trim() && r.nome) setNome(r.nome);
+                  if (r && !email && r.email) setEmail(r.email);
+                }}
+              >
+                {verifying ? (
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                ) : (
+                  <Search className="h-3 w-3 mr-1" />
+                )}
+                Verificar
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="col-span-2 space-y-1.5">
