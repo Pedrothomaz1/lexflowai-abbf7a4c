@@ -225,14 +225,25 @@ export function ContratoFormDialog({
 
             {selectedFornecedor?.cnpj && !showNewFornecedor && (
               <div className="flex items-center justify-between gap-2 pt-1">
-                <CnpjStatusBadge status={cnpjStatus} />
+                <button
+                  type="button"
+                  onClick={() => verifyResult && setShowCnpjDetails(true)}
+                  className="hover:opacity-80 transition-opacity"
+                  disabled={!verifyResult}
+                  title={verifyResult ? "Ver detalhes da Receita Federal" : ""}
+                >
+                  <CnpjStatusBadge status={cnpjStatus} />
+                </button>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   className="h-7 text-xs"
                   disabled={verifyingCnpj}
-                  onClick={() => verify(selectedFornecedor.cnpj!, { fornecedorId: selectedFornecedor.id, force: true })}
+                  onClick={async () => {
+                    const r = await verify(selectedFornecedor.cnpj!, { fornecedorId: selectedFornecedor.id, force: true });
+                    if (r) setShowCnpjDetails(true);
+                  }}
                 >
                   {verifyingCnpj ? (
                     <Loader2 className="h-3 w-3 mr-1 animate-spin" />
@@ -243,6 +254,12 @@ export function ContratoFormDialog({
                 </Button>
               </div>
             )}
+            <CnpjDetailsDialog
+              open={showCnpjDetails}
+              onOpenChange={setShowCnpjDetails}
+              result={verifyResult}
+              cnpj={selectedFornecedor?.cnpj}
+            />
 
             {cnpjBlocked && (
               <Alert variant="destructive" className="mt-2">
