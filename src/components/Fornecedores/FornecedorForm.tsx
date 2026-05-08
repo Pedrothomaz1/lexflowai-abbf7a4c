@@ -179,6 +179,19 @@ export function FornecedorForm({ onSuccess, onCancel }: FornecedorFormProps) {
       }
     }
 
+    if (formData.tipo_pessoa === "juridica") {
+      const r = cnpjResult ?? (await verify(formData.cnpj, { silent: true }));
+      if (r && isCnpjProblem(r.status)) {
+        toast({
+          variant: "destructive",
+          title: "CNPJ não está ativo",
+          description: "Não é possível cadastrar fornecedor com CNPJ inativo na Receita Federal.",
+        });
+        setActiveTab("basico");
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
