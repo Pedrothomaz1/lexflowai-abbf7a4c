@@ -75,6 +75,7 @@ export function ContratoFormDialog({
 }: ContratoFormDialogProps) {
   const [showNewFornecedor, setShowNewFornecedor] = useState(false);
   const { verify, loading: verifyingCnpj, result: verifyResult, setResult: setVerifyResult } = useCnpjVerification();
+  const [showCnpjDetails, setShowCnpjDetails] = useState(false);
 
   const selectedFornecedor = fornecedores.find((f) => f.id === formData.fornecedor_id);
   const cnpjStatus = verifyResult?.status || selectedFornecedor?.cnpj_status || (selectedFornecedor?.cnpj ? "nao_verificado" : null);
