@@ -75,6 +75,11 @@ export function InlineFornecedorForm({ onCreated, onCancel }: InlineFornecedorFo
 
       if (tipoPessoa === "pj") {
         insertData.cnpj = documento || null;
+        if (cnpjResult?.status) {
+          insertData.cnpj_status = cnpjResult.status;
+          insertData.cnpj_situacao_data = cnpjResult.situacao_data ?? null;
+          insertData.cnpj_verificado_em = new Date().toISOString();
+        }
       } else {
         insertData.cpf = documento || null;
       }
