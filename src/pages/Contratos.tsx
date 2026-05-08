@@ -40,6 +40,7 @@ type Fornecedor = {
   nome: string;
   cnpj?: string | null;
   cpf?: string | null;
+  cnpj_status?: string | null;
 };
 
 const Contratos = () => {
