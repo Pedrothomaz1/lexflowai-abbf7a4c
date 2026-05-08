@@ -340,6 +340,7 @@ export function FornecedorForm({ onSuccess, onCancel }: FornecedorFormProps) {
                       onClick={async () => {
                         const r = await verify(formData.cnpj, { force: true });
                         if (!r) return;
+                        setShowCnpjDetails(true);
                         if (!formData.nome && r.nome) handleChange("nome", r.nome);
                         if (!formData.email && r.email) handleChange("email", r.email);
                         if (!formData.telefone && r.telefone) handleChange("telefone", r.telefone);
