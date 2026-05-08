@@ -316,9 +316,54 @@ export function FornecedorForm({ onSuccess, onCancel }: FornecedorFormProps) {
                   onChange={(value, isValid) => {
                     handleChange("cnpj", value);
                     setDocumentValid(isValid);
+                    setCnpjResult(null);
                   }}
                   required
                 />
+                {documentValid && (
+                  <div className="flex items-center justify-between gap-2">
+                    {cnpjResult ? (
+                      <CnpjStatusBadge status={cnpjResult.status} />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">
+                        Verifique o CNPJ na Receita Federal antes de salvar
+                      </span>
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs"
+                      disabled={verifyingCnpj}
+                      onClick={async () => {
+                        const r = await verify(formData.cnpj, { force: true });
+                        if (!r) return;
+                        if (!formData.nome && r.nome) handleChange("nome", r.nome);
+                        if (!formData.email && r.email) handleChange("email", r.email);
+                        if (!formData.telefone && r.telefone) handleChange("telefone", r.telefone);
+                        if (r.endereco) {
+                          if (!formData.endereco && r.endereco.logradouro)
+                            handleChange("endereco", `${r.endereco.logradouro}${r.endereco.numero ? ", " + r.endereco.numero : ""}`);
+                          if (!formData.cidade && r.endereco.municipio) handleChange("cidade", r.endereco.municipio);
+                          if (!formData.estado && r.endereco.uf) handleChange("estado", r.endereco.uf);
+                          if (!formData.cep && r.endereco.cep) handleChange("cep", r.endereco.cep);
+                        }
+                      }}
+                    >
+                      {verifyingCnpj ? (
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      ) : (
+                        <Search className="h-3 w-3 mr-1" />
+                      )}
+                      Verificar
+                    </Button>
+                  </div>
+                )}
+                {cnpjResult?.verificado_em && (
+                  <p className="text-xs text-muted-foreground">
+                    Última verificação: {new Date(cnpjResult.verificado_em).toLocaleString("pt-BR")}
+                  </p>
+                )}
               </div>
             ) : (
               <div className="space-y-2">
