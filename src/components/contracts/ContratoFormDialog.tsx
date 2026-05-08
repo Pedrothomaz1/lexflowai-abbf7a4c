@@ -205,7 +205,7 @@ export function ContratoFormDialog({
             ) : (
               <Select
                 value={formData.fornecedor_id}
-                onValueChange={(value) => onFormDataChange({ ...formData, fornecedor_id: value })}
+                onValueChange={(value) => { onFormDataChange({ ...formData, fornecedor_id: value }); setVerifyResult(null); }}
                 required
               >
                 <SelectTrigger>
@@ -219,6 +219,36 @@ export function ContratoFormDialog({
                   ))}
                 </SelectContent>
               </Select>
+            )}
+
+            {selectedFornecedor?.cnpj && !showNewFornecedor && (
+              <div className="flex items-center justify-between gap-2 pt-1">
+                <CnpjStatusBadge status={cnpjStatus} />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  disabled={verifyingCnpj}
+                  onClick={() => verify(selectedFornecedor.cnpj!, { fornecedorId: selectedFornecedor.id, force: true })}
+                >
+                  {verifyingCnpj ? (
+                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                  ) : (
+                    <Search className="h-3 w-3 mr-1" />
+                  )}
+                  Reverificar
+                </Button>
+              </div>
+            )}
+
+            {cnpjBlocked && (
+              <Alert variant="destructive" className="mt-2">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="text-xs">
+                  Este fornecedor está com CNPJ inativo na Receita Federal. Não é possível criar contratos até regularizar.
+                </AlertDescription>
+              </Alert>
             )}
           </div>
 
