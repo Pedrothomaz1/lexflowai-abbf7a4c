@@ -543,6 +543,7 @@ const Dashboard = () => {
               topFornecedores={topFornecedores}
               onNavigate={navigate}
             />
+            <CnpjProblemasCard />
           </div>
 
           {/* Charts Row - Premium Style */}
