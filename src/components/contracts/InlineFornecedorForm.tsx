@@ -48,6 +48,18 @@ export function InlineFornecedorForm({ onCreated, onCancel }: InlineFornecedorFo
     }
     if (!organization?.id) return;
 
+    if (tipoPessoa === "pj" && docValid) {
+      const r = cnpjResult ?? (await verify(documento, { silent: true }));
+      if (r && isCnpjProblem(r.status)) {
+        toast({
+          variant: "destructive",
+          title: "CNPJ não está ativo",
+          description: "Não é possível cadastrar fornecedor com CNPJ inativo.",
+        });
+        return;
+      }
+    }
+
     const { data: user } = await supabase.auth.getUser();
     if (!user.user) return;
 
