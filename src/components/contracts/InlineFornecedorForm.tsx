@@ -157,7 +157,9 @@ export function InlineFornecedorForm({ onCreated, onCancel }: InlineFornecedorFo
           {tipoPessoa === "pj" && docValid && (
             <div className="flex items-center justify-between gap-2 pt-1">
               {cnpjResult ? (
-                <CnpjStatusBadge status={cnpjResult.status} />
+                <button type="button" onClick={() => setShowDetails(true)} className="hover:opacity-80">
+                  <CnpjStatusBadge status={cnpjResult.status} />
+                </button>
               ) : (
                 <span className="text-xs text-muted-foreground">Verifique na Receita Federal</span>
               )}
@@ -169,8 +171,10 @@ export function InlineFornecedorForm({ onCreated, onCancel }: InlineFornecedorFo
                 disabled={verifying}
                 onClick={async () => {
                   const r = await verify(documento, { force: true });
-                  if (r && !nome.trim() && r.nome) setNome(r.nome);
-                  if (r && !email && r.email) setEmail(r.email);
+                  if (!r) return;
+                  setShowDetails(true);
+                  if (!nome.trim() && r.nome) setNome(r.nome);
+                  if (!email && r.email) setEmail(r.email);
                 }}
               >
                 {verifying ? (
@@ -182,6 +186,12 @@ export function InlineFornecedorForm({ onCreated, onCancel }: InlineFornecedorFo
               </Button>
             </div>
           )}
+          <CnpjDetailsDialog
+            open={showDetails}
+            onOpenChange={setShowDetails}
+            result={cnpjResult}
+            cnpj={documento}
+          />
         </div>
 
         <div className="col-span-2 space-y-1.5">
