@@ -21,8 +21,10 @@ import {
 import { DocumentInput } from "@/components/ui/document-input";
 import { validateCPF, validateCNPJ, cleanDocument } from "@/utils/documentValidation";
 import { FornecedorCategorias, saveFornecedorCategorias } from "./FornecedorCategorias";
-import { Loader2 } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 import { handleDbError } from "@/utils/dbErrorHandler";
+import { useCnpjVerification } from "@/hooks/useCnpjVerification";
+import { CnpjStatusBadge, isCnpjProblem } from "@/components/cnpj/CnpjStatusBadge";
 
 const ESTADOS_BR = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
@@ -78,6 +80,7 @@ export function FornecedorForm({ onSuccess, onCancel }: FornecedorFormProps) {
   const [activeTab, setActiveTab] = useState("basico");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [documentValid, setDocumentValid] = useState(false);
+  const { verify, loading: verifyingCnpj, result: cnpjResult, setResult: setCnpjResult } = useCnpjVerification();
 
   const [formData, setFormData] = useState<FornecedorFormData>({
     nome: "",
@@ -176,6 +179,19 @@ export function FornecedorForm({ onSuccess, onCancel }: FornecedorFormProps) {
       }
     }
 
+    if (formData.tipo_pessoa === "juridica") {
+      const r = cnpjResult ?? (await verify(formData.cnpj, { silent: true }));
+      if (r && isCnpjProblem(r.status)) {
+        toast({
+          variant: "destructive",
+          title: "CNPJ não está ativo",
+          description: "Não é possível cadastrar fornecedor com CNPJ inativo na Receita Federal.",
+        });
+        setActiveTab("basico");
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
@@ -210,6 +226,13 @@ export function FornecedorForm({ onSuccess, onCancel }: FornecedorFormProps) {
           titular_conta: formData.titular_conta || null,
           notas: formData.notas || null,
           created_by: user.id,
+          ...(formData.tipo_pessoa === "juridica" && cnpjResult?.status
+            ? {
+                cnpj_status: cnpjResult.status,
+                cnpj_situacao_data: cnpjResult.situacao_data ?? null,
+                cnpj_verificado_em: new Date().toISOString(),
+              }
+            : {}),
         })
         .select()
         .single();
@@ -293,9 +316,54 @@ export function FornecedorForm({ onSuccess, onCancel }: FornecedorFormProps) {
                   onChange={(value, isValid) => {
                     handleChange("cnpj", value);
                     setDocumentValid(isValid);
+                    setCnpjResult(null);
                   }}
                   required
                 />
+                {documentValid && (
+                  <div className="flex items-center justify-between gap-2">
+                    {cnpjResult ? (
+                      <CnpjStatusBadge status={cnpjResult.status} />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">
+                        Verifique o CNPJ na Receita Federal antes de salvar
+                      </span>
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs"
+                      disabled={verifyingCnpj}
+                      onClick={async () => {
+                        const r = await verify(formData.cnpj, { force: true });
+                        if (!r) return;
+                        if (!formData.nome && r.nome) handleChange("nome", r.nome);
+                        if (!formData.email && r.email) handleChange("email", r.email);
+                        if (!formData.telefone && r.telefone) handleChange("telefone", r.telefone);
+                        if (r.endereco) {
+                          if (!formData.endereco && r.endereco.logradouro)
+                            handleChange("endereco", `${r.endereco.logradouro}${r.endereco.numero ? ", " + r.endereco.numero : ""}`);
+                          if (!formData.cidade && r.endereco.municipio) handleChange("cidade", r.endereco.municipio);
+                          if (!formData.estado && r.endereco.uf) handleChange("estado", r.endereco.uf);
+                          if (!formData.cep && r.endereco.cep) handleChange("cep", r.endereco.cep);
+                        }
+                      }}
+                    >
+                      {verifyingCnpj ? (
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      ) : (
+                        <Search className="h-3 w-3 mr-1" />
+                      )}
+                      Verificar
+                    </Button>
+                  </div>
+                )}
+                {cnpjResult?.verificado_em && (
+                  <p className="text-xs text-muted-foreground">
+                    Última verificação: {new Date(cnpjResult.verificado_em).toLocaleString("pt-BR")}
+                  </p>
+                )}
               </div>
             ) : (
               <div className="space-y-2">

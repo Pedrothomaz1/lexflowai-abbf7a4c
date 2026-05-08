@@ -1,49 +1,67 @@
+## Feature: Validação de CNPJ na Receita Federal
 
+Vamos consultar o status do CNPJ via **ReceitaWS** (gratuita, limite ~3 req/min) em dois momentos: ao cadastrar/editar fornecedor e ao criar contrato. CNPJs inativos/baixados/suspensos bloquearão novos contratos. Um cron diário revalidará toda a base, e o dashboard exibirá CNPJs com problemas.
 
-# Gestão de Usuários e Permissões — Padrão Vektor Flow
+### 1. Banco de dados
 
-## Contexto
+Adicionar colunas em `fornecedores`:
+- `cnpj_status` (text): `ativa`, `baixada`, `suspensa`, `inapta`, `nula`, `nao_verificado`, `erro_consulta`
+- `cnpj_situacao_data` (date): data da situação cadastral retornada
+- `cnpj_verificado_em` (timestamptz): última consulta bem-sucedida
+- `cnpj_dados_receita` (jsonb): payload completo (razão social, atividade principal, endereço) para auditoria/auto-preenchimento
 
-O LexFlow já possui as tabelas `permissions`, `role_permissions`, `user_roles` e as funções `has_role()`, `has_any_role()`, `has_permission()`. O que falta é a **interface administrativa** para gerenciar isso de forma visual, seguindo o padrão do [Vektor Flow](/projects/10073adf-cd1b-4e22-bfae-a55a500b3a29).
+Criar tabela `cnpj_verification_log` para histórico de consultas (fornecedor_id, status, response, created_at, organization_id) com RLS por organização.
 
-## O que será implementado
+### 2. Edge Function: `consultar-cnpj`
 
-### 1. Página de Matriz de Permissões (admin)
+- Recebe `{ cnpj }`, valida formato, chama `https://receitaws.com.br/v1/cnpj/{cnpj}`.
+- Tratamento de erro 429 (rate limit) → retorna `status: "rate_limited"` com retry sugerido.
+- Retorna situação cadastral + dados úteis (razão social, nome fantasia, atividade, endereço).
+- Atualiza `fornecedores` se `fornecedor_id` for passado, e grava em `cnpj_verification_log`.
+- `verify_jwt = true`.
 
-Criar `src/pages/PermissoesAdmin.tsx` — uma tabela interativa onde cada linha é uma permissão e cada coluna é um role (`administrador`, `consultoria_juridica`, `analista_juridico`). Cada célula tem um **Switch** para ativar/desativar a permissão para aquele role.
+### 3. Edge Function: `cron-verificar-cnpjs`
 
-- Agrupa permissões por categoria (Contratos, Fornecedores, Financeiro, Usuários, Auditoria, Serviços, Sistema)
-- Toggle insere/remove registro na tabela `role_permissions`
-- Usa `react-query` para cache e invalidação automática
-- Acesso restrito a administradores
+- Executada diariamente via `pg_cron` (sugestão: 03:00 UTC).
+- Itera fornecedores ativos com CNPJ, respeitando rate limit (~1 req a cada 25s = ~3/min).
+- Atualiza status; quando muda de `ativa` para outro estado, dispara `notify_org_members` para administradores e cria registro em `contract_alerts` (`tipo_alerta = 'cnpj_inativo'`) referenciando contratos vinculados.
+- Usa `CRON_SECRET` para autenticação.
 
-### 2. Refatorar página de Usuários
+### 4. Frontend — Cadastro/edição de fornecedor
 
-Atualizar `src/pages/Usuarios.tsx` para seguir o padrão Vektor Flow:
-- Adicionar busca por nome/email
-- Mostrar badges de roles clicáveis (clique remove o role)
-- Botão "Add Role" abre dialog com select do role
-- Usar `react-query` em vez de `useState` + `useEffect` manual
-- Link para detalhes do usuário
+Em `FornecedorForm.tsx` e `InlineFornecedorForm`:
+- Botão "Verificar Receita Federal" ao lado do CNPJ (auto-disparo no blur quando válido).
+- Badge com status (verde "Ativa" / vermelho "Baixada/Suspensa" / cinza "Não verificado").
+- Auto-preencher razão social, nome fantasia e endereço se vazios.
+- Mostrar data da última verificação.
 
-### 3. Refatorar hook `usePermissions`
+### 5. Frontend — Novo Contrato
 
-Atualizar `src/hooks/usePermissions.ts` para usar `react-query` com cache de 5 minutos (igual Vektor Flow), simplificando o código e melhorando performance.
+Em `ContratoFormDialog.tsx`:
+- Ao selecionar fornecedor, exibir badge de status do CNPJ.
+- Se status ≠ `ativa` → alert vermelho e **botão Criar Contrato desabilitado**.
+- Botão "Reverificar agora" para forçar consulta.
+- Mesma regra para fornecedores criados via `InlineFornecedorForm`.
 
-### 4. Criar hook `useRoles`
+### 6. Dashboard — Card "CNPJs com problemas"
 
-Criar `src/hooks/useRoles.ts` — hook dedicado para consultar roles de um usuário específico, com `hasRole()` e `isAdmin` helpers. Padrão idêntico ao Vektor Flow.
+Novo card no `Dashboard.tsx` (próximo aos KPIs existentes):
+- Contador de fornecedores com `cnpj_status` em (`baixada`, `suspensa`, `inapta`, `nula`, `erro_consulta`).
+- Lista resumida (top 5) com nome, status (badge colorido) e nº de contratos ativos vinculados.
+- Botão "Ver todos" → leva para `/fornecedores?filtro=cnpj_inativo`.
+- Destaque visual (borda vermelha) quando houver pelo menos 1 problema.
 
-### 5. Adicionar rota e menu
+### 7. Tela de Fornecedores
 
-- Registrar rota `/admin/permissoes` no `App.tsx` com proteção de role admin
-- Adicionar item no `AppSidebar.tsx` na seção de administração
+Em `Fornecedores.tsx`:
+- Filtro/tab "CNPJs com problemas".
+- Coluna de status do CNPJ na tabela.
+- Botão "Reverificar" por linha.
 
-## Detalhes técnicos
+### Detalhes técnicos
 
-- **Sem migrações**: as tabelas `permissions`, `role_permissions`, `user_roles` e funções já existem
-- **RLS**: as políticas de `role_permissions` já permitem SELECT para autenticados e ALL para admins
-- **Padrão de UI**: Switch toggles (igual Vektor Flow `PermissionsPage`), agrupado por módulo/categoria
-- **Cache**: `react-query` com `staleTime: 5 * 60 * 1000` para permissões
-- **Arquivos alterados**: ~5 arquivos (2 criados, 3 editados)
-
+- ReceitaWS retorna campo `situacao` (ATIVA, BAIXADA, SUSPENSA, INAPTA, NULA). Normalizar para lowercase.
+- Cache: não reconsultar se `cnpj_verificado_em` < 24h, exceto se usuário clicar "Reverificar".
+- Rate limit do cron: chamadas sequenciais com delay de 25s. Para bases grandes, processar em lotes diários (ex: 100 fornecedores/dia ordenados por `cnpj_verificado_em ASC NULLS FIRST`).
+- pg_cron job inserido via `supabase--insert` (não migration) por conter URL/anon key.
+- Notificação de inativação reaproveita `notify_org_members` + `contract_alerts`.

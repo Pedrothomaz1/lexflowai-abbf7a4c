@@ -40,6 +40,7 @@ type Fornecedor = {
   nome: string;
   cnpj?: string | null;
   cpf?: string | null;
+  cnpj_status?: string | null;
 };
 
 const Contratos = () => {
@@ -164,7 +165,7 @@ const Contratos = () => {
   const fetchFornecedores = async () => {
     const { data } = await supabase
       .from("fornecedores")
-      .select("id, nome, cnpj, cpf")
+      .select("id, nome, cnpj, cpf, cnpj_status")
       .order("nome");
     
     setFornecedores(data || []);
