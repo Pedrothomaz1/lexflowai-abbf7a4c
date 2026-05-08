@@ -38,6 +38,7 @@ type Fornecedor = {
   estado: string | null;
   is_active: boolean | null;
   created_at: string;
+  cnpj_status: string | null;
 };
 
 type FornecedorCategoria = {
