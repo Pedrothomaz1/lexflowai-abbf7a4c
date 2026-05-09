@@ -1112,6 +1112,51 @@ export type Database = {
           },
         ]
       }
+      enterprise_leads: {
+        Row: {
+          cnpj: string | null
+          contacted_at: string | null
+          created_at: string
+          email: string
+          empresa: string
+          id: string
+          mensagem: string | null
+          nome: string
+          num_usuarios_estimado: number | null
+          source: string | null
+          telefone: string | null
+          user_id: string | null
+        }
+        Insert: {
+          cnpj?: string | null
+          contacted_at?: string | null
+          created_at?: string
+          email: string
+          empresa: string
+          id?: string
+          mensagem?: string | null
+          nome: string
+          num_usuarios_estimado?: number | null
+          source?: string | null
+          telefone?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          cnpj?: string | null
+          contacted_at?: string | null
+          created_at?: string
+          email?: string
+          empresa?: string
+          id?: string
+          mensagem?: string | null
+          nome?: string
+          num_usuarios_estimado?: number | null
+          source?: string | null
+          telefone?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       especificacoes_servico: {
         Row: {
           categoria: string
@@ -2028,8 +2073,10 @@ export type Database = {
           max_usuarios: number | null
           nome: string
           plano: string | null
+          plano_changed_at: string | null
           slug: string
           telefone: string | null
+          trial_ends_at: string | null
           updated_at: string
         }
         Insert: {
@@ -2048,8 +2095,10 @@ export type Database = {
           max_usuarios?: number | null
           nome: string
           plano?: string | null
+          plano_changed_at?: string | null
           slug: string
           telefone?: string | null
+          trial_ends_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -2068,8 +2117,10 @@ export type Database = {
           max_usuarios?: number | null
           nome?: string
           plano?: string | null
+          plano_changed_at?: string | null
           slug?: string
           telefone?: string | null
+          trial_ends_at?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -3172,6 +3223,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      org_max_usuarios_for_plano: { Args: { _plano: string }; Returns: number }
       record_login_attempt: {
         Args: {
           _email: string
