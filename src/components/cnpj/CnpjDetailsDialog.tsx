@@ -1,13 +1,16 @@
+import { useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { CnpjStatusBadge } from "./CnpjStatusBadge";
 import type { CnpjVerifyResult } from "@/hooks/useCnpjVerification";
 import { Building2, MapPin, Calendar, Briefcase, Mail, Phone, Clock } from "lucide-react";
+import { useAuditLog } from "@/hooks/useAuditLog";
 
 interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   result: CnpjVerifyResult | null;
   cnpj?: string;
+  fornecedorId?: string;
 }
 
 function fmtCnpj(v?: string) {
