@@ -1,113 +1,144 @@
-# Spec: Bateria Completa de Testes Pré-Venda — LexFlow
+# Plano: Transformar LexFlow em SaaS vendável
 
-Documento mestre que descreve, **um a um**, todos os testes de segurança e vazamento de dados a serem executados antes de colocar o LexFlow à venda. Cada item terá: objetivo, como executar, evidência esperada e critério de aprovação.
-
-A spec será materializada em **3 entregáveis**:
-
-1. `docs/PRE_LAUNCH_TEST_SPEC.md` — documento mestre navegável (este conteúdo, expandido)
-2. `docs/test-evidence/` — pasta para armazenar prints, logs e relatórios de cada execução
-3. Painel `/security` → nova aba **"Pré-Venda"** com checklist interativo (status por teste, link para evidência, botão de marcar como aprovado)
+Entrega completa dos 4 gaps. Vou separar em **4 fases** para você poder validar cada uma antes de seguir.
 
 ---
 
-## Estrutura da spec — 7 frentes, 48 testes
+## Fase 1 — Onboarding "Criar minha empresa" (wizard com plano)
 
-### Frente 1 — Autenticação & Sessão (8 testes)
-| # | Teste | Como executar | Aprovado se |
-|---|---|---|---|
-| 1.1 | Login com credenciais válidas | Suite Vitest `auth-flow.test.ts` | Sessão criada, token retornado |
-| 1.2 | Bloqueio após 5 tentativas falhas | Script manual + `is_login_blocked()` | 6ª tentativa bloqueada |
-| 1.3 | Política de senha (12 chars + complexidade) | Edge fn `validate-password` | Rejeita senhas fracas |
-| 1.4 | Reset de senha funcional | Fluxo manual: solicitar → email → trocar | Token válido 1x, expira em 1h |
-| 1.5 | MFA obrigatório para roles configuradas | Login como `administrador` com MFA | Exige TOTP |
-| 1.6 | Logout invalida sessão server-side | Logout + reuso do token antigo | 401 no reuso |
-| 1.7 | Account enumeration | Tentar login com email inexistente | Mesma mensagem genérica |
-| 1.8 | Refresh token rotation | Forçar refresh + reuso do antigo | Antigo invalidado |
+A página `/onboarding` já existe, mas pede só nome+slug. Vamos transformá-la em **wizard de 3 passos** e adicionar CNPJ + escolha de plano.
 
-### Frente 2 — Autorização & Multi-tenancy (10 testes)
-| # | Teste | Como executar | Aprovado se |
-|---|---|---|---|
-| 2.1 | RLS por tabela (35 tabelas) | `security-regression-runner` | Todos os testes verdes |
-| 2.2 | Cross-tenant SELECT (Org A → Org B) | Suite `rls_tables.test.ts` | 0 linhas retornadas |
-| 2.3 | Cross-tenant INSERT forçando `organization_id` de outra org | Teste novo a criar | RLS bloqueia |
-| 2.4 | Cross-tenant UPDATE via ID conhecido | Teste novo | `.maybeSingle()` retorna null |
-| 2.5 | IDOR em rotas de detalhe (`/contratos/:id`) | Manual + script | 404/403 para ID de outra org |
-| 2.6 | Privilege escalation horizontal (analista → admin) | Tentar `update user_roles` | RLS bloqueia |
-| 2.7 | Privilege escalation vertical (admin org A → admin org B) | Suite | `is_admin_of_org` falha |
-| 2.8 | Edge functions validam JWT | Suite `edge_auth.test.ts` | 401 sem Bearer |
-| 2.9 | `user_id` derivado do token, não do body | Suite recém-criada | `compliance_logs` usa JWT sub |
-| 2.10 | `role_permissions` somente service_role | Suite regressão | INSERT/UPDATE/DELETE 403 |
+**Passos do wizard:**
+1. **Empresa** — Nome, CNPJ (com validação Receita via edge function existente), telefone, cidade/estado.
+2. **Seu papel** — Cargo, departamento (opcional, vai pra `profiles`).
+3. **Plano** — 4 cards lado a lado:
+   - **Free** — 1 usuário · R$ 0 · trial 14 dias dos recursos Pro
+   - **Pro** — 5 usuários · (preço definido depois no Stripe)
+   - **Business** — 30 usuários · (preço definido depois)
+   - **Enterprise** — ilimitado · "Falar com vendas" (abre modal com formulário que dispara email via Resend)
 
-### Frente 3 — Vazamento de Dados (9 testes)
-| # | Teste | Como executar | Aprovado se |
-|---|---|---|---|
-| 3.1 | Storage privado exige signed URL | `rls_storage.test.ts` | URL pública 403 |
-| 3.2 | Realtime: usuário só vê próprio canal | `rls_realtime.test.ts` | Subscribe em canal de outro = sem mensagens |
-| 3.3 | API responses sem campos sensíveis (hash, tokens) | Inspecionar `/profiles`, `/user_roles` | Nenhum campo de credencial |
-| 3.4 | Logs sem segredos (CRON_SECRET, JWT, senhas) | `grep` em logs Supabase + analytics_query | 0 ocorrências |
-| 3.5 | Error messages sem stack trace em produção | Forçar erro 500 | Mensagem genérica |
-| 3.6 | CORS não usa `*` em endpoints autenticados sensíveis | Auditar todas edge fns | Lista revisada |
-| 3.7 | Headers de segurança (CSP, HSTS, X-Frame, X-CTO) | curl + securityheaders.com | Grade A |
-| 3.8 | PII masking ativo para roles sem permissão | Manual em telas de fornecedor/contrato | Campos mascarados |
-| 3.9 | Export de dados respeita tenant | Exportar como user de Org A | Sem dados de Org B |
+Após confirmar:
+- Cria `organizations` (com `plano`, `max_usuarios`, `cnpj`)
+- Vincula como `owner` em `organization_members`
+- Atribui role `administrador` em `user_roles`
+- Se plano pago → redireciona para checkout Stripe (Fase 3)
+- Se Free → redireciona direto para `/dashboard`
 
-### Frente 4 — Injeção & Input Validation (7 testes)
-| # | Teste | Como executar | Aprovado se |
-|---|---|---|---|
-| 4.1 | SQLi em campos de busca | Payloads OWASP em `BuscaAvancada` | Sem erro de SQL, sem dados extras |
-| 4.2 | XSS armazenado em comentários/observações | `<script>alert(1)</script>` em campos | Renderizado como texto |
-| 4.3 | XSS refletido em query params | Payload em URL | Escape ativo |
-| 4.4 | SSRF em integrações (Gest10, CNPJ) | URL interna como input | Bloqueado |
-| 4.5 | Upload de arquivo: tipo e tamanho | PDF malicioso, .exe renomeado | Rejeitado |
-| 4.6 | Path traversal em downloads | `../../etc/passwd` | 403/404 |
-| 4.7 | Validação Zod em todas edge fns | Audit de código | 100% das fns têm schema |
-
-### Frente 5 — Compliance LGPD (6 testes)
-| # | Teste | Como executar | Aprovado se |
-|---|---|---|---|
-| 5.1 | Aceite de termos imutável | Tentar UPDATE em `compliance_logs` | RLS bloqueia |
-| 5.2 | Direito de acesso (Art. 18 LGPD) | Edge fn `gdpr-handler` action=export | Retorna dados do user |
-| 5.3 | Direito de exclusão (Art. 18) | `gdpr_delete_user(uuid)` | Profile anonimizado, logs marcados |
-| 5.4 | Logs de consentimento completos | Inspecionar 1 registro | IP, UA, versão, timestamp |
-| 5.5 | Política de retenção aplicada | Verificar `retention_policies` ativas | Cron rodando |
-| 5.6 | DPA disponível para clientes | Doc em `/docs/legal/DPA.md` | Documento publicado |
-
-### Frente 6 — Infra & Operação (6 testes)
-| # | Teste | Como executar | Aprovado se |
-|---|---|---|---|
-| 6.1 | Pentest externo (terceirizado) | Contratar empresa (HackerOne/Cobalt) | Relatório com 0 críticas |
-| 6.2 | DAST automatizado | OWASP ZAP em staging | Sem highs |
-| 6.3 | SAST no CI | Semgrep + ESLint security | Sem highs |
-| 6.4 | Dependency scan | `npm audit --production` | 0 highs/criticals |
-| 6.5 | Secret scanning no repo | gitleaks | 0 segredos |
-| 6.6 | Backup restore drill | Restaurar em ambiente isolado | RTO < 4h documentado |
-
-### Frente 7 — Monitoring & Resposta (2 testes)
-| # | Teste | Como executar | Aprovado se |
-|---|---|---|---|
-| 7.1 | Alertas funcionando (login suspeito, picos de erro) | `security-alert-handler` + simulação | Alerta dispara |
-| 7.2 | Canal de disclosure público | `security@lexflowai.com.br` ativo + SECURITY.md | Email recebido |
+**Mudanças extras:**
+- `App.tsx`: novo usuário sem org → forçar `/onboarding` (não mais `/waiting-for-invite`).
+- `WaitingForInvite` vira tela secundária acessada apenas via link de convite pendente.
 
 ---
 
-## O que será criado na implementação
+## Fase 2 — Painel Super-Admin LexFlow
 
-1. **`docs/PRE_LAUNCH_TEST_SPEC.md`** — versão expandida deste plano com cada teste detalhado: passos exatos, comandos, payloads, screenshots de evidência esperada
-2. **`docs/test-evidence/README.md`** — convenção de nomes para arquivos de evidência (ex.: `1.2-bloqueio-login.png`, `4.1-sqli-busca.json`)
-3. **Tabela `pre_launch_test_runs`** no banco — para registrar execuções: `test_id`, `executed_by`, `status` (pending/passed/failed/skipped), `evidence_url`, `notes`, `executed_at`
-4. **Componente `PreLaunchChecklist.tsx`** em `src/components/security/` — renderiza os 48 testes agrupados por frente, com badges de status, botão "marcar como aprovado", upload de evidência e contador de progresso (X/48)
-5. **Nova aba "Pré-Venda"** em `src/pages/SecurityDashboard.tsx` — só visível para `administrador`
-6. **Edge function `pre-launch-test-runner`** — opcional, para disparar os testes automatizáveis (frentes 1, 2, 3.1-3.4, 4.7, 5.1-5.4, 6.4) em batch e gravar resultado direto na tabela
+**Modelo:** nova role `super_admin` em `app_role`. Diferente das outras roles, ela é **global** (sem `organization_id`) e dá bypass do `current_user_org()` nas rotas `/admin/*`.
 
-## Fora do escopo desta spec
+### Mudanças de banco
+- Adicionar `'super_admin'` ao enum `app_role`.
+- Função `is_super_admin(_user_id)` SECURITY DEFINER.
+- Nova policy em `organizations`, `organization_members`, `audit_logs`, `profiles`: super_admin pode SELECT global (sem filtro de org).
+- Tabela `platform_metrics` (snapshot diário de uso por org: contratos criados, usuários ativos, storage usado).
+- Tabela `organization_status` (`active`, `suspended`, `trial`, `cancelled`) + coluna `trial_ends_at`, `suspended_at`, `suspended_reason` em `organizations`.
 
-- Execução real dos testes (será feita após a aprovação do plano)
-- Contratação de pentest externo (depende do usuário)
-- Implementação de correções para testes que falharem (cada falha vira um ticket separado)
+### Novas páginas (rotas `/admin/*`, protegidas por `requireSuperAdmin`)
+- `/admin` — dashboard com KPIs (clientes ativos, MRR estimado, novos signups 30d, churn).
+- `/admin/clientes` — listagem de todas as organizations com filtros (plano, status, MRR), busca por nome/CNPJ. Ações: ver detalhes, suspender, reativar, mudar plano manualmente, impersonate (gera token temporário pra você logar como admin daquela org pra suporte).
+- `/admin/clientes/:id` — detalhe da org: dados, membros, métricas de uso (gráfico 30d), histórico de pagamentos, audit logs daquela org.
+- `/admin/financeiro` — receita por mês, lista de invoices Stripe, churn, LTV.
+- `/admin/leads` — formulários "Falar com vendas" do plano Enterprise.
 
-## Próximos passos depois de aprovado
+### Layout
+- Layout `AdminLayout` separado do `DashboardLayout` (header preto/dourado pra diferenciar visualmente: "você está no modo plataforma").
+- Item "Painel LexFlow" no dropdown do usuário só aparece se `super_admin`.
 
-1. Criar o documento mestre + tabela + componente + aba
-2. Rodar os testes automatizáveis (≈30 dos 48) e registrar resultados
-3. Listar os ≈18 testes manuais com instruções claras para você executar
-4. Gerar relatório final em PDF com todas as evidências para entregar a clientes corporativos
+---
+
+## Fase 3 — Billing Stripe (built-in Lovable)
+
+### Setup
+- Habilitar Stripe payments via tool `enable_stripe_payments` (você preenche email/business no formulário).
+- Criar 3 produtos via `batch_create_product` após habilitar:
+  - Pro mensal/anual
+  - Business mensal/anual
+  - (Enterprise é manual, sem produto)
+
+### Banco
+- Tabela `subscriptions` (organization_id, stripe_customer_id, stripe_subscription_id, plano, status, current_period_end, cancel_at_period_end).
+- Tabela `invoices` (subscription_id, stripe_invoice_id, valor, status, paid_at, hosted_invoice_url).
+- Trigger: ao criar `subscription` com plano X → atualizar `organizations.plano` e `max_usuarios`.
+
+### Edge functions
+- `create-checkout-session` — cria Stripe Customer (se não existir) + checkout session, retorna URL.
+- `create-portal-session` — abre Stripe Billing Portal (cliente gerencia cartão, cancela, baixa invoice).
+- `stripe-webhook` — processa eventos: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed`. Atualiza `subscriptions` + `organizations.plano`.
+
+### UI
+- `/organization/billing` — plano atual, próximo vencimento, botão "Gerenciar assinatura" (abre portal Stripe), histórico de invoices, botão "Mudar plano" (upgrade/downgrade).
+- Ao atingir `max_usuarios` → bloquear convites + CTA "Faça upgrade".
+- Banner global se `subscription.status = past_due` ou `trial_ends_at` < 3 dias.
+
+### Tax handling Stripe (decisão necessária)
+Recomendo **opção 2 (Tax calculation only)** para LexFlow: Stripe calcula ICMS/ISS no checkout, você emite NF e faz a apuração. +0.5% por transação. Confirma na hora de habilitar.
+
+---
+
+## Fase 4 — Subdomínio por cliente (white-label)
+
+**Modelo:** `empresaA.lexflowai.com.br` resolve para a mesma app, mas força contexto da org A no login.
+
+### Pré-requisitos manuais (você faz)
+1. No registrador (Lovable ou outro): criar **wildcard DNS** `*.lexflowai.com.br` → `185.158.133.1`.
+2. Em Project Settings → Domains: adicionar wildcard como custom domain (Lovable provisiona SSL wildcard).
+
+### Banco
+- Coluna `subdomain` em `organizations` (única, `[a-z0-9-]+`, valida no onboarding).
+
+### Frontend
+- Hook `useSubdomain()` lê `window.location.hostname` e extrai o subdomínio.
+- Se acessar `empresaA.lexflowai.com.br` → no `/auth`, força que o email logado pertença à org com `subdomain='empresa-a'`. Se não pertence → erro "Esta conta não tem acesso a esta empresa".
+- Tela de login "personalizada": logo da org no topo, cores da org (campo `cor_primaria` em `organizations`).
+- Domínio raiz `lexflowai.com.br` continua funcionando como hoje (landing + login genérico).
+
+### Backend
+- Edge function `validate-subdomain-access` chamada no login: confirma se `user.id` pertence à org do subdomínio.
+
+**Limitação importante:** wildcard SSL em domínio `.com.br` exige validação DNS específica — pode levar 24h para Lovable provisionar. Se der problema, alternativa é usar `*.lexflowai.lovable.app` (subdomínio Lovable, não custom).
+
+---
+
+## Ordem de execução recomendada
+
+```text
+Fase 1 (Onboarding)          ────►  ~1 sessão de chat
+   │
+Fase 2 (Super-Admin)          ────►  ~2 sessões  (mais código)
+   │
+Fase 3 (Billing Stripe)       ────►  ~2 sessões  (precisa habilitar Stripe primeiro)
+   │
+Fase 4 (Subdomínio)           ────►  ~1 sessão + DNS manual
+```
+
+Cada fase termina **funcional e testada** — você pode parar entre fases sem deixar nada quebrado.
+
+---
+
+## Detalhes técnicos (referência)
+
+**Tabelas novas:** `subscriptions`, `invoices`, `platform_metrics`, `organization_status` (ou colunas em `organizations`), `enterprise_leads`.
+
+**Colunas novas em `organizations`:** `subdomain`, `cor_primaria`, `logo_url` (já existe), `trial_ends_at`, `suspended_at`, `suspended_reason`, `stripe_customer_id`.
+
+**Enum:** `app_role` ganha `'super_admin'`.
+
+**Edge functions novas:** `create-checkout-session`, `create-portal-session`, `stripe-webhook`, `impersonate-organization`, `validate-subdomain-access`, `enterprise-lead-notification`.
+
+**RLS:** todas as tabelas novas com `organization_id` seguem o padrão multi-tenant. `subscriptions` e `invoices` têm policy adicional permitindo `super_admin` ver tudo.
+
+**Secrets necessários:** `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` (vêm automaticamente ao habilitar Stripe built-in).
+
+---
+
+## Confirmação antes de implementar
+
+Vou começar pela **Fase 1**. Confirma e eu implemento o wizard de onboarding com os 4 planos (Free 1 / Pro 5 / Business 30 / Enterprise sob consulta). As fases 2, 3 e 4 viram tarefas separadas depois.
