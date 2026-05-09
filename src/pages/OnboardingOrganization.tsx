@@ -113,6 +113,7 @@ const OnboardingOrganization = () => {
           id: orgId,
           nome: formData.nome.trim(),
           slug: formData.slug.trim(),
+          created_by: user.id,
         });
 
       if (orgError) {
