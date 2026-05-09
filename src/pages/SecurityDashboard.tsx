@@ -19,6 +19,7 @@ import { AuditSchedule } from "@/components/security/AuditSchedule";
 import { SuccessCriteria } from "@/components/security/SuccessCriteria";
 import { RiskMatrix } from "@/components/security/RiskMatrix";
 import { SecurityAppendices } from "@/components/security/SecurityAppendices";
+import { SecurityRegressionRunner } from "@/components/security/SecurityRegressionRunner";
 import {
   Shield,
   AlertTriangle,
