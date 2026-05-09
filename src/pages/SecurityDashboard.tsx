@@ -264,6 +264,10 @@ export default function SecurityDashboard() {
             <Eye className="h-4 w-4 mr-2" />
             PII
           </TabsTrigger>
+          <TabsTrigger value="regression">
+            <ShieldCheck className="h-4 w-4 mr-2" />
+            Regressão
+          </TabsTrigger>
           <TabsTrigger value="appendices">
             <FileText className="h-4 w-4 mr-2" />
             Docs
