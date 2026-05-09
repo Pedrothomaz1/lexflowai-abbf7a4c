@@ -7,10 +7,14 @@ export const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 export const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 export const TEST_PASSWORD = Deno.env.get("SECQA_PASSWORD")!;
 
-if (!SUPABASE_URL || !ANON_KEY || !SERVICE_ROLE || !TEST_PASSWORD) {
-  throw new Error(
-    "Missing one of SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY / SECQA_PASSWORD",
-  );
+export const HAS_ENV = Boolean(SUPABASE_URL && ANON_KEY && SERVICE_ROLE && TEST_PASSWORD);
+/** Use to skip a test when env is missing (e.g. running locally without secrets exported). */
+export function requireEnv(t: { name: string }): boolean {
+  if (!HAS_ENV) {
+    console.warn(`[skip] ${t.name}: env not configured (SECQA_PASSWORD/SERVICE_ROLE_KEY)`);
+    return false;
+  }
+  return true;
 }
 
 export const SEED_TAG = "secqa_seed";
