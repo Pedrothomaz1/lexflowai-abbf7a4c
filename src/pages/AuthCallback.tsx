@@ -85,9 +85,14 @@ const AuthCallback = () => {
           console.error("Erro ao verificar organização:", membershipError);
         }
 
-        // If user has no organization, redirect to waiting page
+        // If user has no organization, check pending invite first; else go to onboarding
         if (!membership) {
-          navigate("/waiting-for-invite", { replace: true });
+          const { data: inviteCheck } = await supabase.rpc("check_pending_invite_for_user");
+          if (inviteCheck && (inviteCheck as any).has_invite) {
+            navigate("/waiting-for-invite", { replace: true });
+          } else {
+            navigate("/onboarding", { replace: true });
+          }
           return;
         }
 

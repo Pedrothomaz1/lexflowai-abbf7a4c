@@ -226,12 +226,11 @@ export const ProtectedRoute = ({
       );
     }
 
-    // User has no organization - redirect to waiting page
+    // User has no organization - send to onboarding wizard by default
     if (!hasOrganization) {
-      // Avoid redirect loops for onboarding pages
       const onboardingPaths = ['/onboarding', '/waiting-for-invite'];
       if (!onboardingPaths.includes(location.pathname)) {
-        return <Navigate to="/waiting-for-invite" replace />;
+        return <Navigate to="/onboarding" replace />;
       }
     }
   }
