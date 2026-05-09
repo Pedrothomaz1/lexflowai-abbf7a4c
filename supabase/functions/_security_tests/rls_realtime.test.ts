@@ -1,9 +1,11 @@
 // Regression: realtime.messages RLS + per-table RLS for postgres_changes payloads.
 import { assertEquals, assert } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { bootstrap } from "./_bootstrap.ts";
-import { anonClient, signInAs, serviceClient } from "./_clients.ts";
+import { anonClient, signInAs, serviceClient } , requireEnv from "./_clients.ts";
+import { requireEnv } from "./_clients.ts";
 
-Deno.test("realtime: anonymous cannot subscribe to a private channel", async () => {
+Deno.test("realtime: anonymous cannot subscribe to a private channel", async (t) => {
+  if (!requireEnv(t)) return;
   await bootstrap();
   const anon = anonClient();
   const channel = anon.channel("secqa-anon-probe");
@@ -16,7 +18,8 @@ Deno.test("realtime: anonymous cannot subscribe to a private channel", async () 
   assert(["CHANNEL_ERROR", "TIMED_OUT", "CLOSED", "TIMEOUT"].includes(status), `expected rejection, got ${status}`);
 });
 
-Deno.test("realtime: notification insert in Org A reaches Org A but not Org B", async () => {
+Deno.test("realtime: notification insert in Org A reaches Org A but not Org B", async (t) => {
+  if (!requireEnv(t)) return;
   const seed = await bootstrap();
   const a = await signInAs("analistaA");
   const b = await signInAs("adminB");
