@@ -105,6 +105,7 @@ serve(async (req) => {
 
     if (destinatarios.length === 0) {
       // Buscar usuários com role consultoria_juridica ou administrador
+      // Buscar usuários com role consultoria_juridica ou administrador NA MESMA organização
       const { data: userRoles } = await supabase
         .from("user_roles")
         .select(`
@@ -113,7 +114,8 @@ serve(async (req) => {
             email
           )
         `)
-        .in("role", ["consultoria_juridica", "administrador"]);
+        .in("role", ["consultoria_juridica", "administrador"])
+        .eq("organization_id", contrato.organization_id);
 
       if (userRoles) {
         destinatarios = userRoles

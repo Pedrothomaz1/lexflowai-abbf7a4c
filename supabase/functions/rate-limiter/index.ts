@@ -127,12 +127,33 @@ serve(async (req) => {
   }
 
   try {
+    // SECURITY: validate caller JWT, never trust userId/userRole from body
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Não autorizado' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    const { endpoint, userId, ipAddress, userRole, checkExport, checkSession } = await req.json();
+    const token = authHeader.replace('Bearer ', '');
+    const { data: authData, error: authErr } = await supabase.auth.getUser(token);
+    if (authErr || !authData?.user) {
+      return new Response(
+        JSON.stringify({ error: 'Token inválido' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const userId = authData.user.id;
+    const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null;
+
+    const { endpoint, checkExport, checkSession } = await req.json();
 
     if (!endpoint) {
       return new Response(
@@ -141,9 +162,18 @@ serve(async (req) => {
       );
     }
 
+    // Resolve user role server-side from user_roles (highest privilege wins)
+    const ROLE_PRIORITY = ['administrador', 'consultoria_juridica', 'analista_juridico'];
+    const { data: roleRows } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId);
+    const userRoles = (roleRows || []).map((r: any) => r.role);
+    const userRole = ROLE_PRIORITY.find((r) => userRoles.includes(r)) || 'default';
+
     const rule = findMatchingRule(endpoint);
-    const roleLimits = getRoleLimits(userRole || 'default');
-    
+    const roleLimits = getRoleLimits(userRole);
+
     // Use role-specific multiplier for general rate limiting
     const adjustedMaxRequests = Math.floor(rule.maxRequests * roleLimits.multiplier);
 

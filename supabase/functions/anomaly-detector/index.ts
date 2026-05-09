@@ -221,20 +221,24 @@ serve(async (req) => {
   }
 
   try {
-    // Validate cron secret for scheduled calls
+    // SECURITY: deny by default. CRON_SECRET must be configured.
     const authHeader = req.headers.get('Authorization');
     const cronSecret = Deno.env.get('CRON_SECRET');
-    
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-      
-      if (!authHeader?.includes(supabaseServiceKey)) {
-        console.log('[anomaly-detector] Unauthorized access attempt');
-        return new Response(
-          JSON.stringify({ error: 'Unauthorized' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+
+    if (!cronSecret) {
+      console.error('[anomaly-detector] CRON_SECRET not configured');
+      return new Response(
+        JSON.stringify({ error: 'Server misconfigured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (authHeader !== `Bearer ${cronSecret}`) {
+      console.log('[anomaly-detector] Unauthorized access attempt');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const supabase = createClient(

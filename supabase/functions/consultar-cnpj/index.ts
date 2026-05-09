@@ -187,7 +187,7 @@ Deno.serve(async (req) => {
     );
   } catch (e) {
     console.error("consultar-cnpj error", e);
-    return new Response(JSON.stringify({ error: String(e) }), {
+    return new Response(JSON.stringify({ error: "Erro interno ao consultar CNPJ" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
