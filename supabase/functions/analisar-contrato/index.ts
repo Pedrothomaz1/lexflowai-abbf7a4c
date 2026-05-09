@@ -68,10 +68,25 @@ serve(async (req) => {
 
     const { fileUrl } = await req.json();
 
-    if (!fileUrl) {
+    if (!fileUrl || typeof fileUrl !== 'string') {
       return new Response(
         JSON.stringify({ error: 'URL do arquivo não fornecida' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // SECURITY: enforce that fileUrl belongs to caller's org folder or own user folder
+    const firstSegment = fileUrl.split('/')[0];
+    const { data: memberships } = await supabase
+      .from('organization_members')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .eq('is_active', true);
+    const allowedPrefixes = new Set<string>([user.id, ...((memberships || []).map((m: any) => m.organization_id))]);
+    if (!firstSegment || !allowedPrefixes.has(firstSegment)) {
+      return new Response(
+        JSON.stringify({ error: 'Acesso negado ao arquivo' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
