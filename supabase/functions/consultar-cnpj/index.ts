@@ -152,14 +152,16 @@ Deno.serve(async (req) => {
       await admin.from("fornecedores").update(payload).eq("id", fornecedorId);
     }
 
-    await admin.from("cnpj_verification_log").insert({
-      fornecedor_id: fornecedorId ?? null,
-      cnpj,
-      status: cnpjStatus,
-      response: d,
-      organization_id: organizationId,
-      created_by: userRes.user.id,
-    });
+    if (organizationId) {
+      await admin.from("cnpj_verification_log").insert({
+        fornecedor_id: fornecedorId ?? null,
+        cnpj,
+        status: cnpjStatus,
+        response: d,
+        organization_id: organizationId,
+        created_by: userRes.user.id,
+      });
+    }
 
     return new Response(
       JSON.stringify({
