@@ -172,6 +172,53 @@ async function runChecks(): Promise<Result[]> {
     if (!error && data && data.length > 0) throw new Error("avatars/ public");
   });
 
+  // ---- role_permissions: locked down to service_role only ----
+  await wrap("role_permissions: authenticated can SELECT", async () => {
+    const { error } = await sA.client.from("role_permissions").select("role").limit(1);
+    if (error) throw new Error(`SELECT denied: ${error.message}`);
+  });
+  await wrap("role_permissions: admin INSERT blocked", async () => {
+    const { data: anyPerm } = await svc().from("permissions").select("id").limit(1).maybeSingle();
+    if (!anyPerm) return; // nothing to test against
+    const { error } = await sA.client.from("role_permissions").insert({
+      role: "administrador", permission_id: anyPerm.id,
+    });
+    if (!error) throw new Error("RLS allowed admin INSERT into role_permissions");
+  });
+  await wrap("role_permissions: admin UPDATE blocked", async () => {
+    const { data, error } = await sA.client.from("role_permissions")
+      .update({ role: "administrador" }).neq("role", "__never__").select().maybeSingle();
+    if (!error && data) throw new Error("RLS allowed admin UPDATE on role_permissions");
+  });
+  await wrap("role_permissions: admin DELETE blocked", async () => {
+    const { data, error } = await sA.client.from("role_permissions")
+      .delete().neq("role", "__never__").select().maybeSingle();
+    if (!error && data) throw new Error("RLS allowed admin DELETE on role_permissions");
+  });
+
+  // ---- notifications: user can only insert own user_id ----
+  await wrap("notifications: user can insert own (user_id = auth.uid)", async () => {
+    const { error } = await sAnalista.client.from("notifications").insert({
+      organization_id: orgA, user_id: sAnalista.userId, tipo: "geral",
+      titulo: `secqa-self-${Date.now()}`, mensagem: "x",
+    });
+    if (error) throw new Error(`self-insert rejected: ${error.message}`);
+  });
+  await wrap("notifications: cross-user INSERT blocked (same org)", async () => {
+    const { error } = await sAnalista.client.from("notifications").insert({
+      organization_id: orgA, user_id: adminA, tipo: "geral",
+      titulo: `secqa-xuser-${Date.now()}`, mensagem: "x",
+    });
+    if (!error) throw new Error("RLS allowed insert with foreign user_id");
+  });
+  await wrap("notifications: cross-org INSERT blocked", async () => {
+    const { error } = await sAnalista.client.from("notifications").insert({
+      organization_id: orgB, user_id: sAnalista.userId, tipo: "geral",
+      titulo: `secqa-xorg-${Date.now()}`, mensagem: "x",
+    });
+    if (!error) throw new Error("RLS allowed cross-org notification insert");
+  });
+
   // ---- Realtime ----
   await wrap("realtime: anon does NOT receive postgres_changes events", async () => {
     const c = anon();
