@@ -126,8 +126,9 @@ const Auth = () => {
         description: handleDbError(error).message,
       });
     } else {
-      // Register LGPD consent after successful signup
-      if (data.user) {
+      // Register LGPD consent only if signup created an active session
+      // (when email confirmation is required, no session exists yet — consent is recorded on first login)
+      if (data.user && data.session) {
         await registrarAceiteLGPD(data.user.id);
       }
       toast({
