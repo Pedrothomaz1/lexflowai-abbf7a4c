@@ -147,7 +147,7 @@ const contratosMenuSections: MenuSectionType[] = [
 // Items do menu do usuário (dropdown no footer) - padrão Vektor Flow
 const userSettingsItems = [
   { title: "Meu Perfil", url: "/settings", icon: Settings },
-  { title: "Autenticação 2FA", url: "/2fa-settings", icon: Shield },
+  { title: "Autenticação 2FA", url: "/settings/2fa", icon: Shield },
 ];
 
 const adminSettingsItems = [
