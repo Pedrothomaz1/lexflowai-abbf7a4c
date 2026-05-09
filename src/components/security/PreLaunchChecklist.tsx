@@ -163,10 +163,21 @@ export function PreLaunchChecklist() {
   const runAutomated = async () => {
     setRunning(true);
     try {
-      const { data, error } = await supabase.functions.invoke("pre-launch-test-runner", {
-        body: {},
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error("Sessão expirada");
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pre-launch-test-runner`;
+      const r = await fetch(url, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({}),
       });
-      if (error) throw error;
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
       const summary = data as { passed: number; failed: number; skipped: number; total: number };
       toast({
         title: "Suíte executada",
