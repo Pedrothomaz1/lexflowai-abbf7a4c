@@ -158,6 +158,29 @@ export function PreLaunchChecklist() {
     return g;
   }, []);
 
+  const [running, setRunning] = useState(false);
+
+  const runAutomated = async () => {
+    setRunning(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("pre-launch-test-runner", {
+        body: {},
+      });
+      if (error) throw error;
+      const summary = data as { passed: number; failed: number; skipped: number; total: number };
+      toast({
+        title: "Suíte executada",
+        description: `${summary.passed} aprovados · ${summary.failed} falharam · ${summary.skipped} N/A`,
+        variant: summary.failed > 0 ? "destructive" : "default",
+      });
+      fetchRuns();
+    } catch (e: any) {
+      toast({ title: "Falha ao executar", description: e.message ?? String(e), variant: "destructive" });
+    } finally {
+      setRunning(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <Card>
@@ -179,6 +202,14 @@ export function PreLaunchChecklist() {
                 ? "Critérios críticos OK"
                 : `${criticalsBlocking.length} críticos pendentes`}
             </Badge>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={runAutomated} disabled={running} size="sm">
+              {running ? "Executando…" : "Executar suíte automatizada"}
+            </Button>
+            <span className="text-xs text-muted-foreground self-center">
+              Cobre ~15 testes (regressão RLS, login, LGPD). Os demais ficam manuais.
+            </span>
           </div>
           {criticalsBlocking.length > 0 && (
             <p className="text-xs text-muted-foreground">
