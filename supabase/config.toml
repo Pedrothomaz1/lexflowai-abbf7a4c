@@ -65,3 +65,6 @@ verify_jwt = true
 
 [functions.cron-verificar-cnpjs]
 verify_jwt = false
+
+[functions.security-regression-runner]
+verify_jwt = false
