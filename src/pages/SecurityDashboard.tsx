@@ -311,6 +311,10 @@ export default function SecurityDashboard() {
           <PIIMaskingDemo />
         </TabsContent>
 
+        <TabsContent value="regression">
+          <SecurityRegressionRunner />
+        </TabsContent>
+
         <TabsContent value="appendices">
           <SecurityAppendices />
         </TabsContent>
