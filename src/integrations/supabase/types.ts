@@ -2098,6 +2098,48 @@ export type Database = {
         }
         Relationships: []
       }
+      pre_launch_test_runs: {
+        Row: {
+          created_at: string
+          evidence_url: string | null
+          executed_at: string
+          executed_by: string | null
+          frente: string
+          id: string
+          notes: string | null
+          organization_id: string
+          status: string
+          test_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          evidence_url?: string | null
+          executed_at?: string
+          executed_by?: string | null
+          frente: string
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          status?: string
+          test_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          evidence_url?: string | null
+          executed_at?: string
+          executed_by?: string | null
+          frente?: string
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          status?: string
+          test_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
