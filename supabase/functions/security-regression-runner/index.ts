@@ -173,15 +173,19 @@ async function runChecks(): Promise<Result[]> {
   });
 
   // ---- Realtime ----
-  await wrap("realtime: anon channel rejected/timeout", async () => {
+  await wrap("realtime: anon does NOT receive postgres_changes events", async () => {
     const c = anon();
-    const ch = c.channel("secqa-anon-probe");
-    const status = await new Promise<string>((resolve) => {
-      ch.subscribe((s) => resolve(s));
-      setTimeout(() => resolve("TIMEOUT"), 4000);
+    const got: any[] = [];
+    const ch = c.channel("secqa-anon-notif")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications" }, (p) => got.push(p.new));
+    await new Promise((r) => { ch.subscribe(() => {}); setTimeout(r, 1500); });
+    const probe = `secqa-anon-${Date.now()}`;
+    await svc().from("notifications").insert({
+      organization_id: orgA, user_id: analistaA, tipo: "geral", titulo: probe, mensagem: "x",
     });
+    await new Promise((r) => setTimeout(r, 2500));
     await c.removeChannel(ch);
-    if (!["CHANNEL_ERROR", "TIMED_OUT", "CLOSED", "TIMEOUT"].includes(status)) throw new Error(`status=${status}`);
+    if (got.some((n: any) => n.titulo === probe)) throw new Error("anon received authenticated insert event");
   });
   await wrap("realtime: notification stays in source org", async () => {
     const got: { a: any[]; b: any[] } = { a: [], b: [] };
