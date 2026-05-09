@@ -7,47 +7,58 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Create admin client for inserting logs
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Parse request body
-    const { user_id, versao_termos, versao_privacidade, organization_id } = await req.json();
-
-    // Validate required fields
-    if (!user_id) {
-      console.error("Missing user_id in request");
+    // Validate JWT and derive user_id from verified token
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
       return new Response(
-        JSON.stringify({ error: "user_id is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Capture IP address from headers
+    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims?.sub) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const authenticatedUserId = claimsData.claims.sub as string;
+
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+    const body = await req.json().catch(() => ({}));
+    const { versao_termos, versao_privacidade, organization_id } = body || {};
+
+    // Always derive user_id from verified JWT — ignore any client-supplied user_id
+    const user_id = authenticatedUserId;
+
     const ipAddress =
       req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
       req.headers.get("x-real-ip") ||
       req.headers.get("cf-connecting-ip") ||
       "unknown";
 
-    // Capture user agent
     const userAgent = req.headers.get("user-agent") || "unknown";
 
-    console.log(`Registering LGPD consent for user: ${user_id}, IP: ${ipAddress}`);
+    console.log(`Registering LGPD consent for verified user: ${user_id}, IP: ${ipAddress}`);
 
-    // Resolve organization_id: use provided, fetch from user's membership, or use default
     let resolvedOrgId = organization_id;
-    
+
     if (!resolvedOrgId) {
-      // Try to fetch user's organization from membership
       const { data: memberData } = await supabaseAdmin
         .from("organization_members")
         .select("organization_id")
@@ -55,23 +66,30 @@ Deno.serve(async (req) => {
         .eq("is_active", true)
         .limit(1)
         .single();
-      
+
       if (memberData?.organization_id) {
         resolvedOrgId = memberData.organization_id;
-        console.log(`Resolved organization_id from membership: ${resolvedOrgId}`);
       } else {
-        // Use default organization for pre-onboarding consent logs
-        // This is the legacy/default org used for users without an org yet
         resolvedOrgId = "00000000-0000-0000-0000-000000000001";
-        console.log(`Using default organization for consent log: ${resolvedOrgId}`);
+      }
+    } else {
+      // If client provided an org, verify membership before trusting it
+      const { data: membership } = await supabaseAdmin
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user_id)
+        .eq("organization_id", resolvedOrgId)
+        .eq("is_active", true)
+        .maybeSingle();
+      if (!membership) {
+        resolvedOrgId = "00000000-0000-0000-0000-000000000001";
       }
     }
 
-    // Prepare compliance log entry
     const complianceLog = {
       tipo_evento: "consent_given",
       entidade: "termos_e_privacidade",
-      user_id: user_id,
+      user_id,
       ip_address: ipAddress,
       organization_id: resolvedOrgId,
       dados_afetados: {
@@ -84,7 +102,6 @@ Deno.serve(async (req) => {
       justificativa: "Aceite de Termos de Uso e Política de Privacidade durante autenticação",
     };
 
-    // Insert compliance log
     const { data, error } = await supabaseAdmin
       .from("compliance_logs")
       .insert(complianceLog)
@@ -99,14 +116,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`LGPD consent registered successfully. Log ID: ${data.id}`);
-
     return new Response(
-      JSON.stringify({
-        success: true,
-        log_id: data.id,
-        message: "Consent registered successfully",
-      }),
+      JSON.stringify({ success: true, log_id: data.id, message: "Consent registered successfully" }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
