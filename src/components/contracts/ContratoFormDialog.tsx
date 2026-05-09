@@ -259,6 +259,7 @@ export function ContratoFormDialog({
               onOpenChange={setShowCnpjDetails}
               result={verifyResult}
               cnpj={selectedFornecedor?.cnpj}
+              fornecedorId={selectedFornecedor?.id}
             />
 
             {cnpjBlocked && (
