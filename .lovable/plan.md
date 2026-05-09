@@ -1,114 +1,113 @@
-## Objetivo
+# Spec: Bateria Completa de Testes Pré-Venda — LexFlow
 
-Garantir que as correções de segurança recentes (RLS em `realtime.messages`, Storage por organização, autenticação das edge functions) não regridam, e produzir um relatório de prontidão para venda cobrindo LGPD/OWASP/RBAC.
+Documento mestre que descreve, **um a um**, todos os testes de segurança e vazamento de dados a serem executados antes de colocar o LexFlow à venda. Cada item terá: objetivo, como executar, evidência esperada e critério de aprovação.
 
-## Entregáveis
+A spec será materializada em **3 entregáveis**:
 
-1. **Seed de teste reproduzível** — usuários e organizações isolados, criados via script.
-2. **Suite Deno de integração** rodando contra o backend real, executada pelo runner de edge functions já disponível.
-3. **Checklist de prontidão para venda** (`docs/security-readiness.md`) e **relatório executivo** (`docs/SECURITY_REPORT.md`) gerado após a suíte.
-4. **Script npm** `test:security` que orquestra tudo localmente e em CI.
+1. `docs/PRE_LAUNCH_TEST_SPEC.md` — documento mestre navegável (este conteúdo, expandido)
+2. `docs/test-evidence/` — pasta para armazenar prints, logs e relatórios de cada execução
+3. Painel `/security` → nova aba **"Pré-Venda"** com checklist interativo (status por teste, link para evidência, botão de marcar como aprovado)
 
-## Arquitetura da suíte
+---
 
-```text
-supabase/functions/_security_tests/
-├── _bootstrap.ts          seed/teardown idempotente via service role
-├── _clients.ts            helpers: signInAs(orgA_admin), anonClient(), serviceClient()
-├── rls_realtime.test.ts   subscribe + postgres_changes cross-org
-├── rls_storage.test.ts    upload/download/signed URL cross-org + cross-role
-├── rls_tables.test.ts     contratos / fornecedores / audit_logs / notifications
-├── edge_auth.test.ts      rate-limiter, security-alert-handler, whatsapp,
-│                          anomaly-detector, analisar-contrato, extrair-dados-pdf
-└── README.md              como rodar e interpretar resultados
-```
+## Estrutura da spec — 7 frentes, 48 testes
 
-### Seed (`_bootstrap.ts`)
+### Frente 1 — Autenticação & Sessão (8 testes)
+| # | Teste | Como executar | Aprovado se |
+|---|---|---|---|
+| 1.1 | Login com credenciais válidas | Suite Vitest `auth-flow.test.ts` | Sessão criada, token retornado |
+| 1.2 | Bloqueio após 5 tentativas falhas | Script manual + `is_login_blocked()` | 6ª tentativa bloqueada |
+| 1.3 | Política de senha (12 chars + complexidade) | Edge fn `validate-password` | Rejeita senhas fracas |
+| 1.4 | Reset de senha funcional | Fluxo manual: solicitar → email → trocar | Token válido 1x, expira em 1h |
+| 1.5 | MFA obrigatório para roles configuradas | Login como `administrador` com MFA | Exige TOTP |
+| 1.6 | Logout invalida sessão server-side | Logout + reuso do token antigo | 401 no reuso |
+| 1.7 | Account enumeration | Tentar login com email inexistente | Mesma mensagem genérica |
+| 1.8 | Refresh token rotation | Forçar refresh + reuso do antigo | Antigo invalidado |
 
-Usa `SUPABASE_SERVICE_ROLE_KEY` (já existe como secret) para:
+### Frente 2 — Autorização & Multi-tenancy (10 testes)
+| # | Teste | Como executar | Aprovado se |
+|---|---|---|---|
+| 2.1 | RLS por tabela (35 tabelas) | `security-regression-runner` | Todos os testes verdes |
+| 2.2 | Cross-tenant SELECT (Org A → Org B) | Suite `rls_tables.test.ts` | 0 linhas retornadas |
+| 2.3 | Cross-tenant INSERT forçando `organization_id` de outra org | Teste novo a criar | RLS bloqueia |
+| 2.4 | Cross-tenant UPDATE via ID conhecido | Teste novo | `.maybeSingle()` retorna null |
+| 2.5 | IDOR em rotas de detalhe (`/contratos/:id`) | Manual + script | 404/403 para ID de outra org |
+| 2.6 | Privilege escalation horizontal (analista → admin) | Tentar `update user_roles` | RLS bloqueia |
+| 2.7 | Privilege escalation vertical (admin org A → admin org B) | Suite | `is_admin_of_org` falha |
+| 2.8 | Edge functions validam JWT | Suite `edge_auth.test.ts` | 401 sem Bearer |
+| 2.9 | `user_id` derivado do token, não do body | Suite recém-criada | `compliance_logs` usa JWT sub |
+| 2.10 | `role_permissions` somente service_role | Suite regressão | INSERT/UPDATE/DELETE 403 |
 
-- Criar/recuperar orgs `Org Test A` e `Org Test B` (idempotente por nome).
-- Criar usuários via Admin API (`auth.admin.createUser`, `email_confirm: true`):
-  - `secqa+admin-a@lexflowai.com.br` — admin da Org A
-  - `secqa+analista-a@lexflowai.com.br` — analista da Org A
-  - `secqa+admin-b@lexflowai.com.br` — admin da Org B
-- Linkar em `organization_members` + `user_roles` com a role correta.
-- Cria 1 contrato e 1 fornecedor em cada org para os testes cross-org.
-- Faz upload de 1 arquivo dummy em `<orgA_id>/seed.pdf` e `<orgB_id>/seed.pdf`.
-- Senha gerada uma vez e gravada em secrets `SECQA_PASSWORD` (você confirma, eu peço via add_secret).
-- Função `teardown()` limpa apenas dados marcados com tag `secqa_seed=true`.
+### Frente 3 — Vazamento de Dados (9 testes)
+| # | Teste | Como executar | Aprovado se |
+|---|---|---|---|
+| 3.1 | Storage privado exige signed URL | `rls_storage.test.ts` | URL pública 403 |
+| 3.2 | Realtime: usuário só vê próprio canal | `rls_realtime.test.ts` | Subscribe em canal de outro = sem mensagens |
+| 3.3 | API responses sem campos sensíveis (hash, tokens) | Inspecionar `/profiles`, `/user_roles` | Nenhum campo de credencial |
+| 3.4 | Logs sem segredos (CRON_SECRET, JWT, senhas) | `grep` em logs Supabase + analytics_query | 0 ocorrências |
+| 3.5 | Error messages sem stack trace em produção | Forçar erro 500 | Mensagem genérica |
+| 3.6 | CORS não usa `*` em endpoints autenticados sensíveis | Auditar todas edge fns | Lista revisada |
+| 3.7 | Headers de segurança (CSP, HSTS, X-Frame, X-CTO) | curl + securityheaders.com | Grade A |
+| 3.8 | PII masking ativo para roles sem permissão | Manual em telas de fornecedor/contrato | Campos mascarados |
+| 3.9 | Export de dados respeita tenant | Exportar como user de Org A | Sem dados de Org B |
 
-### Casos de teste cobertos
+### Frente 4 — Injeção & Input Validation (7 testes)
+| # | Teste | Como executar | Aprovado se |
+|---|---|---|---|
+| 4.1 | SQLi em campos de busca | Payloads OWASP em `BuscaAvancada` | Sem erro de SQL, sem dados extras |
+| 4.2 | XSS armazenado em comentários/observações | `<script>alert(1)</script>` em campos | Renderizado como texto |
+| 4.3 | XSS refletido em query params | Payload em URL | Escape ativo |
+| 4.4 | SSRF em integrações (Gest10, CNPJ) | URL interna como input | Bloqueado |
+| 4.5 | Upload de arquivo: tipo e tamanho | PDF malicioso, .exe renomeado | Rejeitado |
+| 4.6 | Path traversal em downloads | `../../etc/passwd` | 403/404 |
+| 4.7 | Validação Zod em todas edge fns | Audit de código | 100% das fns têm schema |
 
-**rls_realtime.test.ts**
-- Anônimo não consegue subscrever em `realtime:public:notifications` (RLS recém-adicionada).
-- Admin Org A inserindo `notifications` com `organization_id=A` → analista Org A recebe payload em ≤2s.
-- Admin Org B subscrito ao mesmo canal **não** recebe a notificação da Org A (filtragem por RLS na tabela origem).
-- Idem para `contract_comments` e `contract_signatures`.
+### Frente 5 — Compliance LGPD (6 testes)
+| # | Teste | Como executar | Aprovado se |
+|---|---|---|---|
+| 5.1 | Aceite de termos imutável | Tentar UPDATE em `compliance_logs` | RLS bloqueia |
+| 5.2 | Direito de acesso (Art. 18 LGPD) | Edge fn `gdpr-handler` action=export | Retorna dados do user |
+| 5.3 | Direito de exclusão (Art. 18) | `gdpr_delete_user(uuid)` | Profile anonimizado, logs marcados |
+| 5.4 | Logs de consentimento completos | Inspecionar 1 registro | IP, UA, versão, timestamp |
+| 5.5 | Política de retenção aplicada | Verificar `retention_policies` ativas | Cron rodando |
+| 5.6 | DPA disponível para clientes | Doc em `/docs/legal/DPA.md` | Documento publicado |
 
-**rls_storage.test.ts**
-- Admin Org A faz upload em `<orgA>/file.pdf` ✅; em `<orgB>/file.pdf` ❌ (403).
-- Admin Org B (`administrador`!) NÃO consegue `list`/`download`/`createSignedUrl` para `<orgA>/seed.pdf` (regressão da finding `storage_role_without_org_scope`).
-- Pasta `avatars/` antiga não é mais pública: anon `getPublicUrl` ou `download` em `avatars/x.png` retorna erro (regressão de `storage_avatars_public_anon`).
-- Analista Org A consegue download do próprio arquivo de org; usuário sem role nenhuma é negado.
+### Frente 6 — Infra & Operação (6 testes)
+| # | Teste | Como executar | Aprovado se |
+|---|---|---|---|
+| 6.1 | Pentest externo (terceirizado) | Contratar empresa (HackerOne/Cobalt) | Relatório com 0 críticas |
+| 6.2 | DAST automatizado | OWASP ZAP em staging | Sem highs |
+| 6.3 | SAST no CI | Semgrep + ESLint security | Sem highs |
+| 6.4 | Dependency scan | `npm audit --production` | 0 highs/criticals |
+| 6.5 | Secret scanning no repo | gitleaks | 0 segredos |
+| 6.6 | Backup restore drill | Restaurar em ambiente isolado | RTO < 4h documentado |
 
-**rls_tables.test.ts**
-- Admin Org B fazendo `select` em `contratos` retorna 0 contratos da Org A.
-- Tentativa de `insert` em `contratos` com `organization_id` da outra org → erro RLS.
-- `audit_logs`: analista (não-admin) recebe 0 linhas; admin da própria org recebe ≥1.
-- `update` com role insuficiente é bloqueado e o helper `.select().maybeSingle()` retorna `null` (memory: rls-silent-failure-handling).
+### Frente 7 — Monitoring & Resposta (2 testes)
+| # | Teste | Como executar | Aprovado se |
+|---|---|---|---|
+| 7.1 | Alertas funcionando (login suspeito, picos de erro) | `security-alert-handler` + simulação | Alerta dispara |
+| 7.2 | Canal de disclosure público | `security@lexflowai.com.br` ativo + SECURITY.md | Email recebido |
 
-**edge_auth.test.ts** (regressões das findings recém-corrigidas)
-- `rate-limiter` sem token → 401; com token mas sem `endpoint` → 400; com token analista pedindo `userRole: 'administrador'` no body é ignorado (multiplier do papel real).
-- `security-alert-handler` sem token → 401; analista (não-admin) → 403; admin de outra org sobre alert da Org A → 403.
-- `enviar-notificacao-whatsapp` com `Bearer fake` → 401.
-- `anomaly-detector` sem header → 401; sem `CRON_SECRET` configurado → 500.
-- `analisar-contrato` / `extrair-dados-pdf` com `fileUrl` apontando para `<orgB>/...` chamado por user da Org A → 403.
-- `consultar-cnpj` em erro forçado retorna mensagem genérica (sem stack).
+---
 
-## Checklist de prontidão para venda
+## O que será criado na implementação
 
-Arquivo `docs/security-readiness.md` cobrindo:
+1. **`docs/PRE_LAUNCH_TEST_SPEC.md`** — versão expandida deste plano com cada teste detalhado: passos exatos, comandos, payloads, screenshots de evidência esperada
+2. **`docs/test-evidence/README.md`** — convenção de nomes para arquivos de evidência (ex.: `1.2-bloqueio-login.png`, `4.1-sqli-busca.json`)
+3. **Tabela `pre_launch_test_runs`** no banco — para registrar execuções: `test_id`, `executed_by`, `status` (pending/passed/failed/skipped), `evidence_url`, `notes`, `executed_at`
+4. **Componente `PreLaunchChecklist.tsx`** em `src/components/security/` — renderiza os 48 testes agrupados por frente, com badges de status, botão "marcar como aprovado", upload de evidência e contador de progresso (X/48)
+5. **Nova aba "Pré-Venda"** em `src/pages/SecurityDashboard.tsx` — só visível para `administrador`
+6. **Edge function `pre-launch-test-runner`** — opcional, para disparar os testes automatizáveis (frentes 1, 2, 3.1-3.4, 4.7, 5.1-5.4, 6.4) em batch e gravar resultado direto na tabela
 
-- **LGPD**: base legal, retenção, anonimização (`gdpr_delete_user` já existe), DPO contact, consentimento.
-- **OWASP Top 10 2021** mapeado → controle implementado + teste cobrindo.
-- **Multi-tenant**: RLS por tabela, storage por pasta, realtime gated, edge functions org-scoped.
-- **RBAC**: papéis em `user_roles`, `has_role`/`has_any_role`/`has_permission`, MFA opcional.
-- **Auditoria**: `audit_logs` + `compliance_logs` + `security_alerts` + playbooks.
-- **Segredos**: anon vs service role, rotação documentada, CSP/headers, robots.
-- **Backup/DR**: gerenciado pelo Lovable Cloud.
+## Fora do escopo desta spec
 
-Cada item linka para o teste que o cobre.
+- Execução real dos testes (será feita após a aprovação do plano)
+- Contratação de pentest externo (depende do usuário)
+- Implementação de correções para testes que falharem (cada falha vira um ticket separado)
 
-## Relatório executivo
+## Próximos passos depois de aprovado
 
-`docs/SECURITY_REPORT.md` é gerado a cada execução com:
-
-- Data, commit, ambiente.
-- Lista de testes (verde/vermelho) agrupados por categoria.
-- Findings ativos do scanner Lovable (puxados via `security--get_scan_results` em modo build).
-- Status do checklist (PASS/PENDING).
-- Próximos passos.
-
-## Passos de implementação
-
-1. Adicionar dependência de teste Deno (nada a instalar — já temos runner).
-2. Escrever `_bootstrap.ts` + `_clients.ts` (idempotente, usa service role).
-3. Escrever as 4 suítes acima.
-4. Criar `docs/security-readiness.md` (checklist).
-5. Criar `scripts/run-security-suite.ts` que invoca o runner e materializa `docs/SECURITY_REPORT.md`.
-6. Adicionar memory note `mem://security/regression-suite` apontando para a suíte.
-
-## Detalhes técnicos
-
-- **Runner**: `supabase--test_edge_functions` (Deno test). Os arquivos vivem em `supabase/functions/_security_tests/*.test.ts`.
-- **Credenciais**: senha única em secret runtime `SECQA_PASSWORD` (peço com `add_secret` ao implementar). Service role já existe.
-- **Isolamento**: tudo é prefixado `secqa_` e tem campo `metadata.secqa_seed=true` para teardown seguro.
-- **CI**: o runner pode ser invocado a cada PR via tooling Lovable; localmente o usuário não roda — instruções no README apenas para referência.
-- **Sem rate limiting**: respeitamos a diretriz de não introduzir backend rate limiting; só **testamos** o que existe.
-
-## Fora de escopo
-
-- Pentest manual / fuzzing externo (recomendado em prod por terceiro especializado — documentado no relatório).
-- Cron real do `anomaly-detector` (apenas teste de auth).
-- Carga / DDoS.
+1. Criar o documento mestre + tabela + componente + aba
+2. Rodar os testes automatizáveis (≈30 dos 48) e registrar resultados
+3. Listar os ≈18 testes manuais com instruções claras para você executar
+4. Gerar relatório final em PDF com todas as evidências para entregar a clientes corporativos
