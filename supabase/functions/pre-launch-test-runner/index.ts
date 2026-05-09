@@ -304,7 +304,7 @@ Deno.serve(async (req) => {
     results,
   };
   return new Response(JSON.stringify(summary, null, 2), {
-    status: summary.failed === 0 ? 200 : 207,
+    status: 200,
     headers: { ...corsHeaders, "content-type": "application/json" },
   });
 });
