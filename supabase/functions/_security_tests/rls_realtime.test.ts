@@ -4,18 +4,21 @@ import { bootstrap } from "./_bootstrap.ts";
 import { anonClient, signInAs, serviceClient } from "./_clients.ts";
 import { requireEnv } from "./_clients.ts";
 
-Deno.test("realtime: anonymous cannot subscribe to a private channel", async (t) => {
+Deno.test("realtime: anon does NOT receive postgres_changes events", async (t) => {
   if (!requireEnv(t)) return;
-  await bootstrap();
-  const anon = anonClient();
-  const channel = anon.channel("secqa-anon-probe");
-  const status = await new Promise<string>((resolve) => {
-    channel.subscribe((s) => resolve(s));
-    setTimeout(() => resolve("TIMEOUT"), 4000);
+  const seed = await bootstrap();
+  const c = anonClient();
+  const got: any[] = [];
+  const ch = c.channel("secqa-anon-notif")
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications" }, (p) => got.push(p.new));
+  await new Promise((r) => { ch.subscribe(() => {}); setTimeout(r, 1500); });
+  const probe = `secqa-anon-${Date.now()}`;
+  await serviceClient().from("notifications").insert({
+    organization_id: seed.orgA, user_id: seed.users.analistaA, tipo: "geral", titulo: probe, mensagem: "x",
   });
-  await anon.removeChannel(channel);
-  // CHANNEL_ERROR or TIMED_OUT both indicate the broker rejected/closed the subscription.
-  assert(["CHANNEL_ERROR", "TIMED_OUT", "CLOSED", "TIMEOUT"].includes(status), `expected rejection, got ${status}`);
+  await new Promise((r) => setTimeout(r, 2500));
+  await c.removeChannel(ch);
+  assert(!got.some((n: any) => n.titulo === probe), "anon MUST NOT receive postgres_changes events from authenticated insert");
 });
 
 Deno.test("realtime: notification insert in Org A reaches Org A but not Org B", async (t) => {
