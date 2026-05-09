@@ -2018,6 +2018,7 @@ export type Database = {
           cnpj: string | null
           configuracoes: Json | null
           created_at: string
+          created_by: string | null
           email_contato: string | null
           endereco: string | null
           estado: string | null
@@ -2037,6 +2038,7 @@ export type Database = {
           cnpj?: string | null
           configuracoes?: Json | null
           created_at?: string
+          created_by?: string | null
           email_contato?: string | null
           endereco?: string | null
           estado?: string | null
@@ -2056,6 +2058,7 @@ export type Database = {
           cnpj?: string | null
           configuracoes?: Json | null
           created_at?: string
+          created_by?: string | null
           email_contato?: string | null
           endereco?: string | null
           estado?: string | null
@@ -2904,6 +2907,7 @@ export type Database = {
           custo_unitario: number | null
           id: string
           metadata: Json | null
+          organization_id: string | null
           quantidade: number | null
           recurso: string
           servico_id: string | null
@@ -2917,6 +2921,7 @@ export type Database = {
           custo_unitario?: number | null
           id?: string
           metadata?: Json | null
+          organization_id?: string | null
           quantidade?: number | null
           recurso: string
           servico_id?: string | null
@@ -2930,6 +2935,7 @@ export type Database = {
           custo_unitario?: number | null
           id?: string
           metadata?: Json | null
+          organization_id?: string | null
           quantidade?: number | null
           recurso?: string
           servico_id?: string | null
@@ -3087,6 +3093,10 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      is_admin_of_org: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_login_blocked: {
         Args: {
           _email: string
