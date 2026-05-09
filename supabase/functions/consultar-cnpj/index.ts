@@ -87,13 +87,9 @@ Deno.serve(async (req) => {
       .order("joined_at", { ascending: true })
       .limit(1)
       .maybeSingle();
-    const organizationId = orgRow?.organization_id;
-    if (!organizationId) {
-      return new Response(JSON.stringify({ error: "Organização não encontrada" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const organizationId = orgRow?.organization_id ?? null;
+    // Onboarding: usuário ainda sem organização pode consultar CNPJ (sem log/cache)
+
 
     // Cache 24h se não forçado
     if (fornecedorId && !force) {
@@ -117,14 +113,16 @@ Deno.serve(async (req) => {
 
     if (!result.ok) {
       const status = result.rateLimited ? "rate_limited" : "erro_consulta";
-      await admin.from("cnpj_verification_log").insert({
-        fornecedor_id: fornecedorId ?? null,
-        cnpj,
-        status,
-        error_message: result.error || (result.rateLimited ? "Rate limit ReceitaWS" : "Erro"),
-        organization_id: organizationId,
-        created_by: userRes.user.id,
-      });
+      if (organizationId) {
+        await admin.from("cnpj_verification_log").insert({
+          fornecedor_id: fornecedorId ?? null,
+          cnpj,
+          status,
+          error_message: result.error || (result.rateLimited ? "Rate limit ReceitaWS" : "Erro"),
+          organization_id: organizationId,
+          created_by: userRes.user.id,
+        });
+      }
       return new Response(
         JSON.stringify({
           status,
@@ -154,14 +152,16 @@ Deno.serve(async (req) => {
       await admin.from("fornecedores").update(payload).eq("id", fornecedorId);
     }
 
-    await admin.from("cnpj_verification_log").insert({
-      fornecedor_id: fornecedorId ?? null,
-      cnpj,
-      status: cnpjStatus,
-      response: d,
-      organization_id: organizationId,
-      created_by: userRes.user.id,
-    });
+    if (organizationId) {
+      await admin.from("cnpj_verification_log").insert({
+        fornecedor_id: fornecedorId ?? null,
+        cnpj,
+        status: cnpjStatus,
+        response: d,
+        organization_id: organizationId,
+        created_by: userRes.user.id,
+      });
+    }
 
     return new Response(
       JSON.stringify({
