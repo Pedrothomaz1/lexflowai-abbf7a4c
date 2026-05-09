@@ -24,6 +24,7 @@ import {
   Shield,
   AlertTriangle,
   ShieldAlert,
+  ShieldCheck,
   Activity,
   Lock,
   Eye,
