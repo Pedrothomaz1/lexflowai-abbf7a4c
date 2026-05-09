@@ -3209,6 +3209,10 @@ export type Database = {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
       }
+      is_org_creator: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_org_owner: {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
