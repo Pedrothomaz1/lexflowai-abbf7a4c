@@ -142,6 +142,22 @@ serve(async (req) => {
       );
     }
 
+    // Ensure caller belongs to the alert's organization
+    const { data: callerMembership } = await supabase
+      .from('organization_members')
+      .select('id')
+      .eq('user_id', userData.user.id)
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (!callerMembership) {
+      return new Response(
+        JSON.stringify({ error: 'Acesso negado a esta organização' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     console.log(`[security-alert-handler] Processing alert ${alert_id} with severity ${alert.severity} for org ${organizationId}`);
 
     const actions = RESPONSE_MATRIX[alert.severity] || RESPONSE_MATRIX['LOW'];
