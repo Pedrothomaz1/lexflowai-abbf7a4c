@@ -87,13 +87,9 @@ Deno.serve(async (req) => {
       .order("joined_at", { ascending: true })
       .limit(1)
       .maybeSingle();
-    const organizationId = orgRow?.organization_id;
-    if (!organizationId) {
-      return new Response(JSON.stringify({ error: "Organização não encontrada" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const organizationId = orgRow?.organization_id ?? null;
+    // Onboarding: usuário ainda sem organização pode consultar CNPJ (sem log/cache)
+
 
     // Cache 24h se não forçado
     if (fornecedorId && !force) {
