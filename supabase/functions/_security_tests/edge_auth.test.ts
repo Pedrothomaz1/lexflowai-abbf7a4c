@@ -2,7 +2,7 @@
 // Each test pins the exact attack vector that produced a security finding.
 import { assert } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { bootstrap } from "./_bootstrap.ts";
-import { callFn, signInAs } , requireEnv from "./_clients.ts";
+import { callFn, signInAs } from "./_clients.ts";
 import { requireEnv } from "./_clients.ts";
 
 async function readBody(r: Response) {

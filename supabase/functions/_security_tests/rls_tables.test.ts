@@ -1,7 +1,7 @@
 // Regression: RLS policies on critical tables (contratos, fornecedores, audit_logs).
 import { assert, assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { bootstrap } from "./_bootstrap.ts";
-import { signInAs } , requireEnv from "./_clients.ts";
+import { signInAs } from "./_clients.ts";
 import { requireEnv } from "./_clients.ts";
 
 Deno.test("contratos: admin of Org B sees no Org A contracts", async (t) => {

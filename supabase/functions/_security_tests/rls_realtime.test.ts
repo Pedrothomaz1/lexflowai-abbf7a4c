@@ -1,7 +1,7 @@
 // Regression: realtime.messages RLS + per-table RLS for postgres_changes payloads.
 import { assertEquals, assert } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { bootstrap } from "./_bootstrap.ts";
-import { anonClient, signInAs, serviceClient } , requireEnv from "./_clients.ts";
+import { anonClient, signInAs, serviceClient } from "./_clients.ts";
 import { requireEnv } from "./_clients.ts";
 
 Deno.test("realtime: anonymous cannot subscribe to a private channel", async (t) => {

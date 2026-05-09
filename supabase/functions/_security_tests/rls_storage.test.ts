@@ -2,7 +2,7 @@
 // even for high-privilege roles (admin of a different org).
 import { assert } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { bootstrap } from "./_bootstrap.ts";
-import { anonClient, signInAs } , requireEnv from "./_clients.ts";
+import { anonClient, signInAs } from "./_clients.ts";
 import { requireEnv } from "./_clients.ts";
 
 const BUCKET = "contratos-documentos";
