@@ -1,67 +1,114 @@
-## Feature: Validação de CNPJ na Receita Federal
+## Objetivo
 
-Vamos consultar o status do CNPJ via **ReceitaWS** (gratuita, limite ~3 req/min) em dois momentos: ao cadastrar/editar fornecedor e ao criar contrato. CNPJs inativos/baixados/suspensos bloquearão novos contratos. Um cron diário revalidará toda a base, e o dashboard exibirá CNPJs com problemas.
+Garantir que as correções de segurança recentes (RLS em `realtime.messages`, Storage por organização, autenticação das edge functions) não regridam, e produzir um relatório de prontidão para venda cobrindo LGPD/OWASP/RBAC.
 
-### 1. Banco de dados
+## Entregáveis
 
-Adicionar colunas em `fornecedores`:
-- `cnpj_status` (text): `ativa`, `baixada`, `suspensa`, `inapta`, `nula`, `nao_verificado`, `erro_consulta`
-- `cnpj_situacao_data` (date): data da situação cadastral retornada
-- `cnpj_verificado_em` (timestamptz): última consulta bem-sucedida
-- `cnpj_dados_receita` (jsonb): payload completo (razão social, atividade principal, endereço) para auditoria/auto-preenchimento
+1. **Seed de teste reproduzível** — usuários e organizações isolados, criados via script.
+2. **Suite Deno de integração** rodando contra o backend real, executada pelo runner de edge functions já disponível.
+3. **Checklist de prontidão para venda** (`docs/security-readiness.md`) e **relatório executivo** (`docs/SECURITY_REPORT.md`) gerado após a suíte.
+4. **Script npm** `test:security` que orquestra tudo localmente e em CI.
 
-Criar tabela `cnpj_verification_log` para histórico de consultas (fornecedor_id, status, response, created_at, organization_id) com RLS por organização.
+## Arquitetura da suíte
 
-### 2. Edge Function: `consultar-cnpj`
+```text
+supabase/functions/_security_tests/
+├── _bootstrap.ts          seed/teardown idempotente via service role
+├── _clients.ts            helpers: signInAs(orgA_admin), anonClient(), serviceClient()
+├── rls_realtime.test.ts   subscribe + postgres_changes cross-org
+├── rls_storage.test.ts    upload/download/signed URL cross-org + cross-role
+├── rls_tables.test.ts     contratos / fornecedores / audit_logs / notifications
+├── edge_auth.test.ts      rate-limiter, security-alert-handler, whatsapp,
+│                          anomaly-detector, analisar-contrato, extrair-dados-pdf
+└── README.md              como rodar e interpretar resultados
+```
 
-- Recebe `{ cnpj }`, valida formato, chama `https://receitaws.com.br/v1/cnpj/{cnpj}`.
-- Tratamento de erro 429 (rate limit) → retorna `status: "rate_limited"` com retry sugerido.
-- Retorna situação cadastral + dados úteis (razão social, nome fantasia, atividade, endereço).
-- Atualiza `fornecedores` se `fornecedor_id` for passado, e grava em `cnpj_verification_log`.
-- `verify_jwt = true`.
+### Seed (`_bootstrap.ts`)
 
-### 3. Edge Function: `cron-verificar-cnpjs`
+Usa `SUPABASE_SERVICE_ROLE_KEY` (já existe como secret) para:
 
-- Executada diariamente via `pg_cron` (sugestão: 03:00 UTC).
-- Itera fornecedores ativos com CNPJ, respeitando rate limit (~1 req a cada 25s = ~3/min).
-- Atualiza status; quando muda de `ativa` para outro estado, dispara `notify_org_members` para administradores e cria registro em `contract_alerts` (`tipo_alerta = 'cnpj_inativo'`) referenciando contratos vinculados.
-- Usa `CRON_SECRET` para autenticação.
+- Criar/recuperar orgs `Org Test A` e `Org Test B` (idempotente por nome).
+- Criar usuários via Admin API (`auth.admin.createUser`, `email_confirm: true`):
+  - `secqa+admin-a@lexflowai.com.br` — admin da Org A
+  - `secqa+analista-a@lexflowai.com.br` — analista da Org A
+  - `secqa+admin-b@lexflowai.com.br` — admin da Org B
+- Linkar em `organization_members` + `user_roles` com a role correta.
+- Cria 1 contrato e 1 fornecedor em cada org para os testes cross-org.
+- Faz upload de 1 arquivo dummy em `<orgA_id>/seed.pdf` e `<orgB_id>/seed.pdf`.
+- Senha gerada uma vez e gravada em secrets `SECQA_PASSWORD` (você confirma, eu peço via add_secret).
+- Função `teardown()` limpa apenas dados marcados com tag `secqa_seed=true`.
 
-### 4. Frontend — Cadastro/edição de fornecedor
+### Casos de teste cobertos
 
-Em `FornecedorForm.tsx` e `InlineFornecedorForm`:
-- Botão "Verificar Receita Federal" ao lado do CNPJ (auto-disparo no blur quando válido).
-- Badge com status (verde "Ativa" / vermelho "Baixada/Suspensa" / cinza "Não verificado").
-- Auto-preencher razão social, nome fantasia e endereço se vazios.
-- Mostrar data da última verificação.
+**rls_realtime.test.ts**
+- Anônimo não consegue subscrever em `realtime:public:notifications` (RLS recém-adicionada).
+- Admin Org A inserindo `notifications` com `organization_id=A` → analista Org A recebe payload em ≤2s.
+- Admin Org B subscrito ao mesmo canal **não** recebe a notificação da Org A (filtragem por RLS na tabela origem).
+- Idem para `contract_comments` e `contract_signatures`.
 
-### 5. Frontend — Novo Contrato
+**rls_storage.test.ts**
+- Admin Org A faz upload em `<orgA>/file.pdf` ✅; em `<orgB>/file.pdf` ❌ (403).
+- Admin Org B (`administrador`!) NÃO consegue `list`/`download`/`createSignedUrl` para `<orgA>/seed.pdf` (regressão da finding `storage_role_without_org_scope`).
+- Pasta `avatars/` antiga não é mais pública: anon `getPublicUrl` ou `download` em `avatars/x.png` retorna erro (regressão de `storage_avatars_public_anon`).
+- Analista Org A consegue download do próprio arquivo de org; usuário sem role nenhuma é negado.
 
-Em `ContratoFormDialog.tsx`:
-- Ao selecionar fornecedor, exibir badge de status do CNPJ.
-- Se status ≠ `ativa` → alert vermelho e **botão Criar Contrato desabilitado**.
-- Botão "Reverificar agora" para forçar consulta.
-- Mesma regra para fornecedores criados via `InlineFornecedorForm`.
+**rls_tables.test.ts**
+- Admin Org B fazendo `select` em `contratos` retorna 0 contratos da Org A.
+- Tentativa de `insert` em `contratos` com `organization_id` da outra org → erro RLS.
+- `audit_logs`: analista (não-admin) recebe 0 linhas; admin da própria org recebe ≥1.
+- `update` com role insuficiente é bloqueado e o helper `.select().maybeSingle()` retorna `null` (memory: rls-silent-failure-handling).
 
-### 6. Dashboard — Card "CNPJs com problemas"
+**edge_auth.test.ts** (regressões das findings recém-corrigidas)
+- `rate-limiter` sem token → 401; com token mas sem `endpoint` → 400; com token analista pedindo `userRole: 'administrador'` no body é ignorado (multiplier do papel real).
+- `security-alert-handler` sem token → 401; analista (não-admin) → 403; admin de outra org sobre alert da Org A → 403.
+- `enviar-notificacao-whatsapp` com `Bearer fake` → 401.
+- `anomaly-detector` sem header → 401; sem `CRON_SECRET` configurado → 500.
+- `analisar-contrato` / `extrair-dados-pdf` com `fileUrl` apontando para `<orgB>/...` chamado por user da Org A → 403.
+- `consultar-cnpj` em erro forçado retorna mensagem genérica (sem stack).
 
-Novo card no `Dashboard.tsx` (próximo aos KPIs existentes):
-- Contador de fornecedores com `cnpj_status` em (`baixada`, `suspensa`, `inapta`, `nula`, `erro_consulta`).
-- Lista resumida (top 5) com nome, status (badge colorido) e nº de contratos ativos vinculados.
-- Botão "Ver todos" → leva para `/fornecedores?filtro=cnpj_inativo`.
-- Destaque visual (borda vermelha) quando houver pelo menos 1 problema.
+## Checklist de prontidão para venda
 
-### 7. Tela de Fornecedores
+Arquivo `docs/security-readiness.md` cobrindo:
 
-Em `Fornecedores.tsx`:
-- Filtro/tab "CNPJs com problemas".
-- Coluna de status do CNPJ na tabela.
-- Botão "Reverificar" por linha.
+- **LGPD**: base legal, retenção, anonimização (`gdpr_delete_user` já existe), DPO contact, consentimento.
+- **OWASP Top 10 2021** mapeado → controle implementado + teste cobrindo.
+- **Multi-tenant**: RLS por tabela, storage por pasta, realtime gated, edge functions org-scoped.
+- **RBAC**: papéis em `user_roles`, `has_role`/`has_any_role`/`has_permission`, MFA opcional.
+- **Auditoria**: `audit_logs` + `compliance_logs` + `security_alerts` + playbooks.
+- **Segredos**: anon vs service role, rotação documentada, CSP/headers, robots.
+- **Backup/DR**: gerenciado pelo Lovable Cloud.
 
-### Detalhes técnicos
+Cada item linka para o teste que o cobre.
 
-- ReceitaWS retorna campo `situacao` (ATIVA, BAIXADA, SUSPENSA, INAPTA, NULA). Normalizar para lowercase.
-- Cache: não reconsultar se `cnpj_verificado_em` < 24h, exceto se usuário clicar "Reverificar".
-- Rate limit do cron: chamadas sequenciais com delay de 25s. Para bases grandes, processar em lotes diários (ex: 100 fornecedores/dia ordenados por `cnpj_verificado_em ASC NULLS FIRST`).
-- pg_cron job inserido via `supabase--insert` (não migration) por conter URL/anon key.
-- Notificação de inativação reaproveita `notify_org_members` + `contract_alerts`.
+## Relatório executivo
+
+`docs/SECURITY_REPORT.md` é gerado a cada execução com:
+
+- Data, commit, ambiente.
+- Lista de testes (verde/vermelho) agrupados por categoria.
+- Findings ativos do scanner Lovable (puxados via `security--get_scan_results` em modo build).
+- Status do checklist (PASS/PENDING).
+- Próximos passos.
+
+## Passos de implementação
+
+1. Adicionar dependência de teste Deno (nada a instalar — já temos runner).
+2. Escrever `_bootstrap.ts` + `_clients.ts` (idempotente, usa service role).
+3. Escrever as 4 suítes acima.
+4. Criar `docs/security-readiness.md` (checklist).
+5. Criar `scripts/run-security-suite.ts` que invoca o runner e materializa `docs/SECURITY_REPORT.md`.
+6. Adicionar memory note `mem://security/regression-suite` apontando para a suíte.
+
+## Detalhes técnicos
+
+- **Runner**: `supabase--test_edge_functions` (Deno test). Os arquivos vivem em `supabase/functions/_security_tests/*.test.ts`.
+- **Credenciais**: senha única em secret runtime `SECQA_PASSWORD` (peço com `add_secret` ao implementar). Service role já existe.
+- **Isolamento**: tudo é prefixado `secqa_` e tem campo `metadata.secqa_seed=true` para teardown seguro.
+- **CI**: o runner pode ser invocado a cada PR via tooling Lovable; localmente o usuário não roda — instruções no README apenas para referência.
+- **Sem rate limiting**: respeitamos a diretriz de não introduzir backend rate limiting; só **testamos** o que existe.
+
+## Fora de escopo
+
+- Pentest manual / fuzzing externo (recomendado em prod por terceiro especializado — documentado no relatório).
+- Cron real do `anomaly-detector` (apenas teste de auth).
+- Carga / DDoS.
