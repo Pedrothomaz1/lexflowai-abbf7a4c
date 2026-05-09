@@ -113,14 +113,16 @@ Deno.serve(async (req) => {
 
     if (!result.ok) {
       const status = result.rateLimited ? "rate_limited" : "erro_consulta";
-      await admin.from("cnpj_verification_log").insert({
-        fornecedor_id: fornecedorId ?? null,
-        cnpj,
-        status,
-        error_message: result.error || (result.rateLimited ? "Rate limit ReceitaWS" : "Erro"),
-        organization_id: organizationId,
-        created_by: userRes.user.id,
-      });
+      if (organizationId) {
+        await admin.from("cnpj_verification_log").insert({
+          fornecedor_id: fornecedorId ?? null,
+          cnpj,
+          status,
+          error_message: result.error || (result.rateLimited ? "Rate limit ReceitaWS" : "Erro"),
+          organization_id: organizationId,
+          created_by: userRes.user.id,
+        });
+      }
       return new Response(
         JSON.stringify({
           status,
