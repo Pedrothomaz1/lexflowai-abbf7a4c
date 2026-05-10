@@ -3598,6 +3598,15 @@ export type Database = {
       }
       is_super_admin: { Args: { _user_id?: string }; Returns: boolean }
       job_notificar_vencimentos: { Args: never; Returns: undefined }
+      list_super_admins: {
+        Args: never
+        Returns: {
+          email: string
+          full_name: string
+          granted_at: string
+          user_id: string
+        }[]
+      }
       mask_pii: {
         Args: { field_type?: string; value: string }
         Returns: string
@@ -3614,6 +3623,7 @@ export type Database = {
         Returns: undefined
       }
       org_max_usuarios_for_plano: { Args: { _plano: string }; Returns: number }
+      promote_super_admin_by_email: { Args: { _email: string }; Returns: Json }
       record_login_attempt: {
         Args: {
           _email: string
@@ -3625,6 +3635,7 @@ export type Database = {
         }
         Returns: string
       }
+      revoke_super_admin_by_email: { Args: { _email: string }; Returns: Json }
       suspend_organization: {
         Args: { _motivo?: string; _org_id: string }
         Returns: Json
