@@ -158,6 +158,10 @@ export default function OrganizacoesTab() {
           <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
           Atualizar
         </Button>
+        <Button size="sm" onClick={() => { resetCreate(); setCreateOpen(true); }}>
+          <Plus className="h-4 w-4 mr-2" />
+          Nova organização cliente
+        </Button>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-col sm:flex-row gap-2">
