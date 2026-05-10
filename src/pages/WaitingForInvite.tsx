@@ -104,22 +104,13 @@ const WaitingForInvite = () => {
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">ou</span>
-            </div>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground text-center">
+              Sua conta está aguardando a criação da empresa pela equipe LexFlow. Você receberá um e-mail quando o acesso for liberado.
+            </p>
           </div>
 
           <div className="space-y-3">
-            <Button 
-              variant="outline" 
-              className="w-full gap-2"
-              onClick={handleCreateOrg}
-            >
-              <Building2 className="h-4 w-4" />
-              Criar Nova Organização
-            </Button>
 
             <Button 
               variant="ghost" 
