@@ -5,6 +5,7 @@ import { Loader2, ShieldAlert } from "lucide-react";
 import OrganizacoesTab from "./OrganizacoesTab";
 import UsuariosTab from "./UsuariosTab";
 import MetricasTab from "./MetricasTab";
+import SuperAdminsTab from "./SuperAdminsTab";
 
 export default function SuperAdminPage() {
   const { isSuperAdmin, loading } = useSuperAdmin();
@@ -51,6 +52,7 @@ export default function SuperAdminPage() {
           <TabsList>
             <TabsTrigger value="organizacoes">Organizações</TabsTrigger>
             <TabsTrigger value="usuarios">Usuários</TabsTrigger>
+            <TabsTrigger value="super-admins">Super Admins</TabsTrigger>
             <TabsTrigger value="metricas">Métricas</TabsTrigger>
           </TabsList>
           <TabsContent value="organizacoes" className="mt-6">
@@ -58,6 +60,9 @@ export default function SuperAdminPage() {
           </TabsContent>
           <TabsContent value="usuarios" className="mt-6">
             <UsuariosTab />
+          </TabsContent>
+          <TabsContent value="super-admins" className="mt-6">
+            <SuperAdminsTab />
           </TabsContent>
           <TabsContent value="metricas" className="mt-6">
             <MetricasTab />
