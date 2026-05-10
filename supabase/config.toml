@@ -63,6 +63,9 @@ verify_jwt = false
 [functions.consultar-cnpj]
 verify_jwt = true
 
+[functions.create-organization-onboarding]
+verify_jwt = true
+
 [functions.cron-verificar-cnpjs]
 verify_jwt = false
 
