@@ -48,6 +48,42 @@ export default function OrganizacoesTab() {
   const [suspendOrg, setSuspendOrg] = useState<OrgRow | null>(null);
   const [suspendReason, setSuspendReason] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [newOrg, setNewOrg] = useState({
+    nome: "", cnpj: "", owner_email: "", owner_nome: "", plano: "pro",
+    telefone: "", cidade: "", estado: "",
+  });
+  const [createdInviteUrl, setCreatedInviteUrl] = useState<string | null>(null);
+  const [createdEmailSent, setCreatedEmailSent] = useState(false);
+
+  const resetCreate = () => {
+    setNewOrg({ nome: "", cnpj: "", owner_email: "", owner_nome: "", plano: "pro", telefone: "", cidade: "", estado: "" });
+    setCreatedInviteUrl(null);
+    setCreatedEmailSent(false);
+  };
+
+  const createClientOrg = async () => {
+    if (!newOrg.nome.trim()) return toast.error("Informe o nome da empresa");
+    if (!newOrg.owner_email.trim()) return toast.error("Informe o e-mail do dono");
+    setCreateLoading(true);
+    const { data, error } = await supabase.functions.invoke("super-admin-create-client-org", {
+      body: newOrg,
+    });
+    setCreateLoading(false);
+    if (error || !(data as any)?.ok) {
+      return toast.error("Falha: " + (error?.message || (data as any)?.error || "erro desconhecido"));
+    }
+    const d = data as any;
+    setCreatedInviteUrl(d.invite_url);
+    setCreatedEmailSent(!!d.email_sent);
+    if (d.email_sent) {
+      toast.success("Organização criada e e-mail enviado ao dono");
+    } else {
+      toast.warning("Organização criada. E-mail não enviado — copie o link abaixo");
+    }
+    load();
+  };
 
   const load = async () => {
     setLoading(true);
