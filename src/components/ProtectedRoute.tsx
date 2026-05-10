@@ -235,10 +235,10 @@ export const ProtectedRoute = ({
         return <Navigate to="/aguardando-aprovacao" replace />;
       }
     } else if (!hasOrganization) {
-      // No organization at all -> onboarding wizard
-      const onboardingPaths = ['/onboarding', '/waiting-for-invite'];
-      if (!onboardingPaths.includes(location.pathname)) {
-        return <Navigate to="/onboarding" replace />;
+      // No organization at all -> waiting screen (orgs are created by super-admin)
+      const allowedPaths = ['/waiting-for-invite', '/aceitar-convite'];
+      if (!allowedPaths.includes(location.pathname)) {
+        return <Navigate to="/waiting-for-invite" replace />;
       }
     }
   }
