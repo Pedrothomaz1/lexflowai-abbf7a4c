@@ -44,7 +44,7 @@ export const ProtectedRoute = ({
   requireOrg = true 
 }: ProtectedRouteProps) => {
   const { session, user, loading: authLoading } = useAuth();
-  const { hasOrganization, loading: orgLoading } = useOrganization();
+  const { hasOrganization, hasInactiveOrganization, orgStatus, loading: orgLoading } = useOrganization();
   const location = useLocation();
   const [mfaStatus, setMfaStatus] = useState<MFAStatus | null>(null);
   const [twoFAVerified, setTwoFAVerified] = useState(false);
@@ -214,7 +214,6 @@ export const ProtectedRoute = ({
 
   // Check organization requirement (only after auth and MFA checks)
   if (requireOrg) {
-    // Still loading organization data
     if (orgLoading) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-background">
@@ -226,8 +225,17 @@ export const ProtectedRoute = ({
       );
     }
 
-    // User has no organization - send to onboarding wizard by default
-    if (!hasOrganization) {
+    // Org exists but is NOT active -> route to status screen
+    if (hasInactiveOrganization) {
+      const statusPaths = ['/aguardando-aprovacao', '/conta-suspensa'];
+      if (!statusPaths.includes(location.pathname)) {
+        if (orgStatus === 'suspensa' || orgStatus === 'cancelada') {
+          return <Navigate to="/conta-suspensa" replace />;
+        }
+        return <Navigate to="/aguardando-aprovacao" replace />;
+      }
+    } else if (!hasOrganization) {
+      // No organization at all -> onboarding wizard
       const onboardingPaths = ['/onboarding', '/waiting-for-invite'];
       if (!onboardingPaths.includes(location.pathname)) {
         return <Navigate to="/onboarding" replace />;

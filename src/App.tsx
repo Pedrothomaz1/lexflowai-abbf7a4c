@@ -56,6 +56,9 @@ const TermosDeUso = React.lazy(() => import("./pages/TermosDeUso"));
 const CentralAjuda = React.lazy(() => import("./pages/CentralAjuda"));
 const PermissoesAdmin = React.lazy(() => import("./pages/PermissoesAdmin"));
 const ResetPassword = React.lazy(() => import("./pages/ResetPassword"));
+const AguardandoAprovacao = React.lazy(() => import("./pages/AguardandoAprovacao"));
+const ContaSuspensa = React.lazy(() => import("./pages/ContaSuspensa"));
+const SuperAdminPage = React.lazy(() => import("./pages/SuperAdmin"));
 
 // Catches chunk load failures (e.g. deploy after user session, offline)
 class AppErrorBoundary extends Component<
@@ -128,7 +131,12 @@ function App() {
                     {/* Organization onboarding routes */}
                     <Route path="/onboarding" element={<ProtectedRoute requireOrg={false}><OnboardingOrganization /></ProtectedRoute>} />
                     <Route path="/waiting-for-invite" element={<ProtectedRoute requireOrg={false}><WaitingForInvite /></ProtectedRoute>} />
+                    <Route path="/aguardando-aprovacao" element={<ProtectedRoute requireOrg={false}><AguardandoAprovacao /></ProtectedRoute>} />
+                    <Route path="/conta-suspensa" element={<ProtectedRoute requireOrg={false}><ContaSuspensa /></ProtectedRoute>} />
                     <Route path="/aceitar-convite" element={<AcceptInvite />} />
+
+                    {/* Super Admin (LexFlow team only) */}
+                    <Route path="/super-admin" element={<ProtectedRoute requireOrg={false}><SuperAdminPage /></ProtectedRoute>} />
 
                     {/* Protected routes requiring organization */}
                     <Route path="/seletor-modulo" element={<ProtectedRoute><SeletorModulo /></ProtectedRoute>} />
