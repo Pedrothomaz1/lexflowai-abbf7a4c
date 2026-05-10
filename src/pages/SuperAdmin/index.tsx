@@ -5,6 +5,7 @@ import { Loader2, ShieldAlert } from "lucide-react";
 import OrganizacoesTab from "./OrganizacoesTab";
 import UsuariosTab from "./UsuariosTab";
 import MetricasTab from "./MetricasTab";
+import SuperAdminsTab from "./SuperAdminsTab";
 
 export default function SuperAdminPage() {
   const { isSuperAdmin, loading } = useSuperAdmin();
