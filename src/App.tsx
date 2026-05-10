@@ -56,6 +56,9 @@ const TermosDeUso = React.lazy(() => import("./pages/TermosDeUso"));
 const CentralAjuda = React.lazy(() => import("./pages/CentralAjuda"));
 const PermissoesAdmin = React.lazy(() => import("./pages/PermissoesAdmin"));
 const ResetPassword = React.lazy(() => import("./pages/ResetPassword"));
+const AguardandoAprovacao = React.lazy(() => import("./pages/AguardandoAprovacao"));
+const ContaSuspensa = React.lazy(() => import("./pages/ContaSuspensa"));
+const SuperAdminPage = React.lazy(() => import("./pages/SuperAdmin"));
 
 // Catches chunk load failures (e.g. deploy after user session, offline)
 class AppErrorBoundary extends Component<
