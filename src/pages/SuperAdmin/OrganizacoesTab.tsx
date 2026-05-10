@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { CheckCircle2, Ban, RefreshCw, Search, Building2 } from "lucide-react";
+import { CheckCircle2, Ban, RefreshCw, Search, Building2, Plus, Copy } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -47,6 +48,42 @@ export default function OrganizacoesTab() {
   const [suspendOrg, setSuspendOrg] = useState<OrgRow | null>(null);
   const [suspendReason, setSuspendReason] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [newOrg, setNewOrg] = useState({
+    nome: "", cnpj: "", owner_email: "", owner_nome: "", plano: "pro",
+    telefone: "", cidade: "", estado: "",
+  });
+  const [createdInviteUrl, setCreatedInviteUrl] = useState<string | null>(null);
+  const [createdEmailSent, setCreatedEmailSent] = useState(false);
+
+  const resetCreate = () => {
+    setNewOrg({ nome: "", cnpj: "", owner_email: "", owner_nome: "", plano: "pro", telefone: "", cidade: "", estado: "" });
+    setCreatedInviteUrl(null);
+    setCreatedEmailSent(false);
+  };
+
+  const createClientOrg = async () => {
+    if (!newOrg.nome.trim()) return toast.error("Informe o nome da empresa");
+    if (!newOrg.owner_email.trim()) return toast.error("Informe o e-mail do dono");
+    setCreateLoading(true);
+    const { data, error } = await supabase.functions.invoke("super-admin-create-client-org", {
+      body: newOrg,
+    });
+    setCreateLoading(false);
+    if (error || !(data as any)?.ok) {
+      return toast.error("Falha: " + (error?.message || (data as any)?.error || "erro desconhecido"));
+    }
+    const d = data as any;
+    setCreatedInviteUrl(d.invite_url);
+    setCreatedEmailSent(!!d.email_sent);
+    if (d.email_sent) {
+      toast.success("Organização criada e e-mail enviado ao dono");
+    } else {
+      toast.warning("Organização criada. E-mail não enviado — copie o link abaixo");
+    }
+    load();
+  };
 
   const load = async () => {
     setLoading(true);
@@ -120,6 +157,10 @@ export default function OrganizacoesTab() {
         <Button variant="outline" size="sm" onClick={load} disabled={loading}>
           <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
           Atualizar
+        </Button>
+        <Button size="sm" onClick={() => { resetCreate(); setCreateOpen(true); }}>
+          <Plus className="h-4 w-4 mr-2" />
+          Nova organização cliente
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -243,6 +284,82 @@ export default function OrganizacoesTab() {
             <Button variant="destructive" onClick={suspend} disabled={actionLoading}>
               Suspender
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={createOpen} onOpenChange={(o) => { setCreateOpen(o); if (!o) resetCreate(); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Nova organização cliente</DialogTitle>
+            <DialogDescription>
+              Cria a empresa já ativa e envia e-mail ao dono com link para definir senha e acessar.
+            </DialogDescription>
+          </DialogHeader>
+
+          {!createdInviteUrl ? (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5 col-span-2">
+                  <Label>Nome da empresa *</Label>
+                  <Input value={newOrg.nome} onChange={(e) => setNewOrg({ ...newOrg, nome: e.target.value })} placeholder="Ex: Acme S.A." />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>CNPJ</Label>
+                  <Input value={newOrg.cnpj} onChange={(e) => setNewOrg({ ...newOrg, cnpj: e.target.value })} placeholder="00.000.000/0000-00" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Plano</Label>
+                  <Select value={newOrg.plano} onValueChange={(v) => setNewOrg({ ...newOrg, plano: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="free">Free</SelectItem>
+                      <SelectItem value="pro">Pro</SelectItem>
+                      <SelectItem value="business">Business</SelectItem>
+                      <SelectItem value="enterprise">Enterprise</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Nome do dono</Label>
+                  <Input value={newOrg.owner_nome} onChange={(e) => setNewOrg({ ...newOrg, owner_nome: e.target.value })} placeholder="João Silva" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>E-mail do dono *</Label>
+                  <Input type="email" value={newOrg.owner_email} onChange={(e) => setNewOrg({ ...newOrg, owner_email: e.target.value })} placeholder="joao@acme.com" />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                O dono receberá um e-mail com link para definir senha (válido por 14 dias). Ele entra como administrador da empresa.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="rounded-lg border bg-muted/40 p-4 space-y-2">
+                <p className="text-sm font-medium">
+                  {createdEmailSent ? "✓ E-mail enviado para " + newOrg.owner_email : "⚠ E-mail não enviado — compartilhe o link manualmente:"}
+                </p>
+                <div className="flex gap-2">
+                  <Input value={createdInviteUrl} readOnly className="font-mono text-xs" />
+                  <Button variant="outline" size="icon" onClick={() => { navigator.clipboard.writeText(createdInviteUrl); toast.success("Link copiado"); }}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            {!createdInviteUrl ? (
+              <>
+                <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={createLoading}>Cancelar</Button>
+                <Button onClick={createClientOrg} disabled={createLoading}>
+                  {createLoading ? "Criando..." : "Criar e enviar e-mail"}
+                </Button>
+              </>
+            ) : (
+              <Button onClick={() => { setCreateOpen(false); resetCreate(); }}>Fechar</Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

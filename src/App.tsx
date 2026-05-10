@@ -47,7 +47,7 @@ const RequisicaoPublica = React.lazy(() => import("./pages/RequisicaoPublica"));
 const Requisicoes = React.lazy(() => import("./pages/Requisicoes"));
 const Franquias = React.lazy(() => import("./pages/Franquias"));
 const FranquiaDetalhes = React.lazy(() => import("./pages/FranquiaDetalhes"));
-const OnboardingOrganization = React.lazy(() => import("./pages/OnboardingOrganization"));
+
 const WaitingForInvite = React.lazy(() => import("./pages/WaitingForInvite"));
 const OrganizationSettings = React.lazy(() => import("./pages/OrganizationSettings"));
 const OrganizationMembers = React.lazy(() => import("./pages/OrganizationMembers"));
@@ -128,8 +128,7 @@ function App() {
                     <Route path="/requisicao" element={<RequisicaoPublica />} />
                     <Route path="/reset-password" element={<ResetPassword />} />
 
-                    {/* Organization onboarding routes */}
-                    <Route path="/onboarding" element={<ProtectedRoute requireOrg={false}><OnboardingOrganization /></ProtectedRoute>} />
+                    {/* Organization status routes (no public onboarding — orgs are created by super-admin) */}
                     <Route path="/waiting-for-invite" element={<ProtectedRoute requireOrg={false}><WaitingForInvite /></ProtectedRoute>} />
                     <Route path="/aguardando-aprovacao" element={<ProtectedRoute requireOrg={false}><AguardandoAprovacao /></ProtectedRoute>} />
                     <Route path="/conta-suspensa" element={<ProtectedRoute requireOrg={false}><ContaSuspensa /></ProtectedRoute>} />
