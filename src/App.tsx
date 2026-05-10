@@ -131,7 +131,12 @@ function App() {
                     {/* Organization onboarding routes */}
                     <Route path="/onboarding" element={<ProtectedRoute requireOrg={false}><OnboardingOrganization /></ProtectedRoute>} />
                     <Route path="/waiting-for-invite" element={<ProtectedRoute requireOrg={false}><WaitingForInvite /></ProtectedRoute>} />
+                    <Route path="/aguardando-aprovacao" element={<ProtectedRoute requireOrg={false}><AguardandoAprovacao /></ProtectedRoute>} />
+                    <Route path="/conta-suspensa" element={<ProtectedRoute requireOrg={false}><ContaSuspensa /></ProtectedRoute>} />
                     <Route path="/aceitar-convite" element={<AcceptInvite />} />
+
+                    {/* Super Admin (LexFlow team only) */}
+                    <Route path="/super-admin" element={<ProtectedRoute requireOrg={false}><SuperAdminPage /></ProtectedRoute>} />
 
                     {/* Protected routes requiring organization */}
                     <Route path="/seletor-modulo" element={<ProtectedRoute><SeletorModulo /></ProtectedRoute>} />
