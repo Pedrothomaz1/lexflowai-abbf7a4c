@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOrganization } from "@/contexts/OrganizationContext";
-import { createClient } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -61,10 +60,6 @@ const formatCnpj = (v: string) =>
     .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
     .replace(/\.(\d{3})(\d)/, ".$1/$2")
     .replace(/(\d{4})(\d)/, "$1-$2");
-
-const slugify = (n: string) =>
-  n.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 
 const OnboardingOrganization = () => {
   const navigate = useNavigate();
@@ -152,60 +147,21 @@ const OnboardingOrganization = () => {
     if (!user) return;
     setLoading(true);
     try {
-      const { data: { session }, error: sErr } = await supabase.auth.getSession();
-      if (sErr || !session?.access_token) {
-        toast({ variant: "destructive", title: "Sessão expirada" });
-        navigate("/auth", { replace: true });
-        return;
-      }
-
-      const authedSupabase = createClient(
-        import.meta.env.VITE_SUPABASE_URL,
-        import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        {
-          global: { headers: { Authorization: `Bearer ${session.access_token}` } },
-          auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-        }
-      );
-
-      const orgId = crypto.randomUUID();
-      const slug = `${slugify(empresa.nome)}-${orgId.slice(0, 6)}`;
-
-      const { error: orgError } = await authedSupabase.from("organizations").insert({
-        id: orgId,
-        nome: empresa.nome.trim(),
-        slug,
-        cnpj: empresa.cnpj.replace(/\D/g, "") || null,
-        telefone: empresa.telefone || null,
-        cidade: empresa.cidade || null,
-        estado: empresa.estado || null,
-        plano,
-        created_by: user.id,
-      });
-      if (orgError) throw orgError;
-
-      const { error: memErr } = await authedSupabase.from("organization_members").insert({
-        organization_id: orgId,
-        user_id: user.id,
-        role_in_org: "owner",
-        is_active: true,
-      });
-      if (memErr) throw memErr;
-
-      const { error: roleErr } = await authedSupabase.from("user_roles").insert({
-        user_id: user.id,
-        role: "administrador",
-        organization_id: orgId,
-      });
-      if (roleErr && roleErr.code !== "23505") throw roleErr;
-
-      // Atualiza perfil com cargo/departamento
-      if (perfil.cargo || perfil.departamento) {
-        await authedSupabase.from("profiles").update({
+      const { data, error } = await supabase.functions.invoke("create-organization-onboarding", {
+        body: {
+          nome: empresa.nome.trim(),
+          cnpj: empresa.cnpj.replace(/\D/g, "") || null,
+          telefone: empresa.telefone || null,
+          cidade: empresa.cidade || null,
+          estado: empresa.estado || null,
+          plano,
           cargo: perfil.cargo || null,
           departamento: perfil.departamento || null,
-        }).eq("id", user.id);
-      }
+        },
+      });
+
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error || "Não foi possível criar a empresa.");
 
       toast({ title: "Empresa criada!", description: `${empresa.nome} está pronta para uso.` });
       await refresh();
