@@ -47,7 +47,7 @@ const RequisicaoPublica = React.lazy(() => import("./pages/RequisicaoPublica"));
 const Requisicoes = React.lazy(() => import("./pages/Requisicoes"));
 const Franquias = React.lazy(() => import("./pages/Franquias"));
 const FranquiaDetalhes = React.lazy(() => import("./pages/FranquiaDetalhes"));
-const OnboardingOrganization = React.lazy(() => import("./pages/OnboardingOrganization"));
+
 const WaitingForInvite = React.lazy(() => import("./pages/WaitingForInvite"));
 const OrganizationSettings = React.lazy(() => import("./pages/OrganizationSettings"));
 const OrganizationMembers = React.lazy(() => import("./pages/OrganizationMembers"));
