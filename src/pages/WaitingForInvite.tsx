@@ -102,8 +102,6 @@ const WaitingForInvite = () => {
             </div>
           </div>
 
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground text-center">
               Sua conta está aguardando a criação da empresa pela equipe LexFlow. Você receberá um e-mail quando o acesso for liberado.
@@ -111,7 +109,6 @@ const WaitingForInvite = () => {
           </div>
 
           <div className="space-y-3">
-
             <Button 
               variant="ghost" 
               className="w-full gap-2"
