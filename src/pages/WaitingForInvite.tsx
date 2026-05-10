@@ -74,9 +74,6 @@ const WaitingForInvite = () => {
     }
   };
 
-  const handleCreateOrg = () => {
-    navigate("/onboarding");
-  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
