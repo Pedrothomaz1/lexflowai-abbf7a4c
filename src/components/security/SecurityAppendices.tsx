@@ -28,11 +28,11 @@ const REFERENCES = [
 ];
 
 const CONTACTS = [
-  { role: "Product Owner", name: "Pedro Thomaz", email: "pedro@veri.com", phone: "+55 11 XXXXX-XXXX" },
-  { role: "Tech Lead", name: "A definir", email: "tech@veri.com", phone: "-" },
-  { role: "Security Lead", name: "A definir / Externo", email: "security@veri.com", phone: "-" },
-  { role: "DPO (LGPD)", name: "A definir", email: "dpo@veri.com", phone: "-" },
-  { role: "On-Call (Critical)", name: "Rotação", email: "oncall@veri.com", phone: "+55 11 XXXXX-XXXX" },
+  { role: "Product Owner", name: "Pedro Thomaz", email: "pedro@lexflowai.com.br", phone: "+55 11 XXXXX-XXXX" },
+  { role: "Tech Lead", name: "A definir", email: "tech@lexflowai.com.br", phone: "-" },
+  { role: "Security Lead", name: "A definir / Externo", email: "security@lexflowai.com.br", phone: "-" },
+  { role: "DPO (LGPD)", name: "A definir", email: "dpo@lexflowai.com.br", phone: "-" },
+  { role: "On-Call (Critical)", name: "Rotação", email: "oncall@lexflowai.com.br", phone: "+55 11 XXXXX-XXXX" },
 ];
 
 const STAKEHOLDERS = [
