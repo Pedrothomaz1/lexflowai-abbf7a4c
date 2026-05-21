@@ -121,19 +121,16 @@ export default function Requisicoes() {
 
   // Fetch requests
   const { data: requests, isLoading, refetch } = useQuery({
-    queryKey: ["contract-requests", statusFilter, urgenciaFilter],
+    queryKey: ["contract-requests", statusFilter, urgenciaFilter, areaFilter],
     queryFn: async () => {
       let query = supabase
         .from("contract_requests")
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (statusFilter !== "all") {
-        query = query.eq("status", statusFilter);
-      }
-      if (urgenciaFilter !== "all") {
-        query = query.eq("urgencia", urgenciaFilter);
-      }
+      if (statusFilter !== "all") query = query.eq("status", statusFilter);
+      if (urgenciaFilter !== "all") query = query.eq("urgencia", urgenciaFilter);
+      if (areaFilter !== "all") query = query.eq("departamento", areaFilter);
 
       const { data, error } = await query;
       if (error) throw error;
@@ -141,10 +138,25 @@ export default function Requisicoes() {
     },
   });
 
+  // Realtime: invalida ao mudar qualquer requisição da org (RLS filtra)
+  useEffect(() => {
+    const channel = supabase
+      .channel("contract_requests_changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "contract_requests" },
+        () => queryClient.invalidateQueries({ queryKey: ["contract-requests"] }),
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
   // Update status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status, observacoes }: { id: string; status: string; observacoes?: string }) => {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("contract_requests")
         .update({
           status,
@@ -152,30 +164,66 @@ export default function Requisicoes() {
           analisado_por: user?.id,
           analisado_em: new Date().toISOString(),
         })
-        .eq("id", id);
+        .eq("id", id)
+        .select()
+        .maybeSingle();
 
       if (error) throw error;
+      if (!data) throw new Error("Você não tem permissão para alterar esta requisição.");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contract-requests"] });
-      toast({
-        title: "Status atualizado",
-        description: "A requisição foi atualizada com sucesso.",
-      });
+      toast({ title: "Status atualizado", description: "A requisição foi atualizada." });
       setIsActionDialogOpen(false);
       setObservacoes("");
       setActionType(null);
     },
-    onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Não foi possível atualizar o status.",
-      });
-    },
+    onError: (err: Error) =>
+      toast({ variant: "destructive", title: "Erro", description: err.message }),
   });
 
-  const handleAction = (request: ContractRequest, action: "aprovar" | "rejeitar" | "em_analise") => {
+  // Converter requisição aprovada em contrato (cria minuta e marca como convertida)
+  const convertMutation = useMutation({
+    mutationFn: async (req: ContractRequest) => {
+      const { data: orgId } = await supabase.rpc("current_user_org");
+      const { data: contrato, error: insErr } = await supabase
+        .from("contratos")
+        .insert({
+          organization_id: orgId as unknown as string,
+          titulo: req.titulo,
+          descricao: req.descricao,
+          tipo: req.tipo_contrato as never,
+          status: "rascunho" as never,
+          valor_total: req.valor_estimado,
+          observacoes: req.justificativa,
+          created_by: user?.id,
+          numero_contrato: `CTR-${Date.now()}`,
+        })
+        .select("id")
+        .maybeSingle();
+      if (insErr) throw insErr;
+      if (!contrato) throw new Error("Sem permissão para criar contrato.");
+
+      const { error: updErr } = await supabase
+        .from("contract_requests")
+        .update({ status: "convertido", contrato_id: contrato.id })
+        .eq("id", req.id);
+      if (updErr) throw updErr;
+      return contrato.id;
+    },
+    onSuccess: (contratoId) => {
+      queryClient.invalidateQueries({ queryKey: ["contract-requests"] });
+      toast({ title: "Contrato criado", description: "Abrindo minuta..." });
+      navigate(`/contratos/${contratoId}`);
+    },
+    onError: (err: Error) =>
+      toast({ variant: "destructive", title: "Conversão falhou", description: err.message }),
+  });
+
+  const handleAction = (
+    request: ContractRequest,
+    action: "aprovar" | "rejeitar" | "em_analise" | "devolver",
+  ) => {
     setSelectedRequest(request);
     setActionType(action);
     setObservacoes(request.observacoes_analise || "");
@@ -184,13 +232,20 @@ export default function Requisicoes() {
 
   const confirmAction = () => {
     if (!selectedRequest || !actionType) return;
-
-    const statusMap = {
+    if ((actionType === "rejeitar" || actionType === "devolver") && observacoes.trim().length < 5) {
+      toast({
+        variant: "destructive",
+        title: "Motivo obrigatório",
+        description: "Descreva o motivo (mín. 5 caracteres).",
+      });
+      return;
+    }
+    const statusMap: Record<string, string> = {
       aprovar: "aprovado",
       rejeitar: "rejeitado",
       em_analise: "em_analise",
+      devolver: "pendente",
     };
-
     updateStatusMutation.mutate({
       id: selectedRequest.id,
       status: statusMap[actionType],
