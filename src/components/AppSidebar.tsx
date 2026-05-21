@@ -79,7 +79,7 @@ interface MenuSectionType {
   defaultOpen?: boolean;
 }
 
-// Menu sections para módulo de Contratos - Hierarquia Gestor-First
+// Menu sections para módulo de Contratos — Hierarquia enterprise CLM
 const contratosMenuSections: MenuSectionType[] = [
   {
     id: "principal",
@@ -87,26 +87,24 @@ const contratosMenuSections: MenuSectionType[] = [
     icon: LayoutDashboard,
     defaultOpen: true,
     items: [
-      { title: "Visão Geral", url: "/dashboard", icon: LayoutDashboard, roles: ["all"] },
-      { 
-        title: "Contratos de Serviço", 
-        url: "/contratos", 
-        icon: FileText, 
-        roles: ["all"],
-        subItems: [
-          { title: "Novo Contrato", url: "/contratos?novo=true", icon: Plus },
-        ]
-      },
-      { 
-        title: "Franquias", 
-        url: "/franquias", 
-        icon: Building2, 
-        roles: ["all"],
-        subItems: [
-          { title: "Nova Franquia", url: "/franquias?nova=true", icon: Plus },
-        ]
-      },
+      { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: ["all"] },
       { title: "Requisições", url: "/requisicoes", icon: FileInput, roles: ["all"] },
+      {
+        title: "Contratos",
+        url: "/contratos",
+        icon: FileText,
+        roles: ["all"],
+        subItems: [{ title: "Novo Contrato", url: "/contratos?novo=true", icon: Plus }],
+      },
+      {
+        title: "Franquias",
+        url: "/franquias",
+        icon: Building2,
+        roles: ["all"],
+        subItems: [{ title: "Nova Franquia", url: "/franquias?nova=true", icon: Plus }],
+      },
+      { title: "Aprovações", url: "/workflows", icon: ShieldCheck, roles: ["all"] },
+      { title: "Obrigações", url: "/obrigacoes", icon: Activity, roles: ["all"] },
       { title: "Alertas e Prazos", url: "/alertas", icon: Bell, roles: ["all"] },
     ],
   },
@@ -131,15 +129,37 @@ const contratosMenuSections: MenuSectionType[] = [
     ],
   },
   {
-    id: "governanca",
-    title: "Governança",
-    icon: Shield,
+    id: "relatorios",
+    title: "Relatórios & Governança",
+    icon: BarChart3,
     defaultOpen: false,
     items: [
       { title: "Relatórios", url: "/relatorios", icon: BarChart3, roles: ["administrador"] },
+      { title: "Calendário", url: "/calendario", icon: Monitor, roles: ["all"] },
       { title: "Histórico de Ações", url: "/audit-logs", icon: Activity, roles: ["administrador"] },
       { title: "Segurança", url: "/security", icon: Shield, roles: ["administrador"] },
       { title: "Proteção de Dados", url: "/compliance", icon: ShieldCheck, roles: ["administrador"] },
+    ],
+  },
+  {
+    id: "portal",
+    title: "Portal Externo",
+    icon: Briefcase,
+    defaultOpen: false,
+    items: [
+      { title: "Link Público de Requisição", url: "/requisicao", icon: FileInput, roles: ["administrador"] },
+    ],
+  },
+  {
+    id: "administracao",
+    title: "Administração",
+    icon: Cog,
+    defaultOpen: false,
+    items: [
+      { title: "Usuários & Papéis", url: "/usuarios", icon: UserCog, roles: ["administrador"] },
+      { title: "Permissões", url: "/admin/permissoes", icon: ShieldCheck, roles: ["administrador"] },
+      { title: "Organização", url: "/organization/settings", icon: Building, roles: ["administrador"] },
+      { title: "Membros", url: "/organization/members", icon: Users, roles: ["administrador"] },
     ],
   },
 ];
