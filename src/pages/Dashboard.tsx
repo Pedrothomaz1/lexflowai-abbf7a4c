@@ -32,11 +32,6 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <Helmet>
-        <title>Dashboard | LexFlow</title>
-        <meta name="description" content="Visão executiva e operacional dos contratos, aprovações e obrigações da sua organização." />
-      </Helmet>
-
       <PageHeader
         title="Dashboard"
         description="Indicadores executivos e fila operacional em tempo real."
