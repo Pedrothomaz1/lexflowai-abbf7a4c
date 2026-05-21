@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { Helmet } from "react-helmet-async";
 import { PageHeader } from "@/components/ui/page-header";
 import { useDashboardFilters } from "@/hooks/useDashboardFilters";
 import { useDashboardRealtime } from "@/hooks/useDashboardRealtime";
