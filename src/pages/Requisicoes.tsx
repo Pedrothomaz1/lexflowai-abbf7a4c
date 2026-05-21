@@ -106,15 +106,17 @@ const tipoContratoLabels: Record<string, string> = {
 export default function Requisicoes() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
-  
+
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [urgenciaFilter, setUrgenciaFilter] = useState<string>("all");
+  const [areaFilter, setAreaFilter] = useState<string>("all");
   const [selectedRequest, setSelectedRequest] = useState<ContractRequest | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isActionDialogOpen, setIsActionDialogOpen] = useState(false);
-  const [actionType, setActionType] = useState<"aprovar" | "rejeitar" | "em_analise" | null>(null);
+  const [actionType, setActionType] = useState<"aprovar" | "rejeitar" | "em_analise" | "devolver" | null>(null);
   const [observacoes, setObservacoes] = useState("");
 
   // Fetch requests
