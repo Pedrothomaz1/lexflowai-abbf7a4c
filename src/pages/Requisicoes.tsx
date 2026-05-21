@@ -391,8 +391,9 @@ export default function Requisicoes() {
                   <TableHead>Protocolo</TableHead>
                   <TableHead>Título</TableHead>
                   <TableHead>Solicitante</TableHead>
-                  <TableHead>Departamento</TableHead>
+                  <TableHead>Área</TableHead>
                   <TableHead>Urgência</TableHead>
+                  <TableHead>SLA</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Data</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
@@ -423,6 +424,14 @@ export default function Requisicoes() {
                         <Badge variant="outline" className={urgencia.color}>
                           {urgencia.label}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <SlaBadge
+                          createdAt={request.created_at}
+                          dataNecessidade={request.data_necessidade}
+                          urgencia={request.urgencia}
+                          status={request.status}
+                        />
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className={`${status.color} flex items-center gap-1 w-fit`}>
@@ -459,7 +468,15 @@ export default function Requisicoes() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="text-green-600"
+                                onClick={() => handleAction(request, "devolver")}
+                              >
+                                <Undo2 className="h-3.5 w-3.5 mr-1" />
+                                Devolver
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-success border-success/40"
                                 onClick={() => handleAction(request, "aprovar")}
                               >
                                 Aprovar
@@ -467,12 +484,24 @@ export default function Requisicoes() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="text-red-600"
+                                className="text-destructive border-destructive/40"
                                 onClick={() => handleAction(request, "rejeitar")}
                               >
                                 Rejeitar
                               </Button>
                             </>
+                          )}
+                          {request.status === "aprovado" && !request.contrato_id && (
+                            <Can permission="contracts.create">
+                              <Button
+                                size="sm"
+                                onClick={() => convertMutation.mutate(request)}
+                                disabled={convertMutation.isPending}
+                              >
+                                <ArrowRight className="h-3.5 w-3.5 mr-1" />
+                                Converter em contrato
+                              </Button>
+                            </Can>
                           )}
                         </div>
                       </TableCell>
