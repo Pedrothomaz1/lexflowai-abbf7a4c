@@ -21,7 +21,7 @@ function rpcParams(args: KPIArgs) {
   };
 }
 
-function useKpi<T = any>(name: string, key: any, fn: () => Promise<{ data: any; error: any }>) {
+function useKpi<T = any>(name: string, key: any, fn: () => any) {
   return useQuery<T>({
     queryKey: ["dash", name, key],
     queryFn: async () => {
