@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -14,6 +14,7 @@ import {
   Filter,
   Search,
   RefreshCw,
+  Undo2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -22,7 +23,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -49,6 +50,11 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Can } from "@/components/auth/Can";
+import { NovaRequisicaoDialog } from "@/components/Requisicoes/NovaRequisicaoDialog";
+import { SlaBadge } from "@/components/Requisicoes/SlaBadge";
+import { RequisicaoTimeline } from "@/components/Requisicoes/RequisicaoTimeline";
+import { AREAS } from "@/lib/lexflow-constants";
 
 interface ContractRequest {
   id: string;
