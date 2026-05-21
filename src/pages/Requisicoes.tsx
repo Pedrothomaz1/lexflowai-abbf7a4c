@@ -357,6 +357,15 @@ export default function Requisicoes() {
                 <SelectItem value="critica">Crítica</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={areaFilter} onValueChange={setAreaFilter}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Área" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as áreas</SelectItem>
+                {AREAS.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+              </SelectContent>
+            </Select>
             <Button variant="outline" onClick={() => refetch()}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Atualizar
@@ -364,6 +373,7 @@ export default function Requisicoes() {
           </div>
         </CardContent>
       </Card>
+
 
       {/* Table */}
       <Card>
