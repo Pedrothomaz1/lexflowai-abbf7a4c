@@ -29,7 +29,17 @@ interface Props {
   trigger?: React.ReactNode;
 }
 
-const initialState = {
+const initialState: {
+  titulo: string;
+  descricao: string;
+  tipo_contrato: string;
+  departamento: string;
+  urgencia: string;
+  data_necessidade: string;
+  valor_estimado: string;
+  fornecedor_sugerido: string;
+  justificativa: string;
+} = {
   titulo: "",
   descricao: "",
   tipo_contrato: "prestacao_servicos",
