@@ -1171,6 +1171,39 @@ export type Database = {
           },
         ]
       }
+      dashboard_saved_views: {
+        Row: {
+          created_at: string
+          filtros: Json
+          id: string
+          is_shared: boolean
+          nome: string
+          organization_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          filtros?: Json
+          id?: string
+          is_shared?: boolean
+          nome: string
+          organization_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          filtros?: Json
+          id?: string
+          is_shared?: boolean
+          nome?: string
+          organization_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       data_retention_policies: {
         Row: {
           acao_pos_retencao: string
@@ -2426,6 +2459,33 @@ export type Database = {
         }
         Relationships: []
       }
+      product_events: {
+        Row: {
+          created_at: string
+          event_name: string
+          id: string
+          organization_id: string
+          properties: Json
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_name: string
+          id?: string
+          organization_id: string
+          properties?: Json
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_name?: string
+          id?: string
+          organization_id?: string
+          properties?: Json
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -3550,6 +3610,124 @@ export type Database = {
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
       count_active_sessions: { Args: { _user_id: string }; Returns: number }
       current_user_org: { Args: never; Returns: string }
+      dash_aprovacoes_acao: {
+        Args: { p_apenas_meus?: boolean; p_limite?: number }
+        Returns: {
+          aprovacao_id: string
+          aprovador_id: string
+          comentario: string
+          contrato_id: string
+          created_at: string
+          numero_contrato: string
+          titulo: string
+        }[]
+      }
+      dash_contratos_risco: {
+        Args: { p_limite?: number }
+        Returns: {
+          analisado_em: string
+          contrato_id: string
+          fornecedor_nome: string
+          numero_contrato: string
+          score_risco: number
+          status: string
+          titulo: string
+        }[]
+      }
+      dash_demandas_por_area: {
+        Args: { p_periodo_fim?: string; p_periodo_inicio?: string }
+        Returns: {
+          abertas: number
+          departamento: string
+          total: number
+        }[]
+      }
+      dash_evolucao_temporal: {
+        Args: { p_meses?: number; p_metrica?: string }
+        Returns: {
+          periodo: string
+          valor: number
+        }[]
+      }
+      dash_kpi_aprovacoes_pendentes: {
+        Args: { p_responsavel?: string[] }
+        Returns: Json
+      }
+      dash_kpi_contratos_ativos: {
+        Args: {
+          p_fornecedor?: string[]
+          p_periodo_fim?: string
+          p_periodo_inicio?: string
+          p_responsavel?: string[]
+          p_status?: Database["public"]["Enums"]["contract_status"][]
+          p_tipo?: Database["public"]["Enums"]["contract_type"][]
+        }
+        Returns: Json
+      }
+      dash_kpi_obrigacoes_atraso: {
+        Args: { p_responsavel?: string[] }
+        Returns: Json
+      }
+      dash_kpi_renovacoes_30d: {
+        Args: {
+          p_fornecedor?: string[]
+          p_tipo?: Database["public"]["Enums"]["contract_type"][]
+        }
+        Returns: Json
+      }
+      dash_kpi_requisicoes_abertas: {
+        Args: {
+          p_area?: string[]
+          p_periodo_fim?: string
+          p_periodo_inicio?: string
+          p_tipo?: Database["public"]["Enums"]["contract_type"][]
+        }
+        Returns: Json
+      }
+      dash_kpi_tempo_medio_assinatura: {
+        Args: {
+          p_periodo_fim?: string
+          p_periodo_inicio?: string
+          p_tipo?: Database["public"]["Enums"]["contract_type"][]
+        }
+        Returns: Json
+      }
+      dash_obrigacoes_vencidas: {
+        Args: { p_limite?: number }
+        Returns: {
+          contrato_id: string
+          data_vencimento: string
+          dias_atraso: number
+          id: string
+          responsavel_id: string
+          status: string
+          titulo: string
+          valor: number
+        }[]
+      }
+      dash_pipeline_contratual: {
+        Args: {
+          p_periodo_fim?: string
+          p_periodo_inicio?: string
+          p_tipo?: Database["public"]["Enums"]["contract_type"][]
+        }
+        Returns: {
+          status: string
+          total: number
+        }[]
+      }
+      dash_prazos_criticos: {
+        Args: { p_limite?: number }
+        Returns: {
+          contrato_id: string
+          data_vencimento: string
+          dias_restantes: number
+          id: string
+          status: string
+          tipo_registro: string
+          titulo: string
+        }[]
+      }
       gdpr_delete_user: { Args: { user_uuid: string }; Returns: Json }
       get_user_organization_status: { Args: never; Returns: Json }
       has_any_role: {
