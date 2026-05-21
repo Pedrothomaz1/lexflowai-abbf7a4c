@@ -645,22 +645,32 @@ export default function Requisicoes() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {actionType === "aprovar" && "Aprovar Requisição"}
-              {actionType === "rejeitar" && "Rejeitar Requisição"}
-              {actionType === "em_analise" && "Iniciar Análise"}
+              {actionType === "aprovar" && "Aprovar requisição"}
+              {actionType === "rejeitar" && "Rejeitar requisição"}
+              {actionType === "em_analise" && "Iniciar análise"}
+              {actionType === "devolver" && "Devolver ao solicitante"}
             </DialogTitle>
             <DialogDescription>
-              {actionType === "aprovar" && "Confirme a aprovação desta requisição de contrato."}
-              {actionType === "rejeitar" && "Informe o motivo da rejeição desta requisição."}
-              {actionType === "em_analise" && "Marcar esta requisição como em análise."}
+              {actionType === "aprovar" && "Confirme a aprovação. Depois você poderá converter em contrato."}
+              {actionType === "rejeitar" && "Informe o motivo da rejeição (obrigatório)."}
+              {actionType === "em_analise" && "Marcar esta requisição como em análise pelo jurídico."}
+              {actionType === "devolver" && "Descreva o que precisa ser ajustado pelo solicitante (obrigatório)."}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div>
-              <Label>Observações</Label>
+              <Label>
+                {actionType === "rejeitar" || actionType === "devolver" ? "Motivo *" : "Observações"}
+              </Label>
               <Textarea
-                placeholder="Adicione observações sobre a análise..."
+                placeholder={
+                  actionType === "rejeitar"
+                    ? "Explique por que esta requisição não pode prosseguir"
+                    : actionType === "devolver"
+                      ? "Descreva o que precisa ser corrigido ou complementado"
+                      : "Adicione observações sobre a análise..."
+                }
                 value={observacoes}
                 onChange={(e) => setObservacoes(e.target.value)}
                 className="min-h-[100px]"
@@ -675,13 +685,7 @@ export default function Requisicoes() {
             <Button
               onClick={confirmAction}
               disabled={updateStatusMutation.isPending}
-              className={
-                actionType === "aprovar"
-                  ? "bg-green-600 hover:bg-green-700"
-                  : actionType === "rejeitar"
-                  ? "bg-red-600 hover:bg-red-700"
-                  : ""
-              }
+              variant={actionType === "rejeitar" ? "destructive" : "default"}
             >
               {updateStatusMutation.isPending ? "Salvando..." : "Confirmar"}
             </Button>
