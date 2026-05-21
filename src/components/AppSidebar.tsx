@@ -61,6 +61,8 @@ import { cn } from "@/lib/utils";
 import { Scale } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { handleDbError } from "@/utils/dbErrorHandler";
+import { SuperAdminGate } from "@/components/auth/Can";
+import { ShieldAlert } from "lucide-react";
 
 // Interface para itens com submenus
 interface MenuItemType {
