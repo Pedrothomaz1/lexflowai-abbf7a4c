@@ -271,7 +271,13 @@ export default function Requisicoes() {
       <PageHeader
         title="Requisições de Contratos"
         description="Gerencie as solicitações de contratos recebidas"
+        action={
+          <Can permission="contracts.create" fallback={null}>
+            <NovaRequisicaoDialog />
+          </Can>
+        }
       />
+
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
