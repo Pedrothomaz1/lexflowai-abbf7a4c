@@ -41,8 +41,7 @@ export function GlobalHeader() {
   const navigate = useNavigate();
   const { organization } = useOrganization();
   const { unreadCount } = useNotifications();
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [userProfile, setUserProfile] = useState<{
     full_name: string;
