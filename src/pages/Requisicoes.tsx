@@ -622,6 +622,13 @@ export default function Requisicoes() {
               <div className="text-sm text-muted-foreground">
                 Criado em: {format(new Date(selectedRequest.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
               </div>
+
+              <div className="pt-2 border-t">
+                <Label className="text-muted-foreground">Histórico</Label>
+                <div className="mt-3">
+                  <RequisicaoTimeline requisicaoId={selectedRequest.id} />
+                </div>
+              </div>
             </div>
           )}
 
