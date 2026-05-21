@@ -519,6 +519,13 @@ export function AppSidebar() {
                 ))}
               </>
             )}
+            <SuperAdminGate>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate("/super-admin")}>
+                <ShieldAlert className="mr-2 h-4 w-4" />
+                Super Admin
+              </DropdownMenuItem>
+            </SuperAdminGate>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
               <LogOut className="mr-2 h-4 w-4" />
