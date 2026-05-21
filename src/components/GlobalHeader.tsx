@@ -19,6 +19,7 @@ import { useOrganization } from "@/contexts/OrganizationContext";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { NotificationPanel } from "@/components/notifications/NotificationPanel";
+import { CommandPalette } from "@/components/CommandPalette";
 
 const routeTitles: Record<string, { title: string; description?: string }> = {
   "/dashboard": { title: "Dashboard", description: "Visão geral do sistema" },
