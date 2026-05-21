@@ -271,7 +271,7 @@ export default function Requisicoes() {
       <PageHeader
         title="Requisições de Contratos"
         description="Gerencie as solicitações de contratos recebidas"
-        action={
+        actions={
           <Can permission="contracts.create" fallback={null}>
             <NovaRequisicaoDialog />
           </Can>
