@@ -45,6 +45,7 @@ const SecurityDashboard = React.lazy(() => import("./pages/SecurityDashboard"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 const RequisicaoPublica = React.lazy(() => import("./pages/RequisicaoPublica"));
 const Requisicoes = React.lazy(() => import("./pages/Requisicoes"));
+const MinhasAprovacoes = React.lazy(() => import("./pages/MinhasAprovacoes"));
 const Franquias = React.lazy(() => import("./pages/Franquias"));
 const FranquiaDetalhes = React.lazy(() => import("./pages/FranquiaDetalhes"));
 
