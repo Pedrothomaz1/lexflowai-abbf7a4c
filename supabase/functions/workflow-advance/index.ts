@@ -44,9 +44,12 @@ Deno.serve(async (req) => {
     const userId = claims.claims.sub as string;
 
     const body = await req.json().catch(() => ({}));
-    const { run_id, decisao, comentario, target_stage_ordem } = body ?? {};
-    if (!run_id || !["aprovado", "rejeitado", "pulado"].includes(decisao)) {
+    const { run_id, decisao, comentario, target_stage_ordem, motivo } = body ?? {};
+    if (!run_id || !["aprovado", "rejeitado", "pulado", "devolvido"].includes(decisao)) {
       return json(200, { ok: false, error: "run_id e decisao válida obrigatórios" });
+    }
+    if (decisao === "devolvido" && (!motivo || String(motivo).trim().length < 10)) {
+      return json(200, { ok: false, error: "Motivo da devolução é obrigatório (mínimo 10 caracteres)" });
     }
 
     // Busca run via RLS
@@ -62,7 +65,9 @@ Deno.serve(async (req) => {
 
     const nowIso = new Date().toISOString();
     const novoStatusEtapa = decisao === "aprovado" ? "aprovado"
-      : decisao === "rejeitado" ? "rejeitado" : "pulado";
+      : decisao === "rejeitado" ? "rejeitado"
+      : decisao === "devolvido" ? "devolvido"
+      : "pulado";
 
     // Marca etapa atual (RLS)
     const { data: stageAtual, error: sErr } = await supabase
@@ -70,7 +75,7 @@ Deno.serve(async (req) => {
       .update({
         status: novoStatusEtapa,
         decisao,
-        comentario: comentario ?? null,
+        comentario: decisao === "devolvido" ? (motivo as string) : (comentario ?? null),
         executado_por: userId,
         executado_em: nowIso,
       })
@@ -81,6 +86,79 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (sErr) return json(200, { ok: false, error: sErr.message });
     if (!stageAtual) return json(200, { ok: false, error: "Nenhuma etapa pendente nessa ordem" });
+
+    // Devolvido → reabre etapa anterior (ou target_stage_ordem) sem encerrar o run
+    if (decisao === "devolvido") {
+      const alvoOrdem = typeof target_stage_ordem === "number"
+        ? target_stage_ordem
+        : Math.max(1, run.current_stage_ordem - 1);
+
+      const { data: alvoStage } = await supabase
+        .from("workflow_stages")
+        .select("id, ordem, sla_horas, nome")
+        .eq("workflow_definition_id", run.workflow_definition_id)
+        .eq("ordem", alvoOrdem)
+        .maybeSingle();
+      if (!alvoStage) {
+        return json(200, { ok: false, error: `Etapa de ordem ${alvoOrdem} não existe` });
+      }
+
+      const dueAlvo = alvoStage.sla_horas
+        ? new Date(Date.now() + alvoStage.sla_horas * 3600_000).toISOString()
+        : null;
+
+      const { error: insErr } = await supabase.from("workflow_run_stages").insert({
+        organization_id: run.organization_id,
+        workflow_run_id: run.id,
+        stage_id: alvoStage.id,
+        ordem: alvoStage.ordem,
+        status: "pendente",
+        due_at: dueAlvo,
+        regra_aplicada: false,
+      });
+      if (insErr) return json(200, { ok: false, error: insErr.message });
+
+      await supabase.from("workflow_runs").update({
+        current_stage_ordem: alvoStage.ordem,
+      }).eq("id", run.id);
+
+      // Se voltou para o início, recoloca o contrato em cadastro
+      if (run.contrato_id && alvoStage.ordem === 1) {
+        await admin.from("contratos").update({
+          intake_status: "em_cadastro",
+        }).eq("id", run.contrato_id);
+      }
+
+      // Registra a devolução como comentário vinculado à etapa devolvida
+      if (run.contrato_id) {
+        await admin.from("contract_comments").insert({
+          contrato_id: run.contrato_id,
+          organization_id: run.organization_id,
+          user_id: userId,
+          tipo: "devolucao",
+          conteudo: motivo as string,
+          status: "aberto",
+          workflow_run_stage_id: stageAtual.id,
+          secao: "workflow",
+        });
+
+        await admin.rpc("notify_org_members", {
+          _org_id: run.organization_id,
+          _tipo: "workflow",
+          _titulo: `Devolvido: ${alvoStage.nome}`,
+          _mensagem: motivo as string,
+          _referencia_id: run.contrato_id,
+          _referencia_tipo: "contrato",
+        });
+      }
+
+      return json(200, {
+        ok: true,
+        status: "em_andamento",
+        decisao: "devolvido",
+        current_stage_ordem: alvoStage.ordem,
+      });
+    }
 
     // Rejeitado → encerra
     if (decisao === "rejeitado") {
