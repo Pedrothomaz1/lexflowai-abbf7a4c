@@ -139,6 +139,7 @@ const contratosMenuSections: MenuSectionType[] = [
     defaultOpen: false,
     items: [
       { title: "Relatórios", url: "/relatorios", icon: BarChart3, roles: ["administrador"] },
+      { title: "Dashboard IA", url: "/dashboard-ia", icon: Sparkles, roles: ["administrador"] },
       { title: "Calendário", url: "/calendario", icon: Monitor, roles: ["all"] },
       { title: "Histórico de Ações", url: "/audit-logs", icon: Activity, roles: ["administrador"] },
       { title: "Segurança", url: "/security", icon: Shield, roles: ["administrador"] },
