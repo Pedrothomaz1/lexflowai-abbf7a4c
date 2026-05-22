@@ -5547,6 +5547,8 @@ export type Database = {
           por_plano: Json
         }[]
       }
+      check_gate1_completo: { Args: { _contrato_id: string }; Returns: Json }
+      check_gate2_completo: { Args: { _contrato_id: string }; Returns: Json }
       check_pending_invite_for_user: { Args: never; Returns: Json }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
       count_active_sessions: { Args: { _user_id: string }; Returns: number }
@@ -5757,6 +5759,10 @@ export type Database = {
           _user_id?: string
         }
         Returns: string
+      }
+      release_intake_to_approval: {
+        Args: { _contrato_id: string }
+        Returns: Json
       }
       revoke_super_admin_by_email: { Args: { _email: string }; Returns: Json }
       super_admin_update_billing: {
