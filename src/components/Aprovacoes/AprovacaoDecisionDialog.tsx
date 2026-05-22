@@ -91,6 +91,8 @@ export function AprovacaoDecisionDialog({ open, onOpenChange, stepId, contratoTi
               className="resize-none"
             />
           </div>
+
+          <HistoricoDecisoes stepId={stepId} />
         </div>
 
         <DialogFooter>
