@@ -24,7 +24,7 @@ const TOOL = {
           items: {
             type: "object",
             properties: {
-              campo: { type: "string", description: "Ex: parte_contratante, parte_contratada, valor_total, data_inicio, data_fim, vigencia, objeto, multa_rescisoria, foro" },
+              campo: { type: "string", description: "Use SOMENTE estes nomes quando o valor estiver no contrato: parte_contratante, parte_contratada, valor_total, data_inicio, data_fim, vigencia, objeto, multa_rescisoria, foro, forma_pagamento (boleto|pix|ted|cartao|debito_automatico), condicao_pagamento (à vista|30 dias|parcelado|etc), numero_parcelas, dia_vencimento, valor_parcela, data_primeiro_vencimento, indice_reajuste (IPCA|IGPM|INPC|etc), periodicidade_reajuste (anual|semestral|mensal), multa_atraso_pct, juros_mora_pct, banco, agencia, conta, pix, favorecido" },
               valor: { type: "string" },
               confianca: { type: "number", minimum: 0, maximum: 1 },
               trecho_origem: { type: "string" },
@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: "Você é um analista de contratos. Extraia campos estruturados e riscos do texto fornecido. Use confiança baixa quando o campo for ambíguo ou ausente. Responda em português." },
+          { role: "system", content: "Você é um analista de contratos. Extraia campos estruturados (incluindo bloco financeiro: forma/condição de pagamento, parcelas, vencimentos, índice e periodicidade de reajuste, multa de atraso, juros de mora e dados bancários quando presentes) e riscos do texto fornecido. Use confiança baixa quando o campo for ambíguo ou ausente. Responda em português." },
           { role: "user", content: `Analise o contrato abaixo e chame a ferramenta registrar_analise_estruturada com os campos e riscos identificados.\n\n${texto.slice(0, 30000)}` },
         ],
         tools: [TOOL],
