@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { handleDbError } from "@/utils/dbErrorHandler";
 import { exportWorkflowHistoryPDF, exportWorkflowHistoryXLSX } from "@/utils/workflowExport";
+import { WorkflowStageDiscussion } from "@/components/contracts/WorkflowStageDiscussion";
 
 type Stage = {
   id: string; ordem: number; nome: string;
