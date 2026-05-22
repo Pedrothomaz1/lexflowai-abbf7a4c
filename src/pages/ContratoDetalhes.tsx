@@ -789,7 +789,8 @@ const ContratoDetalhes = () => {
             </AnimatedCard>
           </TabsContent>
 
-          <TabsContent value="negociacao">
+          <TabsContent value="negociacao" className="space-y-4">
+            <NegotiationThread contratoId={contrato.id} />
             <NegotiationMetrics contratoId={contrato.id} />
           </TabsContent>
         </Tabs>
