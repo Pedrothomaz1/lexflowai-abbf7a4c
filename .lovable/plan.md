@@ -1,80 +1,51 @@
-## Objetivo
+## Skill Cards no Dashboard IA
 
-Substituir o prompt genérico atual da análise de contratos por **4 análises especialistas** baseadas nas skills jurídicas já carregadas, com seleção automática conforme o tipo do contrato e opção manual no UI.
+Adiciona uma nova seção no `DashboardIA.tsx` com 4 cards, um por skill jurídica, abaixo dos KPIs e acima do bloco "Top contratos por risco".
 
-## Skills aplicadas
+### Cards (um por skill)
 
-| Skill | Quando aplicar | Output |
-|-------|----------------|--------|
-| `nda-triage` | tipo contém "NDA", "confidencialidade", "sigilo" | Classificação ✅/⚠️/❌ + checklist |
-| `contract-review` | demais contratos (fornecimento, serviços, locação, SaaS, etc.) | Análise cláusula-a-cláusula 🟢🟡🔴⚫ + redlines + score |
-| `legal-risk-assessment` | sempre (complementar) | Matriz 8 categorias + probabilidade × impacto |
-| `compliance` | sempre (complementar) | LGPD + Anticorrupção + Trabalhista + Fiscal |
+1. **Revisão Cláusula-a-Cláusula** (`contract-review`)
+   - Métrica: nº de contratos analisados com esta skill
+   - Mini-stats: cláusulas verdes / amarelas / vermelhas (somatório)
+2. **Triagem de NDA** (`nda-triage`)
+   - Métrica: nº de NDAs triados
+   - Mini-stats: distribuição Aprovar / Revisar / Rejeitar
+3. **Mapa de Riscos** (`risk-assessment`)
+   - Métrica: nº de contratos com risco mapeado
+   - Mini-stats: riscos críticos + exposição total estimada (R$)
+4. **Compliance** (`compliance`)
+   - Métrica: nº de contratos com avaliação de compliance
+   - Mini-stats: frameworks com gaps abertos (top 2)
 
-## Mudanças
+### Comportamento
 
-### 1. Backend — edge functions
+- Cada card tem botão "Ver contratos" → navega para `/contratos?skill=<slug>` (filtro de skill já será respeitado pela página de lista; se ainda não existir, basta query string sem efeito por enquanto — não escopo desta etapa).
+- Card vazio (sem dados) mostra mensagem amigável "Nenhum contrato analisado com esta skill ainda".
+- Loading com `Skeleton`.
 
-**Refatorar `analisar-contrato-ia`** para receber `skill: 'auto' | 'contract-review' | 'nda-triage' | 'risk-assessment' | 'compliance' | 'full'`:
+### Dados
 
-- Auto-detecta skill pelo `contrato.tipo_contrato`
-- `full` = roda as 4 em sequência e consolida
-- Cada skill tem seu **prompt system dedicado** (extraído da skill correspondente) usando **tool calling** para output estruturado em vez do JSON via texto
-- Modelo: `google/gemini-2.5-pro` para `full`/`contract-review`, `google/gemini-2.5-flash` para triage/risk/compliance (mais barato)
-- Salva em `contract_analysis` com novo campo `skill_aplicada` + `payload_estruturado` (JSONB)
+Nova query única a `contract_analysis` agrupando por `skill_aplicada` e extraindo `payload_estruturado`:
 
-**Nova migration:**
-```sql
-ALTER TABLE contract_analysis
-  ADD COLUMN IF NOT EXISTS skill_aplicada text DEFAULT 'contract-review',
-  ADD COLUMN IF NOT EXISTS payload_estruturado jsonb DEFAULT '{}'::jsonb;
+```ts
+supabase.from("contract_analysis")
+  .select("contrato_id, skill_aplicada, payload_estruturado, created_at")
+  .not("skill_aplicada", "is", null)
+  .order("created_at", { ascending: false })
+  .limit(1000);
 ```
 
-Schemas estruturados por skill (via `tools` / `function_calling`):
-- **contract-review:** `{ score, clausulas: [{categoria, status, texto_original, problema, redline_sugerido, prioridade}], resumo, recomendacao }`
-- **nda-triage:** `{ classificacao: 'aprovar'|'revisar'|'rejeitar', pontos_atencao, checklist }`
-- **risk-assessment:** `{ score_geral, riscos: [{categoria, descricao, probabilidade, impacto, classificacao, mitigante, exposicao_estimada}] }`
-- **compliance:** `{ frameworks: [{nome, status, gaps}], acoes_necessarias }`
+Agregação client-side por skill (último registro por contrato+skill), reaproveitando o padrão do `ultimosResumos`.
 
-### 2. Frontend
+### Visual
 
-**`ContractAIAnalysis.tsx`** — adicionar abas para renderizar cada skill (Cláusulas / Riscos / Compliance / NDA Triage) com componentes visuais específicos:
-- Cláusulas: tabela com badge de status (🟢🟡🔴⚫) + accordion mostrando redline
-- Riscos: heatmap probabilidade × impacto
-- Compliance: cards por framework
-- NDA: card com classificação grande + checklist
+- Grid `md:grid-cols-2 lg:grid-cols-4`
+- Header com ícone próprio por skill (FileSearch, ShieldAlert, TrendingUp, ScrollText)
+- Cor de destaque sutil por skill (usando tokens semânticos existentes — sem cores hardcoded)
+- Mini-stats em linha com `Badge` pequenos
 
-**Botão "Analisar contrato" em `ContratoDetalhes`** vira um **dropdown** com opções:
-- "Análise completa (recomendado)" → `skill=full`
-- "Revisão cláusula-a-cláusula" → `contract-review`
-- "Triagem de NDA" → `nda-triage`
-- "Mapa de riscos" → `risk-assessment`
-- "Compliance (LGPD/Anticorrupção)" → `compliance`
+### Fora de escopo
 
-A auto-seleção sugere a opção default baseada em `tipo_contrato`.
-
-### 3. Indicadores no Dashboard IA
-
-`DashboardIA.tsx` ganha 1 card por skill ativa com contagem de análises e drill-down. Risk heatmap consolidado entre contratos com `risk-assessment`.
-
-## Detalhes técnicos
-
-- Skills permanecem em `.workspace/skills/` (não duplicar). Os prompts das edge functions são **derivados** do conteúdo da skill (copiar trechos do workflow e do template de output), mantendo a skill como fonte da verdade documental.
-- Tool calling em vez de pedir JSON: mais confiável e elimina o `try/catch JSON.parse` atual.
-- Disclaimer obrigatório (assistência por IA, validar com advogado) renderizado no rodapé de cada análise.
-- Reutilizar `ContractRiskBadge` já existente, estendendo para aceitar classificação textual (`baixo|medio|alto|critico`).
-- Custos: registrar `skill_aplicada` em `uso_sistema.metadata` para auditoria.
-
-## Fora de escopo
-
-- Editor de playbook configurável (skill `contract-review` menciona; fica para fase futura).
-- Geração automática de NDA model (pode reaproveitar `gerar-documento` depois).
-- Re-análise automática ao trocar anexo (já planejado em refinamento anterior, mantém-se).
-
-## Entregáveis
-
-1. Migration `contract_analysis` (2 colunas).
-2. `analisar-contrato-ia` refatorada com 4 modos + `full`.
-3. `ContractAIAnalysis.tsx` com abas e componentes por skill.
-4. Dropdown de skill no `ContratoDetalhes.tsx`.
-5. Cards de skill no `DashboardIA.tsx`.
+- Filtro real por skill na página `/contratos` (apenas a query string fica preparada)
+- Drill-down com modal
+- Edição de DashboardIA além desta seção

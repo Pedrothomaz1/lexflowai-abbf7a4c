@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sparkles, FileText, Lightbulb, AlertTriangle, TrendingUp, ArrowRight } from "lucide-react";
+import { Sparkles, FileText, Lightbulb, AlertTriangle, TrendingUp, ArrowRight, FileSearch, ShieldAlert, ScrollText } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
