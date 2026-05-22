@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,8 +6,18 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle2, XCircle, Loader2, PlayCircle, ShieldCheck } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, PlayCircle, ShieldCheck, History } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+interface RunRow {
+  id: string;
+  started_at: string;
+  finished_at: string;
+  duration_ms: number;
+  total: number;
+  passed: number;
+  failed: number;
+}
 
 interface RegressionResult {
   name: string;
@@ -29,6 +39,20 @@ export function SecurityRegressionRunner() {
   const [running, setRunning] = useState(false);
   const [summary, setSummary] = useState<RegressionSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [history, setHistory] = useState<RunRow[]>([]);
+
+  const loadHistory = async () => {
+    const { data } = await supabase
+      .from("security_regression_runs")
+      .select("id, started_at, finished_at, duration_ms, total, passed, failed")
+      .order("created_at", { ascending: false })
+      .limit(20);
+    setHistory((data ?? []) as RunRow[]);
+  };
+
+  useEffect(() => {
+    loadHistory();
+  }, []);
 
   const handleRun = async () => {
     setRunning(true);
@@ -53,6 +77,7 @@ export function SecurityRegressionRunner() {
       toast({ title: "Erro", description: msg, variant: "destructive" });
     } finally {
       setRunning(false);
+      loadHistory();
     }
   };
 
@@ -147,6 +172,40 @@ export function SecurityRegressionRunner() {
           <p className="text-sm text-muted-foreground">
             Nenhuma execução recente. Clique em "Executar Suíte" para validar o isolamento multi-tenant agora.
           </p>
+        )}
+
+        {history.length > 0 && (
+          <div className="pt-4 border-t">
+            <div className="flex items-center gap-2 mb-3">
+              <History className="h-4 w-4 text-muted-foreground" />
+              <h4 className="text-sm font-semibold">Últimas execuções</h4>
+              <Badge variant="outline" className="text-xs">{history.length}</Badge>
+            </div>
+            <div className="rounded-md border divide-y max-h-[280px] overflow-y-auto">
+              {history.map((h) => (
+                <div key={h.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {h.failed === 0 ? (
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                    ) : (
+                      <XCircle className="h-4 w-4 text-destructive shrink-0" />
+                    )}
+                    <span className="truncate">
+                      {new Date(h.finished_at).toLocaleString("pt-BR")}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge variant={h.failed === 0 ? "secondary" : "destructive"} className="text-xs">
+                      {h.passed}/{h.total}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {Math.round(h.duration_ms / 1000)}s
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </CardContent>
     </Card>
