@@ -16,6 +16,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   ArrowLeft,
   FileText,
   Building,
@@ -28,6 +36,7 @@ import {
   Paperclip,
   History,
   Edit3,
+  ScrollText,
 } from "lucide-react";
 import { exportContratoDetalhePDF } from "@/utils/pdfExport";
 import { ContractComments } from "@/components/ContractComments";
@@ -223,7 +232,7 @@ const ContratoDetalhes = () => {
     }
   };
 
-  const handleAnalisarIA = async () => {
+  const handleAnalisarIA = async (skill: "auto" | "full" | "contract-review" | "nda-triage" | "risk-assessment" | "compliance" = "auto") => {
     if (!contrato) return;
 
     setIsAnalyzing(true);
@@ -238,15 +247,15 @@ const ContratoDetalhes = () => {
       `;
 
       const { data, error } = await supabase.functions.invoke("analisar-contrato-ia", {
-        body: { contratoId: contrato.id, conteudo },
+        body: { contratoId: contrato.id, conteudo, skill },
       });
 
       if (error) throw error;
 
       if (data.success) {
         toast({
-          title: "Análise concluída!",
-          description: "O contrato foi analisado com sucesso pela IA.",
+          title: "Análise concluída",
+          description: `Skill aplicada: ${data.skill ?? skill}`,
         });
         setAnalise(data.analise);
         setShowAnalise(true);
@@ -596,23 +605,42 @@ const ContratoDetalhes = () => {
                 <Separator />
 
                 <div className="space-y-2">
-                  <Label className="text-muted-foreground">Análise com IA</Label>
-                  <AnimatedButton 
-                    variant="outline" 
-                    className="w-full" 
-                    onClick={handleAnalisarIA}
-                    disabled={isAnalyzing}
-                  >
-                    <Brain className="h-4 w-4 mr-2" />
-                    {isAnalyzing ? "Analisando..." : analise ? "Reanalisar" : "Analisar Contrato"}
-                  </AnimatedButton>
+                  <Label className="text-muted-foreground">Análise com IA (skills jurídicas)</Label>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <AnimatedButton variant="outline" className="w-full" disabled={isAnalyzing}>
+                        <Brain className="h-4 w-4 mr-2" />
+                        {isAnalyzing ? "Analisando..." : analise ? "Reanalisar contrato" : "Analisar contrato"}
+                      </AnimatedButton>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-64 z-50 bg-popover">
+                      <DropdownMenuLabel>Escolha a skill</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => handleAnalisarIA("full")}>
+                        <ScrollText className="h-4 w-4 mr-2" />
+                        Análise completa (recomendado)
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => handleAnalisarIA("contract-review")}>
+                        Revisão cláusula a cláusula
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleAnalisarIA("nda-triage")}>
+                        Triagem de NDA
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleAnalisarIA("risk-assessment")}>
+                        Mapa de riscos jurídicos
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleAnalisarIA("compliance")}>
+                        Compliance (LGPD, anticorrupção…)
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   {analise && (
-                    <Button 
-                      variant="ghost" 
-                      className="w-full text-xs" 
+                    <Button
+                      variant="ghost"
+                      className="w-full text-xs"
                       onClick={() => setShowAnalise(!showAnalise)}
                     >
-                      {showAnalise ? "Ocultar" : "Ver"} Análise
+                      {showAnalise ? "Ocultar" : "Ver"} análise
                     </Button>
                   )}
                   <Button

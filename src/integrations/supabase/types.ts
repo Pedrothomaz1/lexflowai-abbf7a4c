@@ -620,8 +620,10 @@ export type Database = {
           contrato_id: string | null
           id: string
           organization_id: string
+          payload_estruturado: Json
           riscos_identificados: Json | null
           score_risco: number | null
+          skill_aplicada: string
           sugestoes_melhoria: Json | null
         }
         Insert: {
@@ -631,8 +633,10 @@ export type Database = {
           contrato_id?: string | null
           id?: string
           organization_id: string
+          payload_estruturado?: Json
           riscos_identificados?: Json | null
           score_risco?: number | null
+          skill_aplicada?: string
           sugestoes_melhoria?: Json | null
         }
         Update: {
@@ -642,8 +646,10 @@ export type Database = {
           contrato_id?: string | null
           id?: string
           organization_id?: string
+          payload_estruturado?: Json
           riscos_identificados?: Json | null
           score_risco?: number | null
+          skill_aplicada?: string
           sugestoes_melhoria?: Json | null
         }
         Relationships: [
