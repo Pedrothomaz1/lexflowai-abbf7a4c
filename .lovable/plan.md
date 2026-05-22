@@ -1,99 +1,196 @@
-# Home LexFlow — Dashboard executivo + operacional
+## Escopo (rodada de 2 módulos, ordem #11 → #13)
 
-Substituir `src/pages/Dashboard.tsx` (688 linhas, hoje misturando KPIs de franquias/CNPJ/SLA) por uma home unificada com seções condicionais por role, KPIs ao vivo, filtros globais persistentes, realtime de aprovações/alertas e saved views.
+Implementação fiel à **master spec v2** (arquivo carregado), aproveitando o que já existe (`approval_workflows`, `contract_approvals`, `contract_obligations`, `audit_logs`, `notifications`) e adicionando só o que falta para o padrão enterprise descrito.
 
-## Decisões de arquitetura
+Invariantes do bloco de continuidade respeitadas: `organization_id` em toda tabela, RLS em todas, aprovação obrigatória antes da assinatura, `.select().maybeSingle()` em UPDATEs, segredos só em edge functions, atualização do `PROGRESS.md` ao final.
 
-**Visão por perfil:** Dashboard único. Blocos exibidos via `<Can permission=...>` + `<RoleGate>`. Executivos (`administrador`) veem KPI row + riscos + gráficos macro. Jurídico/operação (`consultoria_juridica`, `analista_juridico`) veem adicionalmente pipeline, aprovações pendentes, obrigações vencidas. Sem rotas duplicadas, sem toggle manual.
+---
 
-**Agregação de KPIs (best practice escolhida):** RPC functions dedicadas por KPI/seção, com `SECURITY DEFINER` + filtro `organization_id = current_user_org()`. Vantagens: drill-down flexível, params de filtro (período/área/tipo/status/responsável/fornecedor), cache no frontend via React Query, sem cron nem stale data. Views materializadas ficam para fase 2 quando o volume justificar.
+## Módulo #11 — Aprovação e checklist pré-assinatura
 
-**Filtros persistentes (best practice escolhida):** URL params (`?periodo=30d&area=...`) como fonte primária — compartilháveis, deep-linkable, navegação browser funciona. Saved views ficam em nova tabela `dashboard_saved_views` (per-user, opcionalmente compartilháveis no tenant). `localStorage` guarda só "última view aberta" para restaurar ao voltar.
+### Gaps vs. spec
+- Sem fila dedicada do aprovador (hoje a aprovação vive só dentro de `ContratoDetalhes`).
+- `contract_approvals` é flat — não suporta **série / paralelo / passos** (a spec pede `approval_steps` + `approval_decisions` + `workflow_tasks`).
+- Não há **checklist pré-assinatura** nem **edge function de validação**.
+- Sem SLA banner na fila, sem motivo obrigatório de rejeição, sem histórico consolidado de decisões.
 
-**Realtime:** canal Supabase Realtime em `contract_approvals`, `contract_alerts`, `contract_obligations` filtrado por `organization_id`. Invalida React Query keys correspondentes.
+### Migração (schema)
 
-**Telemetria:** tabela `product_events` (event_name, user_id, organization_id, properties jsonb) registrando `dashboard_view`, `kpi_drill_down`, `filter_applied`, `saved_view_loaded`.
+```text
+approval_steps
+  id, organization_id, contrato_id, workflow_id, ordem, modo ('serie'|'paralelo'),
+  minimo_aprovacoes int, status ('pendente'|'aprovado'|'rejeitado'|'cancelado'),
+  due_at timestamptz, created_at, updated_at
 
-## Backend (migration)
+approval_step_approvers
+  id, organization_id, step_id, aprovador_id, status, decided_at
 
-### Novas tabelas
-- `dashboard_saved_views` — `id`, `organization_id`, `user_id`, `nome`, `filtros jsonb`, `is_shared bool`, `created_at`. RLS: select próprio OU shared do tenant; CRUD só do dono.
-- `product_events` — `id`, `organization_id`, `user_id`, `event_name`, `properties jsonb`, `created_at`. RLS: insert tenant-bound, select admin only.
+approval_decisions
+  id, organization_id, step_id, aprovador_id,
+  decisao ('aprovado'|'rejeitado'|'ajuste'), motivo text, created_at
 
-### RPC functions (todas `SECURITY DEFINER`, `SET search_path = public`, com check `organization_id = current_user_org()`)
-Aceitam params: `p_periodo_inicio date`, `p_periodo_fim date`, `p_area text[]`, `p_tipo contract_type[]`, `p_status text[]`, `p_responsavel uuid[]`, `p_fornecedor uuid[]`. Todos retornam `{ valor, delta_pct, serie jsonb }` quando aplicável.
+contract_checklist
+  id, organization_id, contrato_id, criterio text, satisfeito boolean,
+  validado_por uuid, validado_em timestamptz, observacao text
+  UNIQUE (contrato_id, criterio)
 
-- `dash_kpi_contratos_ativos(filtros)` — count `contratos` status='ativo'
-- `dash_kpi_requisicoes_abertas(filtros)` — count `contract_requests` status in (pendente,em_analise)
-- `dash_kpi_aprovacoes_pendentes(filtros)` — count `contract_approvals` status='pendente'
-- `dash_kpi_obrigacoes_atraso(filtros)` — count `contract_obligations` data_vencimento < now() AND status != 'concluido'
-- `dash_kpi_renovacoes_30d(filtros)` — count `contratos` data_fim between now() and now()+30d
-- `dash_kpi_tempo_medio_assinatura(filtros)` — avg(data_assinatura - created_at) em `contratos`
-- `dash_pipeline_contratual(filtros)` — agrupado por status para gráfico de barras
-- `dash_prazos_criticos(filtros)` — lista contratos/obrigações próximas vencimento, ordenado por urgência
-- `dash_contratos_risco(filtros)` — join `contratos` + `contract_analysis` ordenado por score_risco desc
-- `dash_demandas_por_area(filtros)` — agrupamento por `departamento` em `contract_requests`
-- `dash_aprovacoes_acao(filtros)` — `contract_approvals` pendentes do usuário atual
-- `dash_obrigacoes_vencidas(filtros)` — `contract_obligations` vencidas + próximas 7d
-- `dash_evolucao_temporal(filtros, p_metrica)` — série temporal mensal para gráfico de linha
-
-## Frontend
-
-### Estrutura
-```
-src/pages/Dashboard.tsx               (rewrite, ~200 linhas, orquestrador)
-src/components/Dashboard/
-  DashboardHeader.tsx                 (contexto tenant + saved view ativa)
-  DashboardFilters.tsx                (chips + dropdowns, sincroniza URL)
-  SavedViewsMenu.tsx                  (CRUD de saved views)
-  KPIRow.tsx                          (grid responsivo dos 6 KPIs)
-  KPICard.tsx                         (ícone, valor, delta, drill-down link)
-  sections/
-    PipelineContratualSection.tsx     (Recharts BarChart)
-    PrazosCriticosSection.tsx         (tabela)
-    ContratosRiscoSection.tsx         (tabela com badges)
-    DemandasPorAreaSection.tsx        (gráfico + breakdown)
-    AprovacoesAcaoSection.tsx         (cards acionáveis, realtime)
-    ObrigacoesVencidasSection.tsx     (lista com badges, realtime)
-    EvolucaoTemporalSection.tsx       (Recharts LineChart)
-  EmptyOnboardingState.tsx            (quando tenant sem dados)
+workflow_tasks
+  id, organization_id, contrato_id, step_id, titulo, status, due_at,
+  assignee_id, created_at
 ```
 
-### Hooks
-- `src/hooks/useDashboardFilters.ts` — sincroniza URL ↔ estado, gerencia chips, restaura última view do localStorage.
-- `src/hooks/useDashboardKPIs.ts` — React Query, chama RPCs em paralelo, retorna `{ data, isLoading, error }` por KPI.
-- `src/hooks/useSavedViews.ts` — CRUD em `dashboard_saved_views`.
-- `src/hooks/useDashboardRealtime.ts` — subscribe nas 3 tabelas, invalida queries.
-- `src/lib/analytics.ts` — helper `trackEvent(name, props)` insere em `product_events`.
+- RLS multi-tenant padrão (`organization_id = current_user_org()`); UPDATE restrito ao `aprovador_id` ou `administrador`.
+- Mantém `contract_approvals` antigo (compatibilidade do dashboard) — novo fluxo grava também ali para não quebrar KPIs.
+- Auditoria automática via `audit_trigger_func`.
 
-### Regras de exibição (via `<Can>` / `<RoleGate>`)
-- KPIs Contratos Ativos, Renovações 30d, Tempo Médio Assinatura, Evolução Temporal: todos os perfis autenticados do tenant.
-- KPIs Requisições Abertas, Aprovações Pendentes, Obrigações em Atraso + seções Pipeline, Prazos Críticos, Aprovações que Exigem Ação, Obrigações Vencidas: `analista_juridico`, `consultoria_juridica`, `administrador`.
-- Seção Contratos com Maior Risco + Demandas por Área: `consultoria_juridica`, `administrador` (executivo).
-- CTAs "Ver todos em risco" e "Abrir fila de aprovações": só quando seção visível.
+### Edge Function
 
-### Estados
-- Loading: `<Skeleton>` por card/seção (não tela inteira).
-- Erro: `<ErrorState>` por seção, sem derrubar dashboard.
-- Vazio sem dados no tenant: `<EmptyOnboardingState>` com CTAs (Criar primeiro contrato, Importar planilha, Convidar equipe).
-- Tenant suspenso: `<SuspendedBanner>` já existe no layout.
+- `validar-checklist-pre-assinatura` (verify_jwt=true) — input `{ contrato_id }`.
+- Verifica: documento final, campos obrigatórios, aprovações concluídas, anexos obrigatórios, contraparte (fornecedor com CNPJ verificado).
+- Sempre **HTTP 200** com `{ ok: boolean, pendencias: [...] }`.
 
-### Filtros
-Chips inline + popovers: Período (presets 7d/30d/90d/YTD/custom), Área (multi), Tipo (multi enum), Status (multi), Responsável (multi user picker), Fornecedor (multi async search). Botão "Salvar como saved view" + dropdown de views salvas. Reset clears URL params.
+### Frontend novo
 
-### Drill-down
-Cada KPI/linha de tabela navega para rota correspondente com filtros propagados via URL params: `/contratos?status=ativo&periodo=30d`, `/aprovacoes?status=pendente`, `/obrigacoes?vencidas=true`, etc.
+```text
+src/pages/MinhasAprovacoes.tsx                  rota /aprovacoes
+src/components/Aprovacoes/
+  AprovacaoQueue.tsx          tabela com SLA + badge serie/paralelo
+  AprovacaoCard.tsx           detalhe com passos
+  AprovacaoDecisionDialog.tsx Aprovar | Rejeitar (motivo obrigatório) | Solicitar ajuste
+  ChecklistPanel.tsx          5 itens da spec, status visual
+  SlaAlertBanner.tsx          em risco / vencido
+  HistoricoDecisoes.tsx       lê approval_decisions
+src/hooks/useAprovacoes.ts    React Query + realtime nos canais
+                              approval_steps, approval_decisions, contract_approvals
+```
 
-## Arquivos afetados
+- Sidebar: novo item **Aprovações** com badge contador.
+- `ContratoDetalhes`: CTA "Enviar para assinatura" bloqueado enquanto edge function retornar pendências.
+- Telemetria: `trackEvent('aprovacao_decidida', { decisao, contrato_id, sla_h })`.
 
-**Novos (15):** 1 migration, 2 hooks (filters, kpis, savedviews, realtime), 1 lib (analytics), 11 componentes (header, filters, savedviewsmenu, kpirow, kpicard, 7 sections, empty state).
+---
 
-**Editados (2):** `src/pages/Dashboard.tsx` (rewrite completo), `src/App.tsx` (nenhuma rota nova — `/dashboard` já existe).
+## Módulo #13 — Obrigações, renovação, reajuste e alertas
 
-**Preservados:** componentes legados de `src/components/Dashboard/` (FranquiasKPIGrid, GestorKPIGrid, etc.) ficam disponíveis para reuso em `/franquias` se já forem referenciados lá — verificarei na implementação e removerei só os que não tiverem outras referências.
+### Gaps vs. spec
+- `Obrigacoes.tsx` lista bem mas não exige **evidência** na conclusão.
+- Tipos não cobrem os 6 da spec (faltam **aviso_previo**, **compliance**, **reajuste** dedicado).
+- Sem **renovação** nem **reajuste** estruturados.
+- Calendário existe (`Calendario.tsx`) mas não cruzado com obrigações.
+- Jobs de alerta hoje são plpgsql avulsos sem `pg_cron` agendado — a spec exige cron + idempotência diária.
 
-## Fora de escopo (fase 2)
-- Views materializadas com refresh cron
-- Saved views compartilhadas com permissão granular
-- Export PDF do dashboard
-- Comparação entre períodos no mesmo gráfico
+### Migração (schema)
+
+```text
+contract_obligations  (ALTER)
+  + evidencia_url text
+  + concluido_por uuid
+  + observacao_conclusao text
+  + responsavel_juridico_id uuid
+  Tipos: pagamento | entrega | renovacao | reajuste | aviso_previo | compliance
+
+contract_reajustes  (nova)
+  id, organization_id, contrato_id, indice text, percentual numeric,
+  valor_anterior numeric, valor_novo numeric, vigencia_inicio date,
+  observacao text, created_by, created_at
+
+contract_renovacoes  (nova)
+  id, organization_id, contrato_id_origem, contrato_id_novo uuid null,
+  status ('iniciada'|'em_negociacao'|'concluida'|'cancelada'),
+  requisicao_id uuid null, created_by, created_at
+```
+
+- Bucket Storage **`obligation-evidences`** (privado) com path `{organization_id}/{obligation_id}/{filename}` e RLS por prefixo.
+- RLS padrão multi-tenant nas novas tabelas.
+
+### pg_cron jobs (extensão pg_cron + pg_net)
+
+```text
+alertas_obrigacoes    08:00 diário  — obrigações vencendo em 7d ou vencidas
+alertas_renovacao     08:00 diário  — contratos com data_fim em 60d (normal) e 30d (crítico)
+sla_aprovacoes        a cada 1h     — approval_steps pendentes com due_at < now()+4h
+```
+
+Idempotência obrigatória em todos:
+```sql
+NOT EXISTS (
+  SELECT 1 FROM notifications
+  WHERE organization_id = ? AND tipo = ? AND referencia_id = ?
+    AND DATE(created_at) = CURRENT_DATE
+)
+```
+
+Reaproveita `notify_org_members` existente. Cron agendado via `supabase--insert` (não migration), pois carrega URL/anon-key.
+
+### Edge Functions
+
+- `iniciar-renovacao` — cria `contract_renovacoes` + `contract_requests` vinculada ao contrato origem.
+- `registrar-reajuste` — insere em `contract_reajustes`, atualiza `contratos.valor_total`, registra em `audit_logs`.
+
+### Frontend
+
+```text
+src/pages/Obrigacoes.tsx                refator (preserva DataTable atual)
+src/components/Obrigacoes/
+  ConcluirObrigacaoDialog.tsx           upload obrigatório p/ entrega/compliance
+  EvidenciaUploader.tsx                 storage util + signed URL
+  IniciarRenovacaoDialog.tsx
+  RegistrarReajusteDialog.tsx
+  ObrigacoesCalendar.tsx                view calendário (react-day-picker)
+  ObrigacaoTimeline.tsx                 audit_logs daquele record
+src/hooks/useObrigacoes.ts              React Query + realtime
+```
+
+- `lexflow-constants.ts`: adiciona `aviso_previo`, `compliance`, `reajuste`.
+- Badges: `crítico` (≤30d) e `aviso` (≤60d) para renovações.
+
+---
+
+## Princípios transversais aos 2 módulos
+
+- Toda mutação: `.select().maybeSingle()` + `handleDbError`.
+- Toda nova tabela: RLS + `organization_id` + `created_by` + auditoria.
+- Edge functions: HTTP 200 mesmo em validação reprovada.
+- Realtime restrito ao `organization_id`.
+- Reaproveita: `SlaBadge`, `Can`, `RoleGate`, `EmptyState`, `toast`, `handleDbError`, `lexflow-constants`.
+- Não edita: `client.ts`, `types.ts`, `config.toml` (exceto blocos de função se necessário).
+- `PROGRESS.md` atualizado ao final, conforme bloco de continuidade da spec.
+
+---
+
+## Arquivos adicionados / editados
+
+```text
+supabase/migrations/
+  <ts>_aprovacao_steps_checklist.sql
+  <ts>_obrigacoes_renovacao_reajuste.sql
+  <ts>_storage_obligation_evidences.sql
+supabase/functions/
+  validar-checklist-pre-assinatura/index.ts
+  iniciar-renovacao/index.ts
+  registrar-reajuste/index.ts
+src/pages/
+  MinhasAprovacoes.tsx                  (novo, rota /aprovacoes)
+  Obrigacoes.tsx                        (refator)
+  ContratoDetalhes.tsx                  (bloqueia envio se checklist pendente)
+src/components/Aprovacoes/*             (6 arquivos)
+src/components/Obrigacoes/*             (6 arquivos)
+src/hooks/
+  useAprovacoes.ts
+  useObrigacoes.ts
+src/App.tsx                             (rota /aprovacoes)
+src/components/AppSidebar.tsx           (item Aprovações)
+PROGRESS.md                             (entrada nova)
+```
+
+Job `pg_cron` é agendado via `supabase--insert` (não migration) porque carrega URL/anon-key.
+
+---
+
+## Fora desta rodada (próximas)
+
+- #10 Revisão colaborativa (Redline já parcial — auditar depois).
+- #12 ZapSign (depende do checklist desta rodada).
+- #14 IA aplicada / #15 Portal externo.
+
+Ao final desta rodada eu pergunto se devemos seguir para o próximo grupo (provavelmente #12 → #10 → #14).
