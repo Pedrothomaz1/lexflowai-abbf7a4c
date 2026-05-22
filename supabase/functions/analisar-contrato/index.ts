@@ -1,30 +1,120 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
+import { Buffer } from "node:buffer";
+import pdfParse from "npm:pdf-parse@1.1.1/lib/pdf-parse.js";
 
-// Allowed origins for CORS - add your production domain here
-const ALLOWED_ORIGINS = [
+// Allowed origins for CORS
+const STATIC_ALLOWED_ORIGINS = new Set<string>([
   'http://localhost:8080',
   'http://localhost:5173',
   'http://localhost:3000',
+  'https://lexflowai.com.br',
+  'https://www.lexflowai.com.br',
+  'https://lexflowai.lovable.app',
   Deno.env.get('ALLOWED_ORIGIN') || '',
-].filter(Boolean);
+].filter(Boolean));
+
+const ALLOWED_ORIGIN_PATTERNS: RegExp[] = [
+  /^https:\/\/[a-z0-9-]+\.lovableproject\.com$/i,
+  /^https:\/\/[a-z0-9-]+\.lovable\.app$/i,
+  /^https:\/\/[a-z0-9-]+--[a-z0-9-]+\.lovable\.app$/i,
+];
+
+function isOriginAllowed(origin: string): boolean {
+  if (!origin) return true;
+  if (STATIC_ALLOWED_ORIGINS.has(origin)) return true;
+  return ALLOWED_ORIGIN_PATTERNS.some((re) => re.test(origin));
+}
 
 // Get CORS headers based on request origin
 function getCorsHeaders(req: Request): Record<string, string> | null {
   const origin = req.headers.get('Origin') || '';
-  const isAllowedOrigin = ALLOWED_ORIGINS.includes(origin);
-  if (!isAllowedOrigin && origin) {
-    // Reject requests from unknown origins (except empty origin for same-origin requests)
-    return null;
-  }
-  const allowedOrigin = isAllowedOrigin ? origin : (ALLOWED_ORIGINS[0] || 'http://localhost:8080');
+  if (!isOriginAllowed(origin)) return null;
+  const allowedOrigin = origin || '*';
 
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Max-Age': '86400',
+    'Vary': 'Origin',
   };
+}
+
+type ExtractionPayload = {
+  data_inicio?: string | null;
+  data_fim?: string | null;
+  titulo?: string | null;
+  descricao?: string | null;
+  tipo?: string | null;
+  valor_total?: string | null;
+  moeda?: string | null;
+  fornecedor_nome?: string | null;
+};
+
+const EXTRACTION_TOOL = {
+  type: "function",
+  function: {
+    name: "extract_contract_dates",
+    description: "Extrai campos principais de um contrato",
+    parameters: {
+      type: "object",
+      properties: {
+        data_inicio: { type: "string", description: "YYYY-MM-DD ou string vazia" },
+        data_fim: { type: "string", description: "YYYY-MM-DD ou string vazia" },
+        titulo: { type: "string" },
+        descricao: { type: "string" },
+        tipo: { type: "string", enum: ["prestacao_servicos", "fornecimento", "locacao", "confidencialidade", "parceria", "outro"] },
+        valor_total: { type: "string", description: "Número como string, ex.: 12000.50" },
+        moeda: { type: "string", enum: ["BRL", "USD", "EUR"] },
+        fornecedor_nome: { type: "string" },
+      },
+      required: ["data_inicio", "data_fim", "titulo", "descricao", "tipo", "valor_total", "moeda", "fornecedor_nome"],
+      additionalProperties: false,
+    },
+  },
+};
+
+const extractionPrompt = `Você é um assistente jurídico. Analise este contrato e extraia os campos abaixo. Use estritamente o formato do schema da função. Se um campo não for identificável com segurança, retorne string vazia.
+
+Campos:
+- data_inicio, data_fim (YYYY-MM-DD; procure por "vigência", "prazo", "início", "término")
+- titulo: título curto descritivo (ex.: "Prestação de Serviços de TI - Acme")
+- descricao: objeto/escopo em 1-2 frases
+- tipo: um de [prestacao_servicos, fornecimento, locacao, confidencialidade, parceria, outro]
+- valor_total: número como string, somente dígitos e ponto decimal, sem moeda/símbolo
+- moeda: BRL, USD ou EUR
+- fornecedor_nome: razão social/nome da parte contratada/fornecedora (sem CNPJ).`;
+
+function detectMimeType(path: string): string {
+  const lower = path.toLowerCase();
+  if (lower.endsWith('.pdf')) return 'application/pdf';
+  if (lower.endsWith('.txt')) return 'text/plain';
+  if (lower.endsWith('.docx')) return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  return 'application/octet-stream';
+}
+
+function toBase64(bytes: Uint8Array): string {
+  return btoa(String.fromCharCode(...bytes));
+}
+
+function hasGoodText(text: string): boolean {
+  const normalized = text.replace(/\s+/g, ' ').trim();
+  return normalized.length > 500 && (normalized.match(/[A-Za-zÀ-ÿ]/g) || []).length > 100;
+}
+
+async function extractNativeText(fileBytes: Uint8Array, mimeType: string): Promise<string> {
+  if (mimeType === 'text/plain') return new TextDecoder().decode(fileBytes);
+  if (mimeType === 'application/pdf') {
+    try {
+      const data = await pdfParse(Buffer.from(fileBytes));
+      return data.text || '';
+    } catch (error) {
+      console.warn('Native PDF extraction failed:', error);
+      return '';
+    }
+  }
+  return '';
 }
 
 serve(async (req) => {
