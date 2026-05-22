@@ -388,7 +388,7 @@ const Settings = () => {
                   Editar apenas contratos em rascunho criados por você
                 </li>
               )}
-              {(isConsultor || isAdmin) && (
+              {isAdmin && (
                 <>
                   <li className="flex items-center gap-2 text-sm">
                     <CheckCircle2 className="h-4 w-4 text-primary" />
