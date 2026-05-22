@@ -808,6 +808,10 @@ const ContratoDetalhes = () => {
             <NegotiationMetrics contratoId={contrato.id} />
           </TabsContent>
 
+          <TabsContent value="revisao-ia" className="space-y-4">
+            <RevisaoExtracoesPanel contratoId={contrato.id} />
+          </TabsContent>
+
           <TabsContent value="ia" className="space-y-4">
             <AssistenteIA
               contratoId={contrato.id}
