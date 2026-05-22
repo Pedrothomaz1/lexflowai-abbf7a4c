@@ -252,6 +252,15 @@ Deno.serve(async (req) => {
             dias_antecedencia: 0,
           });
         }
+
+        // Envia email para os admins da organização
+        await notifyAdminsByEmail(
+          admin,
+          f.organization_id,
+          f.nome,
+          newStatus,
+          (contratos ?? []).map((c) => ({ numero_contrato: c.numero_contrato, titulo: c.titulo })),
+        );
       }
 
       processed++;
