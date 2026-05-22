@@ -173,6 +173,40 @@ export function SecurityRegressionRunner() {
             Nenhuma execução recente. Clique em "Executar Suíte" para validar o isolamento multi-tenant agora.
           </p>
         )}
+
+        {history.length > 0 && (
+          <div className="pt-4 border-t">
+            <div className="flex items-center gap-2 mb-3">
+              <History className="h-4 w-4 text-muted-foreground" />
+              <h4 className="text-sm font-semibold">Últimas execuções</h4>
+              <Badge variant="outline" className="text-xs">{history.length}</Badge>
+            </div>
+            <div className="rounded-md border divide-y max-h-[280px] overflow-y-auto">
+              {history.map((h) => (
+                <div key={h.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {h.failed === 0 ? (
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                    ) : (
+                      <XCircle className="h-4 w-4 text-destructive shrink-0" />
+                    )}
+                    <span className="truncate">
+                      {new Date(h.finished_at).toLocaleString("pt-BR")}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge variant={h.failed === 0 ? "secondary" : "destructive"} className="text-xs">
+                      {h.passed}/{h.total}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {Math.round(h.duration_ms / 1000)}s
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
