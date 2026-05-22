@@ -73,6 +73,7 @@ import { AssistenteIA } from "@/components/IA/AssistenteIA";
 import { RevisaoExtracoesPanel } from "@/components/IA/RevisaoExtracoesPanel";
 import { PortalContraparteDialog } from "@/components/Portal/PortalContraparteDialog";
 import { PortalLinksPanel } from "@/components/Portal/PortalLinksPanel";
+import { IntakeGatesPanel } from "@/components/contracts/IntakeGatesPanel";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { handleDbError } from "@/utils/dbErrorHandler";
