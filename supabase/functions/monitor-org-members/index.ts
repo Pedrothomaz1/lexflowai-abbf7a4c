@@ -12,19 +12,27 @@ Deno.serve(async (req) => {
 
   try {
     const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const CRON_SECRET = Deno.env.get('CRON_SECRET') ?? '';
     const URL = Deno.env.get('SUPABASE_URL')!;
 
-    // Auth: aceita Bearer service_role OU x-cron-secret
+    const supabase = createClient(URL, SERVICE_ROLE);
+
+    // Auth: aceita Bearer service_role OU x-cron-secret (validado contra vault)
     const auth = req.headers.get('Authorization') ?? '';
     const cronSecret = req.headers.get('x-cron-secret') ?? '';
     const bearerOk = auth === `Bearer ${SERVICE_ROLE}`;
-    const cronOk = CRON_SECRET && cronSecret === CRON_SECRET;
+    let cronOk = false;
+    if (!bearerOk && cronSecret) {
+      const { data: vaultRow } = await supabase
+        .schema('vault' as any)
+        .from('decrypted_secrets')
+        .select('decrypted_secret')
+        .eq('name', 'monitor_cron_secret')
+        .maybeSingle();
+      cronOk = !!vaultRow && (vaultRow as any).decrypted_secret === cronSecret;
+    }
     if (!bearerOk && !cronOk) {
       return json({ error: 'Unauthorized' }, 401);
     }
-
-    const supabase = createClient(URL, SERVICE_ROLE);
 
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
