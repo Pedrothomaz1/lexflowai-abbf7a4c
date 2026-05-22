@@ -39,6 +39,20 @@ export function SecurityRegressionRunner() {
   const [running, setRunning] = useState(false);
   const [summary, setSummary] = useState<RegressionSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [history, setHistory] = useState<RunRow[]>([]);
+
+  const loadHistory = async () => {
+    const { data } = await supabase
+      .from("security_regression_runs")
+      .select("id, started_at, finished_at, duration_ms, total, passed, failed")
+      .order("created_at", { ascending: false })
+      .limit(20);
+    setHistory((data ?? []) as RunRow[]);
+  };
+
+  useEffect(() => {
+    loadHistory();
+  }, []);
 
   const handleRun = async () => {
     setRunning(true);
