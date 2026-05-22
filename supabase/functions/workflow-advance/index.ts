@@ -1,9 +1,10 @@
 // Avança um workflow_run com regras condicionais + notificações.
 // Body: {
 //   run_id: string,
-//   decisao: 'aprovado'|'rejeitado'|'pulado',
+//   decisao: 'aprovado'|'rejeitado'|'pulado'|'devolvido',
 //   comentario?: string,
-//   target_stage_ordem?: number   // drag-and-drop: salto explícito
+//   target_stage_ordem?: number,  // drag-and-drop OU etapa-alvo da devolução
+//   motivo?: string               // obrigatório (>=10 chars) quando decisao='devolvido'
 // }
 // Validações de negócio retornam HTTP 200 + { ok:false, error }.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
