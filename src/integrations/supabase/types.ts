@@ -772,13 +772,17 @@ export type Database = {
       contract_obligations: {
         Row: {
           concluido_em: string | null
+          concluido_por: string | null
           contrato_id: string | null
           created_at: string
           data_vencimento: string
           descricao: string | null
+          evidencia_url: string | null
           id: string
+          observacao_conclusao: string | null
           organization_id: string
           responsavel_id: string | null
+          responsavel_juridico_id: string | null
           status: string | null
           tipo: string | null
           titulo: string
@@ -786,13 +790,17 @@ export type Database = {
         }
         Insert: {
           concluido_em?: string | null
+          concluido_por?: string | null
           contrato_id?: string | null
           created_at?: string
           data_vencimento: string
           descricao?: string | null
+          evidencia_url?: string | null
           id?: string
+          observacao_conclusao?: string | null
           organization_id: string
           responsavel_id?: string | null
+          responsavel_juridico_id?: string | null
           status?: string | null
           tipo?: string | null
           titulo: string
@@ -800,13 +808,17 @@ export type Database = {
         }
         Update: {
           concluido_em?: string | null
+          concluido_por?: string | null
           contrato_id?: string | null
           created_at?: string
           data_vencimento?: string
           descricao?: string | null
+          evidencia_url?: string | null
           id?: string
+          observacao_conclusao?: string | null
           organization_id?: string
           responsavel_id?: string | null
+          responsavel_juridico_id?: string | null
           status?: string | null
           tipo?: string | null
           titulo?: string
@@ -835,6 +847,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      contract_reajustes: {
+        Row: {
+          contrato_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          indice: string
+          observacao: string | null
+          organization_id: string
+          percentual: number
+          valor_anterior: number | null
+          valor_novo: number | null
+          vigencia_inicio: string
+        }
+        Insert: {
+          contrato_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          indice: string
+          observacao?: string | null
+          organization_id: string
+          percentual: number
+          valor_anterior?: number | null
+          valor_novo?: number | null
+          vigencia_inicio: string
+        }
+        Update: {
+          contrato_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          indice?: string
+          observacao?: string | null
+          organization_id?: string
+          percentual?: number
+          valor_anterior?: number | null
+          valor_novo?: number | null
+          vigencia_inicio?: string
+        }
+        Relationships: []
       }
       contract_redlines: {
         Row: {
@@ -902,6 +956,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      contract_renovacoes: {
+        Row: {
+          contrato_id_novo: string | null
+          contrato_id_origem: string
+          created_at: string
+          created_by: string | null
+          id: string
+          observacao: string | null
+          organization_id: string
+          requisicao_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          contrato_id_novo?: string | null
+          contrato_id_origem: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          observacao?: string | null
+          organization_id: string
+          requisicao_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          contrato_id_novo?: string | null
+          contrato_id_origem?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          observacao?: string | null
+          organization_id?: string
+          requisicao_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       contract_requests: {
         Row: {
