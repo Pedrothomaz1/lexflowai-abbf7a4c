@@ -480,11 +480,9 @@ const Obrigacoes = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os tipos</SelectItem>
-              <SelectItem value="comunicacao">Comunicação</SelectItem>
-              <SelectItem value="entrega">Entrega</SelectItem>
-              <SelectItem value="relatorio">Relatório</SelectItem>
-              <SelectItem value="renovacao">Renovação</SelectItem>
-              <SelectItem value="notificacao">Notificação</SelectItem>
+              {TIPO_OBRIGACAO_OPTIONS.map((t) => (
+                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
