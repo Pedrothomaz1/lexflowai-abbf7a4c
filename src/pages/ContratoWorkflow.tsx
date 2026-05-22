@@ -450,7 +450,9 @@ export default function ContratoWorkflow() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {pendingTargetOrdem
+              {pendingDecisao === "devolvido"
+                ? "Devolver para etapa anterior"
+                : pendingTargetOrdem
                 ? `Mover para etapa ${pendingTargetOrdem}`
                 : pendingDecisao === "aprovado" ? "Aprovar etapa atual"
                 : pendingDecisao === "rejeitado" ? "Rejeitar workflow"
@@ -458,8 +460,30 @@ export default function ContratoWorkflow() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
+            {pendingDecisao === "devolvido" && (
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Devolver para</label>
+                <Select
+                  value={String(pendingTargetOrdem ?? "")}
+                  onValueChange={(v) => setPendingTargetOrdem(Number(v))}
+                >
+                  <SelectTrigger><SelectValue placeholder="Escolha a etapa" /></SelectTrigger>
+                  <SelectContent>
+                    {stages
+                      .filter((s) => s.ordem < (run?.current_stage_ordem ?? 0))
+                      .map((s) => (
+                        <SelectItem key={s.id} value={String(s.ordem)}>
+                          #{s.ordem} — {s.nome}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <Textarea
-              placeholder="Comentário (opcional)"
+              placeholder={pendingDecisao === "devolvido"
+                ? "Motivo da devolução (mínimo 10 caracteres) *"
+                : "Comentário (opcional)"}
               value={comentario}
               onChange={(e) => setComentario(e.target.value)}
               rows={3}
@@ -467,6 +491,11 @@ export default function ContratoWorkflow() {
             {pendingDecisao === "rejeitado" && (
               <p className="text-xs text-destructive">
                 Esta ação encerrará o workflow imediatamente.
+              </p>
+            )}
+            {pendingDecisao === "devolvido" && (
+              <p className="text-xs text-muted-foreground">
+                A etapa atual ficará marcada como devolvida e o workflow voltará para a etapa escolhida.
               </p>
             )}
           </div>
