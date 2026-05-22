@@ -169,6 +169,72 @@ export default function DashboardIA() {
         <KpiCard icon={AlertTriangle} label="Sugestões prioridade alta" value={stats.altas.length} loading={isLoading} variant="warning" />
       </div>
 
+      {/* Skill Cards */}
+      <div>
+        <h2 className="text-lg font-semibold mb-3">Análises por skill especialista</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <SkillCard
+            icon={FileSearch}
+            title="Revisão cláusula-a-cláusula"
+            slug="contract-review"
+            total={skillStats.review.total}
+            loading={loadingSkills}
+            stats={[
+              { label: "OK", value: skillStats.review.verde, variant: "secondary" },
+              { label: "Atenção", value: skillStats.review.amarelo, variant: "default" },
+              { label: "Crítico", value: skillStats.review.vermelho, variant: "destructive" },
+            ]}
+          />
+          <SkillCard
+            icon={ScrollText}
+            title="Triagem de NDA"
+            slug="nda-triage"
+            total={skillStats.nda.total}
+            loading={loadingSkills}
+            stats={[
+              { label: "Aprovar", value: skillStats.nda.aprovar, variant: "secondary" },
+              { label: "Revisar", value: skillStats.nda.revisar, variant: "default" },
+              { label: "Rejeitar", value: skillStats.nda.rejeitar, variant: "destructive" },
+            ]}
+          />
+          <SkillCard
+            icon={ShieldAlert}
+            title="Mapa de riscos"
+            slug="risk-assessment"
+            total={skillStats.risk.total}
+            loading={loadingSkills}
+            stats={[
+              { label: "Críticos", value: skillStats.risk.criticos, variant: "destructive" },
+              {
+                label: "Exposição",
+                value: skillStats.risk.exposicao > 0
+                  ? `R$ ${Math.round(skillStats.risk.exposicao).toLocaleString("pt-BR")}`
+                  : "—",
+                variant: "outline",
+              },
+            ]}
+          />
+          <SkillCard
+            icon={TrendingUp}
+            title="Compliance"
+            slug="compliance"
+            total={skillStats.compliance.total}
+            loading={loadingSkills}
+            stats={
+              skillStats.compliance.topGaps.length === 0
+                ? [{ label: "Sem gaps", value: "—", variant: "secondary" }]
+                : skillStats.compliance.topGaps.map(([nome, n]) => ({
+                    label: nome,
+                    value: `${n} gap${n > 1 ? "s" : ""}`,
+                    variant: "destructive" as const,
+                  }))
+            }
+          />
+        </div>
+      </div>
+
+
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top riscos */}
         <Card>
