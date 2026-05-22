@@ -2755,6 +2755,75 @@ export type Database = {
           },
         ]
       }
+      onboarding_email_log: {
+        Row: {
+          email: string
+          error_message: string | null
+          id: string
+          organization_id: string
+          sent_at: string
+          status: string
+          step: number
+          user_id: string | null
+        }
+        Insert: {
+          email: string
+          error_message?: string | null
+          id?: string
+          organization_id: string
+          sent_at?: string
+          status?: string
+          step: number
+          user_id?: string | null
+        }
+        Update: {
+          email?: string
+          error_message?: string | null
+          id?: string
+          organization_id?: string
+          sent_at?: string
+          status?: string
+          step?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_email_log_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_email_log_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "super_admin_organizations_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      onboarding_settings: {
+        Row: {
+          enabled: boolean
+          id: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          enabled?: boolean
+          id?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          enabled?: boolean
+          id?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       organization_invites: {
         Row: {
           accepted_at: string | null
@@ -2959,6 +3028,33 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+        }
+        Relationships: []
+      }
+      plan_pricing: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          nome_exibicao: string
+          plano: string
+          preco_mensal_centavos: number
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          nome_exibicao: string
+          plano: string
+          preco_mensal_centavos?: number
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          nome_exibicao?: string
+          plano?: string
+          preco_mensal_centavos?: number
+          updated_at?: string
         }
         Relationships: []
       }
@@ -4842,6 +4938,13 @@ export type Database = {
       belongs_to_org: {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
+      }
+      calculate_mrr: {
+        Args: never
+        Returns: {
+          mrr_total_centavos: number
+          por_plano: Json
+        }[]
       }
       check_pending_invite_for_user: { Args: never; Returns: Json }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
