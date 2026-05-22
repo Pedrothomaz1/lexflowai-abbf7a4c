@@ -1,7 +1,7 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { GlobalHeader } from "./GlobalHeader";
-import { OnboardingTour } from "./Onboarding";
+import { OnboardingTour, OnboardingChecklist } from "./Onboarding";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { SuspendedBanner } from "./states/SuspendedBanner";
 import { useModulo } from "@/contexts/ModuloContext";
@@ -43,6 +43,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       </div>
       {/* Onboarding Tour - renders on first visit */}
       <OnboardingTour />
+      {/* Onboarding Checklist - persistent until completed/dismissed */}
+      <OnboardingChecklist />
     </SidebarProvider>
   );
 }
