@@ -236,12 +236,18 @@ Campos:
     const toolCall = aiResponse.choices?.[0]?.message?.tool_calls?.[0];
     if (toolCall && toolCall.function?.arguments) {
       const extractedData = JSON.parse(toolCall.function.arguments);
-      
+
       return new Response(
         JSON.stringify({
           success: true,
           data_inicio: extractedData.data_inicio || null,
-          data_fim: extractedData.data_fim || null
+          data_fim: extractedData.data_fim || null,
+          titulo: extractedData.titulo || null,
+          descricao: extractedData.descricao || null,
+          tipo: extractedData.tipo || null,
+          valor_total: extractedData.valor_total || null,
+          moeda: extractedData.moeda || null,
+          fornecedor_nome: extractedData.fornecedor_nome || null,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
