@@ -147,51 +147,24 @@ export function InlineFornecedorForm({ onCreated, onCancel }: InlineFornecedorFo
 
         <div className="space-y-1.5">
           <Label className="text-xs">{tipoPessoa === "pj" ? "CNPJ" : "CPF"}</Label>
-          <DocumentInput
-            documentType={tipoPessoa === "pj" ? "cnpj" : "cpf"}
-            value={documento}
-            onChange={(val, valid) => { setDocumento(val); setDocValid(valid); setResult(null); }}
-            showValidation={documento.length > 0}
-            className="h-9"
-          />
-          {tipoPessoa === "pj" && docValid && (
-            <div className="flex items-center justify-between gap-2 pt-1">
-              {cnpjResult ? (
-                <button type="button" onClick={() => setShowDetails(true)} className="hover:opacity-80">
-                  <CnpjStatusBadge status={cnpjResult.status} />
-                </button>
-              ) : (
-                <span className="text-xs text-muted-foreground">Verifique na Receita Federal</span>
-              )}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs"
-                disabled={verifying}
-                onClick={async () => {
-                  const r = await verify(documento, { force: true });
-                  if (!r) return;
-                  setShowDetails(true);
-                  if (!nome.trim() && r.nome) setNome(r.nome);
-                  if (!email && r.email) setEmail(r.email);
-                }}
-              >
-                {verifying ? (
-                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                ) : (
-                  <Search className="h-3 w-3 mr-1" />
-                )}
-                Verificar
-              </Button>
-            </div>
+          {tipoPessoa === "pj" ? (
+            <CnpjAutoFillInput
+              value={documento}
+              onChange={(val) => { setDocumento(val); setDocValid(true); }}
+              onDataFetched={(data) => {
+                if (!nome.trim() && data.nome) setNome(data.nome);
+                if (!email && data.email) setEmail(data.email);
+              }}
+            />
+          ) : (
+            <DocumentInput
+              documentType="cpf"
+              value={documento}
+              onChange={(val, valid) => { setDocumento(val); setDocValid(valid); }}
+              showValidation={documento.length > 0}
+              className="h-9"
+            />
           )}
-          <CnpjDetailsDialog
-            open={showDetails}
-            onOpenChange={setShowDetails}
-            result={cnpjResult}
-            cnpj={documento}
-          />
         </div>
 
         <div className="col-span-2 space-y-1.5">
