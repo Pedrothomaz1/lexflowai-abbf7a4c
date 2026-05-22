@@ -15,8 +15,11 @@ import {
 } from "@dnd-kit/core";
 import {
   ArrowLeft, CheckCircle2, XCircle, Clock, GitBranch, AlertTriangle, History,
-  FileDown, FileSpreadsheet, ScrollText, GitFork,
+  FileDown, FileSpreadsheet, ScrollText, GitFork, Undo2,
 } from "lucide-react";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { handleDbError } from "@/utils/dbErrorHandler";
 import { exportWorkflowHistoryPDF, exportWorkflowHistoryXLSX } from "@/utils/workflowExport";
 
