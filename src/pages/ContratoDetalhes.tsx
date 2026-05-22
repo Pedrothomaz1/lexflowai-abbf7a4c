@@ -736,13 +736,10 @@ const ContratoDetalhes = () => {
 
           <TabsContent value="assinaturas">
             <PreSignatureGuard contratoId={contrato.id}>
-              <ContractSignature
-                contratoId={contrato.id}
-                contratoTitulo={contrato.titulo}
-                arquivoUrl={contrato.arquivo_url}
-              />
+              <ZapsignPanel contratoId={contrato.id} arquivoUrl={contrato.arquivo_url} />
             </PreSignatureGuard>
           </TabsContent>
+
 
           <TabsContent value="comentarios">
             <ContractComments contratoId={contrato.id} />
