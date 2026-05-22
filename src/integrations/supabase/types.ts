@@ -14,6 +14,127 @@ export type Database = {
   }
   public: {
     Tables: {
+      approval_decisions: {
+        Row: {
+          aprovador_id: string
+          created_at: string
+          decisao: string
+          id: string
+          motivo: string | null
+          organization_id: string
+          step_id: string
+        }
+        Insert: {
+          aprovador_id: string
+          created_at?: string
+          decisao: string
+          id?: string
+          motivo?: string | null
+          organization_id: string
+          step_id: string
+        }
+        Update: {
+          aprovador_id?: string
+          created_at?: string
+          decisao?: string
+          id?: string
+          motivo?: string | null
+          organization_id?: string
+          step_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_decisions_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "approval_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      approval_step_approvers: {
+        Row: {
+          aprovador_id: string
+          created_at: string
+          decided_at: string | null
+          id: string
+          organization_id: string
+          status: string
+          step_id: string
+        }
+        Insert: {
+          aprovador_id: string
+          created_at?: string
+          decided_at?: string | null
+          id?: string
+          organization_id: string
+          status?: string
+          step_id: string
+        }
+        Update: {
+          aprovador_id?: string
+          created_at?: string
+          decided_at?: string | null
+          id?: string
+          organization_id?: string
+          status?: string
+          step_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_step_approvers_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "approval_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      approval_steps: {
+        Row: {
+          contrato_id: string
+          created_at: string
+          created_by: string | null
+          due_at: string | null
+          id: string
+          minimo_aprovacoes: number
+          modo: string
+          ordem: number
+          organization_id: string
+          status: string
+          updated_at: string
+          workflow_id: string | null
+        }
+        Insert: {
+          contrato_id: string
+          created_at?: string
+          created_by?: string | null
+          due_at?: string | null
+          id?: string
+          minimo_aprovacoes?: number
+          modo?: string
+          ordem?: number
+          organization_id: string
+          status?: string
+          updated_at?: string
+          workflow_id?: string | null
+        }
+        Update: {
+          contrato_id?: string
+          created_at?: string
+          created_by?: string | null
+          due_at?: string | null
+          id?: string
+          minimo_aprovacoes?: number
+          modo?: string
+          ordem?: number
+          organization_id?: string
+          status?: string
+          updated_at?: string
+          workflow_id?: string | null
+        }
+        Relationships: []
+      }
       approval_workflows: {
         Row: {
           aprovacao_paralela: boolean | null
@@ -479,6 +600,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      contract_checklist: {
+        Row: {
+          contrato_id: string
+          created_at: string
+          criterio: string
+          id: string
+          observacao: string | null
+          organization_id: string
+          satisfeito: boolean
+          updated_at: string
+          validado_em: string | null
+          validado_por: string | null
+        }
+        Insert: {
+          contrato_id: string
+          created_at?: string
+          criterio: string
+          id?: string
+          observacao?: string | null
+          organization_id: string
+          satisfeito?: boolean
+          updated_at?: string
+          validado_em?: string | null
+          validado_por?: string | null
+        }
+        Update: {
+          contrato_id?: string
+          created_at?: string
+          criterio?: string
+          id?: string
+          observacao?: string | null
+          organization_id?: string
+          satisfeito?: boolean
+          updated_at?: string
+          validado_em?: string | null
+          validado_por?: string | null
+        }
+        Relationships: []
       }
       contract_comments: {
         Row: {
@@ -3439,6 +3599,53 @@ export type Database = {
             columns: ["servico_id"]
             isOneToOne: false
             referencedRelation: "servicos_periodicos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_tasks: {
+        Row: {
+          assignee_id: string | null
+          contrato_id: string
+          created_at: string
+          due_at: string | null
+          id: string
+          organization_id: string
+          status: string
+          step_id: string | null
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          assignee_id?: string | null
+          contrato_id: string
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          organization_id: string
+          status?: string
+          step_id?: string | null
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          assignee_id?: string | null
+          contrato_id?: string
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          organization_id?: string
+          status?: string
+          step_id?: string | null
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_tasks_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "approval_steps"
             referencedColumns: ["id"]
           },
         ]
