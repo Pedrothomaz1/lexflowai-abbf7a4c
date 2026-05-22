@@ -13,6 +13,7 @@ import { CheckCircle2, Inbox, Eye } from "lucide-react";
 import { useMinhasAprovacoes, type ApprovalStep } from "@/hooks/useAprovacoes";
 import { AprovacaoSlaBadge } from "@/components/Aprovacoes/AprovacaoSlaBadge";
 import { AprovacaoDecisionDialog } from "@/components/Aprovacoes/AprovacaoDecisionDialog";
+import { SlaAlertBanner } from "@/components/Aprovacoes/SlaAlertBanner";
 
 export default function MinhasAprovacoes() {
   const navigate = useNavigate();
