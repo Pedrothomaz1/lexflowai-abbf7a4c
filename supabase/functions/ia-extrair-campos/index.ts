@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: "Você é um analista de contratos. Extraia campos estruturados e riscos do texto fornecido. Use confiança baixa quando o campo for ambíguo ou ausente. Responda em português." },
+          { role: "system", content: "Você é um analista de contratos. Extraia campos estruturados (incluindo bloco financeiro: forma/condição de pagamento, parcelas, vencimentos, índice e periodicidade de reajuste, multa de atraso, juros de mora e dados bancários quando presentes) e riscos do texto fornecido. Use confiança baixa quando o campo for ambíguo ou ausente. Responda em português." },
           { role: "user", content: `Analise o contrato abaixo e chame a ferramenta registrar_analise_estruturada com os campos e riscos identificados.\n\n${texto.slice(0, 30000)}` },
         ],
         tools: [TOOL],
