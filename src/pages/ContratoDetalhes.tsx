@@ -794,8 +794,26 @@ const ContratoDetalhes = () => {
           </TabsContent>
 
           <TabsContent value="negociacao" className="space-y-4">
+            <div className="flex justify-end">
+              <PortalContraparteDialog contratoId={contrato.id} />
+            </div>
             <NegotiationThread contratoId={contrato.id} />
             <NegotiationMetrics contratoId={contrato.id} />
+          </TabsContent>
+
+          <TabsContent value="ia" className="space-y-4">
+            <AssistenteIA
+              contratoId={contrato.id}
+              tipoContrato={contrato.tipo}
+              contratoConteudo={[
+                `Contrato: ${contrato.numero_contrato}`,
+                `Título: ${contrato.titulo}`,
+                `Tipo: ${contrato.tipo}`,
+                `Valor: ${contrato.valor_total ?? "N/A"}`,
+                `Descrição: ${contrato.descricao || ""}`,
+                `Observações: ${contrato.observacoes || ""}`,
+              ].join("\n")}
+            />
           </TabsContent>
         </Tabs>
       </FadeIn>
