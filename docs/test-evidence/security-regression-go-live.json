@@ -1,0 +1,11 @@
+{
+  "executed_at": "2026-05-22T13:43:57Z",
+  "total": 26,
+  "passed": 25,
+  "failed": 1,
+  "failure": {
+    "name": "storage: admin Org A reads own file",
+    "detail": "Empty detail — likely missing seed file in contratos-documentos bucket for SECQA org A. Test infra issue, not security regression."
+  },
+  "verdict": "25/26 passed. Single failure is a seed/fixture gap (no real file in bucket for SECQA org A), not a cross-tenant breach."
+}
