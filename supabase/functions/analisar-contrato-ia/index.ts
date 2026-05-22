@@ -360,7 +360,7 @@ serve(async (req) => {
       skillReq === "full"
         ? ["contract-review", "risk-assessment", "compliance"]
         : skillReq === "auto"
-          ? [detectAuto(contrato.tipo_contrato)]
+          ? [detectAuto(contrato.tipo)]
           : [skillReq as Exclude<SkillId, "auto" | "full">];
 
     console.log(`Analyzing ${contratoId} skills=${resolved.join(",")}`);
