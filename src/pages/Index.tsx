@@ -53,9 +53,11 @@ const Index = () => {
             </div>
             <span className="text-2xl font-bold">LexFlow</span>
           </div>
-          <Button onClick={() => navigate("/auth")} variant="default">
-            Entrar
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => navigate("/planos")} variant="ghost">Planos</Button>
+            <Button onClick={() => navigate("/auth")} variant="default">Entrar</Button>
+          </div>
+
         </div>
       </header>
 

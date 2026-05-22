@@ -9,6 +9,8 @@ import SuperAdminsTab from "./SuperAdminsTab";
 import DashboardTab from "./DashboardTab";
 import PrecosTab from "./PrecosTab";
 import OnboardingTab from "./OnboardingTab";
+import LeadsTab from "./LeadsTab";
+
 
 export default function SuperAdminPage() {
   const { isSuperAdmin, loading } = useSuperAdmin();
@@ -55,18 +57,24 @@ export default function SuperAdminPage() {
           <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="organizacoes">Clientes</TabsTrigger>
+            <TabsTrigger value="leads">Leads</TabsTrigger>
             <TabsTrigger value="onboarding">Onboarding</TabsTrigger>
             <TabsTrigger value="precos">Preços</TabsTrigger>
             <TabsTrigger value="usuarios">Usuários</TabsTrigger>
             <TabsTrigger value="super-admins">Super Admins</TabsTrigger>
             <TabsTrigger value="metricas">Métricas</TabsTrigger>
           </TabsList>
+
           <TabsContent value="dashboard" className="mt-6">
             <DashboardTab />
           </TabsContent>
           <TabsContent value="organizacoes" className="mt-6">
             <OrganizacoesTab />
           </TabsContent>
+          <TabsContent value="leads" className="mt-6">
+            <LeadsTab />
+          </TabsContent>
+
           <TabsContent value="onboarding" className="mt-6">
             <OnboardingTab />
           </TabsContent>
