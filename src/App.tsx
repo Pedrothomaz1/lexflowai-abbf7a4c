@@ -152,6 +152,7 @@ function App() {
                     <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout><Dashboard /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/contratos" element={<ProtectedRoute><DashboardLayout><Contratos /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/contratos/:id" element={<ProtectedRoute><DashboardLayout><ContratoDetalhes /></DashboardLayout></ProtectedRoute>} />
+                    <Route path="/contratos/:id/workflow" element={<ProtectedRoute><DashboardLayout><ContratoWorkflow /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/franquias" element={<ProtectedRoute><DashboardLayout><Franquias /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/franquias/:id" element={<ProtectedRoute><DashboardLayout><FranquiaDetalhes /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/kanban" element={<ProtectedRoute><DashboardLayout><Kanban /></DashboardLayout></ProtectedRoute>} />
