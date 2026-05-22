@@ -50,9 +50,19 @@ async function ensureUser(email: string): Promise<string> {
 
 async function ensureOrg(name: string): Promise<string> {
   const s = svc();
-  const { data: existing } = await s.from("organizations").select("id").eq("nome", name).maybeSingle();
-  if (existing) return existing.id;
-  const { data, error } = await s.from("organizations").insert({ nome: name, slug: name.toLowerCase().replace(/\s+/g, "-") }).select("id").single();
+  const { data: existing } = await s.from("organizations").select("id, status").eq("nome", name).maybeSingle();
+  if (existing) {
+    if (existing.status !== "ativa") {
+      await s.from("organizations").update({ status: "ativa", aprovada_em: new Date().toISOString() }).eq("id", existing.id);
+    }
+    return existing.id;
+  }
+  const { data, error } = await s.from("organizations").insert({
+    nome: name,
+    slug: name.toLowerCase().replace(/\s+/g, "-"),
+    status: "ativa",
+    aprovada_em: new Date().toISOString(),
+  }).select("id").single();
   if (error) throw new Error(`ensureOrg ${name}: ${error.message}`);
   return data.id;
 }
