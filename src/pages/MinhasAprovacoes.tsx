@@ -13,6 +13,7 @@ import { CheckCircle2, Inbox, Eye } from "lucide-react";
 import { useMinhasAprovacoes, type ApprovalStep } from "@/hooks/useAprovacoes";
 import { AprovacaoSlaBadge } from "@/components/Aprovacoes/AprovacaoSlaBadge";
 import { AprovacaoDecisionDialog } from "@/components/Aprovacoes/AprovacaoDecisionDialog";
+import { SlaAlertBanner } from "@/components/Aprovacoes/SlaAlertBanner";
 
 export default function MinhasAprovacoes() {
   const navigate = useNavigate();
@@ -88,6 +89,8 @@ export default function MinhasAprovacoes() {
         title="Minhas Aprovações"
         description="Fila de contratos aguardando sua decisão. Aprovação obrigatória antes da assinatura."
       />
+
+      <SlaAlertBanner steps={steps} />
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
         <TabsList>

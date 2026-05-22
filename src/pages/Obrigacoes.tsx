@@ -28,6 +28,7 @@ import { DataTable, DataTableColumn } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageSkeleton } from "@/components/ui/skeleton-loaders";
 import { StatCard, StatCardGrid } from "@/components/ui/stat-card";
+import { TIPO_OBRIGACAO_OPTIONS } from "@/lib/lexflow-constants";
 import { AnimatedButton } from "@/components/ui/animated-button";
 import { StaggerContainer, StaggerItem, FadeIn } from "@/components/ui/motion-container";
 import { AnimatedCard, AnimatedCardContent, AnimatedCardHeader } from "@/components/ui/animated-card";
@@ -480,11 +481,9 @@ const Obrigacoes = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os tipos</SelectItem>
-              <SelectItem value="comunicacao">Comunicação</SelectItem>
-              <SelectItem value="entrega">Entrega</SelectItem>
-              <SelectItem value="relatorio">Relatório</SelectItem>
-              <SelectItem value="renovacao">Renovação</SelectItem>
-              <SelectItem value="notificacao">Notificação</SelectItem>
+              {TIPO_OBRIGACAO_OPTIONS.map((t) => (
+                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
