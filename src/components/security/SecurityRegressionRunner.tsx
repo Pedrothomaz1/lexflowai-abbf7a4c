@@ -77,6 +77,7 @@ export function SecurityRegressionRunner() {
       toast({ title: "Erro", description: msg, variant: "destructive" });
     } finally {
       setRunning(false);
+      loadHistory();
     }
   };
 
