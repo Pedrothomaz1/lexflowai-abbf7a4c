@@ -30,10 +30,12 @@ const OrganizationSettings = () => {
 
   useEffect(() => {
     if (organization) {
+      const org = organization as typeof organization & { email_financeiro?: string | null };
       setFormData({
         nome: organization.nome || "",
         cnpj: organization.cnpj || "",
         email_contato: organization.email_contato || "",
+        email_financeiro: org.email_financeiro || "",
         telefone: organization.telefone || "",
         endereco: organization.endereco || "",
         cidade: organization.cidade || "",
