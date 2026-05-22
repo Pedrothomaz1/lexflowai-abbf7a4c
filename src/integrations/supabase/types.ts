@@ -14,6 +14,117 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_extractions: {
+        Row: {
+          campo: string
+          confianca: number | null
+          contrato_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          modelo: string | null
+          organization_id: string
+          revisado_em: string | null
+          revisado_por: string | null
+          status: string
+          trecho_origem: string | null
+          updated_at: string
+          valor_aceito: string | null
+          valor_extraido: string | null
+        }
+        Insert: {
+          campo: string
+          confianca?: number | null
+          contrato_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          modelo?: string | null
+          organization_id: string
+          revisado_em?: string | null
+          revisado_por?: string | null
+          status?: string
+          trecho_origem?: string | null
+          updated_at?: string
+          valor_aceito?: string | null
+          valor_extraido?: string | null
+        }
+        Update: {
+          campo?: string
+          confianca?: number | null
+          contrato_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          modelo?: string | null
+          organization_id?: string
+          revisado_em?: string | null
+          revisado_por?: string | null
+          status?: string
+          trecho_origem?: string | null
+          updated_at?: string
+          valor_aceito?: string | null
+          valor_extraido?: string | null
+        }
+        Relationships: []
+      }
+      ai_risk_reviews: {
+        Row: {
+          clausula: string | null
+          confianca: number | null
+          contrato_id: string
+          created_at: string
+          created_by: string | null
+          descricao: string | null
+          id: string
+          organization_id: string
+          recomendacao: string | null
+          revisado_em: string | null
+          revisado_por: string | null
+          severidade: string
+          status: string
+          tipo_risco: string | null
+          trecho_origem: string | null
+          updated_at: string
+        }
+        Insert: {
+          clausula?: string | null
+          confianca?: number | null
+          contrato_id: string
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          id?: string
+          organization_id: string
+          recomendacao?: string | null
+          revisado_em?: string | null
+          revisado_por?: string | null
+          severidade?: string
+          status?: string
+          tipo_risco?: string | null
+          trecho_origem?: string | null
+          updated_at?: string
+        }
+        Update: {
+          clausula?: string | null
+          confianca?: number | null
+          contrato_id?: string
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          id?: string
+          organization_id?: string
+          recomendacao?: string | null
+          revisado_em?: string | null
+          revisado_por?: string | null
+          severidade?: string
+          status?: string
+          tipo_risco?: string | null
+          trecho_origem?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       approval_decisions: {
         Row: {
           aprovador_id: string
