@@ -15,7 +15,7 @@ interface Props {
 type Financeiro = {
   forma_pagamento: string;
   condicao_pagamento: string;
-  qtd_parcelas: string;
+  numero_parcelas: string;
   valor_parcela: string;
   dia_vencimento: string;
   indice_reajuste: string;
@@ -31,7 +31,7 @@ type Financeiro = {
 const EMPTY: Financeiro = {
   forma_pagamento: "",
   condicao_pagamento: "",
-  qtd_parcelas: "",
+  numero_parcelas: "",
   valor_parcela: "",
   dia_vencimento: "",
   indice_reajuste: "",
@@ -56,7 +56,7 @@ export function BlocoFinanceiroPanel({ contratoId, onSaved }: Props) {
       const { data: c, error } = await supabase
         .from("contratos")
         .select(
-          "forma_pagamento,condicao_pagamento,qtd_parcelas,valor_parcela,dia_vencimento,indice_reajuste,periodicidade_reajuste,multa_atraso_pct,juros_mora_pct,dados_bancarios",
+          "forma_pagamento,condicao_pagamento,numero_parcelas,valor_parcela,dia_vencimento,indice_reajuste,periodicidade_reajuste,multa_atraso_pct,juros_mora_pct,dados_bancarios",
         )
         .eq("id", contratoId)
         .maybeSingle();
@@ -67,7 +67,7 @@ export function BlocoFinanceiroPanel({ contratoId, onSaved }: Props) {
         setData({
           forma_pagamento: c.forma_pagamento ?? "",
           condicao_pagamento: c.condicao_pagamento ?? "",
-          qtd_parcelas: c.qtd_parcelas?.toString() ?? "",
+          numero_parcelas: c.numero_parcelas?.toString() ?? "",
           valor_parcela: c.valor_parcela?.toString() ?? "",
           dia_vencimento: c.dia_vencimento?.toString() ?? "",
           indice_reajuste: c.indice_reajuste ?? "",
@@ -92,7 +92,7 @@ export function BlocoFinanceiroPanel({ contratoId, onSaved }: Props) {
     const payload = {
       forma_pagamento: data.forma_pagamento || null,
       condicao_pagamento: data.condicao_pagamento || null,
-      qtd_parcelas: data.qtd_parcelas ? Number(data.qtd_parcelas) : null,
+      numero_parcelas: data.numero_parcelas ? Number(data.numero_parcelas) : null,
       valor_parcela: data.valor_parcela ? Number(data.valor_parcela) : null,
       dia_vencimento: data.dia_vencimento ? Number(data.dia_vencimento) : null,
       indice_reajuste: data.indice_reajuste || null,
@@ -137,7 +137,7 @@ export function BlocoFinanceiroPanel({ contratoId, onSaved }: Props) {
         <div className="grid gap-4 md:grid-cols-2">
           <Field label="Forma de pagamento" value={data.forma_pagamento} onChange={set("forma_pagamento")} placeholder="boleto, pix, transferência…" />
           <Field label="Condição de pagamento" value={data.condicao_pagamento} onChange={set("condicao_pagamento")} placeholder="à vista, 30/60/90…" />
-          <Field label="Qtd. parcelas" value={data.qtd_parcelas} onChange={set("qtd_parcelas")} type="number" />
+          <Field label="Qtd. parcelas" value={data.numero_parcelas} onChange={set("numero_parcelas")} type="number" />
           <Field label="Valor da parcela (R$)" value={data.valor_parcela} onChange={set("valor_parcela")} type="number" />
           <Field label="Dia de vencimento" value={data.dia_vencimento} onChange={set("dia_vencimento")} type="number" placeholder="1-31" />
           <Field label="Índice de reajuste" value={data.indice_reajuste} onChange={set("indice_reajuste")} placeholder="IPCA, IGPM, INPC…" />
