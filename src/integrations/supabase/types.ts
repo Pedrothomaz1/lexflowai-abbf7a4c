@@ -1643,6 +1643,48 @@ export type Database = {
           },
         ]
       }
+      document_templates: {
+        Row: {
+          categoria: string | null
+          created_at: string
+          created_by: string | null
+          current_version: number
+          descricao: string | null
+          id: string
+          is_active: boolean
+          nome: string
+          organization_id: string
+          tipo: Database["public"]["Enums"]["contract_type"] | null
+          updated_at: string
+        }
+        Insert: {
+          categoria?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_version?: number
+          descricao?: string | null
+          id?: string
+          is_active?: boolean
+          nome: string
+          organization_id: string
+          tipo?: Database["public"]["Enums"]["contract_type"] | null
+          updated_at?: string
+        }
+        Update: {
+          categoria?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_version?: number
+          descricao?: string | null
+          id?: string
+          is_active?: boolean
+          nome?: string
+          organization_id?: string
+          tipo?: Database["public"]["Enums"]["contract_type"] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       enterprise_leads: {
         Row: {
           cnpj: string | null
@@ -3840,6 +3882,53 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      template_versions: {
+        Row: {
+          changelog: string | null
+          conteudo: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_published: boolean
+          organization_id: string
+          template_id: string
+          variaveis: Json
+          versao: number
+        }
+        Insert: {
+          changelog?: string | null
+          conteudo: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_published?: boolean
+          organization_id: string
+          template_id: string
+          variaveis?: Json
+          versao: number
+        }
+        Update: {
+          changelog?: string | null
+          conteudo?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_published?: boolean
+          organization_id?: string
+          template_id?: string
+          variaveis?: Json
+          versao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_versions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "document_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       unidades: {
         Row: {
