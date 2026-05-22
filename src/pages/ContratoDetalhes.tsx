@@ -55,6 +55,7 @@ import { ContractInfoCard } from "@/components/ContractDetails/ContractInfoCard"
 import { ContractAIAnalysis } from "@/components/ContractDetails/ContractAIAnalysis";
 import { ContractApprovalCard } from "@/components/ContractDetails/ContractApprovalCard";
 import { FinanceNotificationModal } from "@/components/FinanceNotificationModal";
+import { PreSignatureGuard } from "@/components/Aprovacoes/PreSignatureGuard";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { handleDbError } from "@/utils/dbErrorHandler";
@@ -730,11 +731,13 @@ const ContratoDetalhes = () => {
           </TabsContent>
 
           <TabsContent value="assinaturas">
-            <ContractSignature 
-              contratoId={contrato.id} 
-              contratoTitulo={contrato.titulo}
-              arquivoUrl={contrato.arquivo_url}
-            />
+            <PreSignatureGuard contratoId={contrato.id}>
+              <ContractSignature
+                contratoId={contrato.id}
+                contratoTitulo={contrato.titulo}
+                arquivoUrl={contrato.arquivo_url}
+              />
+            </PreSignatureGuard>
           </TabsContent>
 
           <TabsContent value="comentarios">

@@ -63,6 +63,7 @@ import { Badge } from "@/components/ui/badge";
 import { handleDbError } from "@/utils/dbErrorHandler";
 import { SuperAdminGate } from "@/components/auth/Can";
 import { ShieldAlert } from "lucide-react";
+import { useAprovacoesPendentesCount } from "@/hooks/useAprovacoes";
 
 // Interface para itens com submenus
 interface MenuItemType {
@@ -105,6 +106,7 @@ const contratosMenuSections: MenuSectionType[] = [
         roles: ["all"],
         subItems: [{ title: "Nova Franquia", url: "/franquias?nova=true", icon: Plus }],
       },
+      { title: "Minhas Aprovações", url: "/aprovacoes", icon: ShieldCheck, roles: ["all"] },
       { title: "Aprovações", url: "/workflows", icon: ShieldCheck, roles: ["all"] },
       { title: "Obrigações", url: "/obrigacoes", icon: Activity, roles: ["all"] },
       { title: "Alertas e Prazos", url: "/alertas", icon: Bell, roles: ["all"] },
@@ -557,7 +559,6 @@ function MenuItem({ item, collapsed, isActive, moduloAtivo }: MenuItemProps) {
   const Icon = item.icon;
 
   const activeStyles = "bg-[hsl(var(--lexflow-verde-principal)/0.15)] text-[hsl(var(--lexflow-verde-principal))]";
-
   const iconActiveColor = "text-[hsl(var(--lexflow-verde-principal))]";
 
   return (
@@ -577,9 +578,20 @@ function MenuItem({ item, collapsed, isActive, moduloAtivo }: MenuItemProps) {
         >
           <Icon className={cn("h-4 w-4 shrink-0", isActive && iconActiveColor)} />
           {!collapsed && <span className="flex-1">{item.title}</span>}
+          {!collapsed && item.url === "/aprovacoes" && <AprovacoesBadge />}
         </NavLink>
       </SidebarMenuButton>
     </SidebarMenuItem>
+  );
+}
+
+function AprovacoesBadge() {
+  const { data: count } = useAprovacoesPendentesCount();
+  if (!count) return null;
+  return (
+    <Badge className="h-5 min-w-5 px-1.5 text-[10px] bg-[hsl(var(--lexflow-mostarda))] text-black hover:bg-[hsl(var(--lexflow-mostarda))]">
+      {count}
+    </Badge>
   );
 }
 
