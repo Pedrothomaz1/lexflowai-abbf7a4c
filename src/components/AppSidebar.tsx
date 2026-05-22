@@ -63,6 +63,7 @@ import { Badge } from "@/components/ui/badge";
 import { handleDbError } from "@/utils/dbErrorHandler";
 import { SuperAdminGate } from "@/components/auth/Can";
 import { ShieldAlert } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { useAprovacoesPendentesCount } from "@/hooks/useAprovacoes";
 
 // Interface para itens com submenus
@@ -139,6 +140,7 @@ const contratosMenuSections: MenuSectionType[] = [
     defaultOpen: false,
     items: [
       { title: "Relatórios", url: "/relatorios", icon: BarChart3, roles: ["administrador"] },
+      { title: "Dashboard IA", url: "/dashboard-ia", icon: Sparkles, roles: ["administrador"] },
       { title: "Calendário", url: "/calendario", icon: Monitor, roles: ["all"] },
       { title: "Histórico de Ações", url: "/audit-logs", icon: Activity, roles: ["administrador"] },
       { title: "Segurança", url: "/security", icon: Shield, roles: ["administrador"] },

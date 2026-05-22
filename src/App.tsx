@@ -61,6 +61,7 @@ const ResetPassword = React.lazy(() => import("./pages/ResetPassword"));
 const AguardandoAprovacao = React.lazy(() => import("./pages/AguardandoAprovacao"));
 const ContaSuspensa = React.lazy(() => import("./pages/ContaSuspensa"));
 const SuperAdminPage = React.lazy(() => import("./pages/SuperAdmin"));
+const DashboardIA = React.lazy(() => import("./pages/DashboardIA"));
 
 // Catches chunk load failures (e.g. deploy after user session, offline)
 class AppErrorBoundary extends Component<
@@ -168,6 +169,7 @@ function App() {
                     <Route path="/settings/2fa" element={<ProtectedRoute requireOrg={false}><TwoFactorSettings /></ProtectedRoute>} />
                     <Route path="/audit-logs" element={<ProtectedRoute><DashboardLayout><AuditLogs /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/relatorios" element={<ProtectedRoute><DashboardLayout><Relatorios /></DashboardLayout></ProtectedRoute>} />
+                    <Route path="/dashboard-ia" element={<ProtectedRoute><DashboardLayout><DashboardIA /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/compliance" element={<ProtectedRoute><DashboardLayout><ComplianceLGPD /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/security" element={<ProtectedRoute><DashboardLayout><SecurityDashboard /></DashboardLayout></ProtectedRoute>} />
 
