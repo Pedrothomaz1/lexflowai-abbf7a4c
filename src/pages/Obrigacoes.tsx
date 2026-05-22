@@ -28,6 +28,7 @@ import { DataTable, DataTableColumn } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageSkeleton } from "@/components/ui/skeleton-loaders";
 import { StatCard, StatCardGrid } from "@/components/ui/stat-card";
+import { TIPO_OBRIGACAO_OPTIONS } from "@/lib/lexflow-constants";
 import { AnimatedButton } from "@/components/ui/animated-button";
 import { StaggerContainer, StaggerItem, FadeIn } from "@/components/ui/motion-container";
 import { AnimatedCard, AnimatedCardContent, AnimatedCardHeader } from "@/components/ui/animated-card";
