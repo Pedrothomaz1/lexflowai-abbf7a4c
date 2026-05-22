@@ -63,6 +63,7 @@ import { Badge } from "@/components/ui/badge";
 import { handleDbError } from "@/utils/dbErrorHandler";
 import { SuperAdminGate } from "@/components/auth/Can";
 import { ShieldAlert } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { useAprovacoesPendentesCount } from "@/hooks/useAprovacoes";
 
 // Interface para itens com submenus
