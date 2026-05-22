@@ -14,6 +14,8 @@ import { CookieBanner } from "./components/CookieBanner";
 import { PageSkeleton } from "./components/ui/skeleton-loaders";
 
 const Index = React.lazy(() => import("./pages/Index"));
+const Planos = React.lazy(() => import("./pages/Planos"));
+
 const PortalExterno = React.lazy(() => import("./pages/PortalExterno"));
 const Auth = React.lazy(() => import("./pages/Auth"));
 const Privacidade = React.lazy(() => import("./pages/Privacidade"));
@@ -128,6 +130,8 @@ function App() {
                   <Routes>
                     {/* Public routes */}
                     <Route path="/" element={<Index />} />
+                    <Route path="/planos" element={<Planos />} />
+
                     <Route path="/auth" element={<Auth />} />
                     <Route path="/auth/callback" element={<AuthCallback />} />
                     <Route path="/privacidade" element={<Privacidade />} />
