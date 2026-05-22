@@ -1,66 +1,129 @@
-# Plano: Auto-preenchimento via CNPJ em todos os cadastros
+# Plano: Painel Super Admin redesenhado + Onboarding por e-mail (7 dias)
 
-A consulta de CNPJ já funciona no cadastro de Fornecedores (`useCnpjVerification` + edge function `consultar-cnpj` usando ReceitaWS). Esta entrega leva o mesmo comportamento para os demais cadastros e para a criação inline de fornecedor dentro do fluxo de contrato.
+Duas entregas conectadas: você passa a **enxergar e operar todos os clientes em um painel executivo** (MRR, status, ativação em 1 clique) e os novos clientes recebem uma **sequência automática de e-mails nos primeiros 7 dias** para acelerar adoção e reduzir churn no trial.
 
-## O que será entregue
+---
 
-### 1. CNPJ auto-preenche em todos os formulários
+## Parte 1 — Painel Super Admin (redesign executivo)
 
-Adicionar o mesmo padrão "digita CNPJ → busca → preenche nome/endereço/telefone/e-mail" em:
+Hoje existe `/super-admin` com 4 abas funcionais mas visualmente cruas. Vamos transformar a aba principal em um **dashboard de comando** com cards de KPI grandes, gráfico de crescimento, tabela densa de clientes e ações instantâneas.
 
-- **Cadastro de Franquia** (`FranquiaForm.tsx`) — hoje pede CNPJ manualmente.
-- **Criação inline de Fornecedor dentro de Contrato** (`InlineFornecedorForm`) — hoje exige digitar tudo na hora.
-- **Cadastro de Organização** (formulário de signup / `OrganizationSettings`) — o cliente novo digita o CNPJ da própria empresa e o nome/endereço vêm prontos.
-- **Cadastro de Cliente (Super Admin → Nova Organização)** — você digita o CNPJ do cliente que comprou e o sistema já preenche.
+### KPIs no topo (cards visuais)
 
-Comportamento padrão (igual ao fornecedor):
-- Usuário digita 14 dígitos → 500ms de debounce → chama edge function.
-- Mostra spinner ao lado do campo.
-- Se ReceitaWS retornar OK: preenche nome, fantasia, endereço (logradouro, número, bairro, cidade, UF, CEP), telefone, e-mail. Campos ficam editáveis caso o usuário queira ajustar.
-- Se der erro: mostra toast amigável "CNPJ não encontrado, preencha manualmente". Não trava o formulário.
-- Cache: cada CNPJ consultado fica salvo na tabela `cnpj_verifications` (já existe) por 30 dias para evitar bater de novo na ReceitaWS.
+```text
+┌─────────────┬─────────────┬─────────────┬─────────────┐
+│   MRR       │  Clientes   │   Trial     │   Churn 30d │
+│ R$ 12.450   │   24 ativos │   5 expir.  │     2       │
+│ ▲ +18%      │   ▲ +3 mês  │   em 7 dias │   1.2%      │
+└─────────────┴─────────────┴─────────────┴─────────────┘
+```
 
-### 2. Componente reutilizável `CnpjAutoFillInput`
+- **MRR** = soma de `preço do plano × organizações ativas`. Tabela de preços nova: `plan_pricing` (plano → valor mensal). Você edita os preços direto na UI.
+- **Clientes ativos** com delta vs mês anterior.
+- **Trial expirando** = orgs com `trial_ends_at` nos próximos 7 dias.
+- **Churn 30d** = % de orgs suspensas/canceladas no período.
 
-Criar um único componente em `src/components/ui/cnpj-autofill-input.tsx` que encapsula: input com máscara + busca automática + callback `onDataFetched(data)`. Os 4 formulários acima passam a usar esse componente, eliminando código duplicado.
+### Tabela "Clientes" (visão única)
 
-### 3. CPF — validação local apenas
+Substitui a aba Organizações atual por uma tabela mais informativa:
 
-Para campos de CPF (cadastro de fornecedor pessoa física, contraparte, responsável), manter o componente atual `DocumentInput` com validação de dígito verificador. **Não** integrar API paga agora. Adicionar pequena nota no campo: "Preencha manualmente — CPF não pode ser consultado por API gratuita."
+| Cliente | Plano | MRR | Status | Membros | Último login | Ações |
+|---|---|---|---|---|---|---|
+| Empresa X | Pro | R$ 497 | 🟢 Ativa | 8/10 | 2h atrás | ⋯ |
 
-Quando você quiser ativar Serpro (R$/consulta) no futuro, basta criar uma edge function `consultar-cpf` análoga e plugar no mesmo padrão.
+Ações em 1 clique no menu `⋯` ou inline:
+- **Ativar** (se pendente)
+- **Suspender** (abre dialog com motivo)
+- **Reativar** (se suspensa)
+- **Trocar plano** (dropdown inline)
+- **Ver detalhes** (drawer lateral com tudo da org)
+- **Acessar como** (impersonation — abre sessão da org em nova aba) — *opcional, marca como TODO se quiser revisar segurança antes*
 
-### 4. Limite de uso da ReceitaWS
+Filtros no topo: busca, status, plano. Ordenação por MRR / data / nome.
 
-ReceitaWS gratuita = 3 consultas/minuto por IP. Para evitar bloqueio quando vários clientes consultarem ao mesmo tempo:
-- Edge function já trata HTTP 429 e devolve mensagem amigável.
-- Cache de 30 dias na tabela `cnpj_verifications` reduz drasticamente o nº de chamadas reais.
-- Se virar gargalo no futuro, troca para **BrasilAPI** (também gratuita, mesma resposta, sem limite agressivo) com 1 linha de mudança na edge function.
+### Gráfico de crescimento
+
+Linha simples (recharts) com novos clientes / MRR ao longo dos últimos 6 meses. Coloca contexto visual no que a tabela mostra.
+
+### Drawer de detalhes do cliente
+
+Ao clicar em um cliente, abre painel lateral com:
+- Dados da empresa (nome, CNPJ, plano, status, datas)
+- Lista de membros e roles
+- Métricas de uso (nº contratos, fornecedores, último login)
+- Histórico de mudanças (ativações, suspensões, trocas de plano)
+- Botão "Enviar e-mail para o admin" (manual)
+
+---
+
+## Parte 2 — Onboarding por e-mail (7 dias)
+
+Sequência automática que dispara quando uma organização é criada. Todos os e-mails são personalizados com nome do admin + nome da empresa + link contextual.
+
+### Cronograma da sequência
+
+| Dia | E-mail | Objetivo |
+|---|---|---|
+| **0** (na hora) | "Bem-vindo ao LexFlow, {nome}" | Confirmar acesso + 3 primeiros passos (cadastrar 1ª empresa, 1º fornecedor, 1º contrato). CTA: entrar. |
+| **1** | "Cadastre seu primeiro contrato em 3 minutos" | Tutorial curto com vídeo/print + link direto. |
+| **3** | "Dica: receba alertas antes do vencimento" | Mostrar o módulo de alertas + WhatsApp + sino. |
+| **5** | "Como sua equipe aproveita melhor o LexFlow" | Convidar membros + permissões + papéis. |
+| **7** | "Como está sendo até aqui?" | Pedido de feedback + link para falar com suporte / agendar call. |
+
+### Como funciona por baixo
+
+- Tabela nova `onboarding_email_log` (organization_id, user_id, email, step 0–7, sent_at, status). Garante idempotência — cada passo só vai 1 vez por org.
+- Cron diário novo `cron-onboarding-emails` roda 09:00 BRT, varre orgs ativas criadas nos últimos 7 dias, e para cada uma envia o e-mail correspondente ao dia (D+0, D+1, D+3, D+5, D+7) que ainda não foi enviado.
+- Templates HTML branded LexFlow (paleta verde/mostarda, mesma do app, fundo branco). Cada e-mail tem rodapé com link de descadastro do onboarding (não desliga alertas operacionais).
+- E-mail D+0 é disparado **na hora** ao criar a org (via `super-admin-create-client-org` que já existe), os demais ficam por conta do cron.
+- Usa o `RESEND_API_KEY` já configurado (mesma infra dos outros e-mails).
+
+### Controle do dono da plataforma (você)
+
+Na aba "Onboarding" do Super Admin:
+- Ver quem está em qual passo da sequência.
+- Pré-visualizar cada template.
+- Pausar/reativar a sequência inteira (kill switch).
+- Reenviar manualmente um passo específico para um cliente.
+
+---
 
 ## Detalhes técnicos
 
-### Arquivos novos
-- `src/components/ui/cnpj-autofill-input.tsx` — componente reutilizável.
+### Banco de dados
 
-### Arquivos alterados
-- `src/components/Franquias/FranquiaForm.tsx` — substituir input de CNPJ pelo novo componente.
-- `src/components/Fornecedores/InlineFornecedorForm.tsx` — idem.
-- `src/pages/OrganizationSettings.tsx` — idem no campo de CNPJ da própria organização.
-- `src/pages/SuperAdmin/OrganizacoesTab.tsx` — no diálogo "Nova Organização Cliente".
-- (Opcional) Refatorar `FornecedorForm.tsx` para usar o mesmo componente, eliminando duplicação.
+- **`plan_pricing`** — `plano` (PK), `nome_exibicao`, `preco_mensal_centavos`, `ativo`. Seed: free=0, pro=49700, enterprise=149700. RLS: leitura para autenticados, escrita só super admin.
+- **`onboarding_email_log`** — `id`, `organization_id`, `user_id`, `email`, `step` (0,1,3,5,7), `sent_at`, `status`, `error_message`. Unique em (org, step). RLS: super admin only.
+- **`onboarding_settings`** — single-row config: `enabled` (kill switch global). RLS: super admin only.
+- Função `calculate_mrr()` retorna soma de preço × orgs ativas por plano.
 
-### Sem mudanças
-- Edge function `consultar-cnpj` — já funciona e está em produção.
-- Tabela `cnpj_verifications` — já existe e já cacheia.
-- Hook `useCnpjVerification` — vira base do novo componente.
+### Edge functions
 
-### Sem mudanças de banco
-Nenhuma migration nesta entrega.
+- **`cron-onboarding-emails`** (nova) — roda 09:00 BRT diário. Para cada org elegível, monta e envia template via Resend e grava log.
+- **`super-admin-create-client-org`** (existente) — adicionar dispatch do e-mail D+0 ao final.
+- **`super-admin-toggle-org-status`** (nova) — wrap das ações ativar/suspender/reativar com auditoria.
 
-## Fora de escopo
-- Integração de API paga de CPF (fica documentada para o futuro).
-- Migração para Supabase próprio (respondida em chat — só fazer quando houver motivo concreto).
-- Painel Super Admin reforçado e fluxo de boas-vindas por e-mail (plano anterior, fica em standby até você decidir a ordem).
+### Frontend
 
-## Estimativa
-~30 min de implementação. 1 commit.
+- `src/pages/SuperAdmin/DashboardTab.tsx` — nova aba "Dashboard" como default, com KPIs + gráfico + tabela compacta de top clientes.
+- `src/pages/SuperAdmin/ClientesTab.tsx` — substitui `OrganizacoesTab` (tabela densa + filtros + drawer de detalhes + ações 1-clique).
+- `src/pages/SuperAdmin/OnboardingTab.tsx` — nova aba com lista de orgs × progresso da sequência + preview de templates + kill switch.
+- `src/pages/SuperAdmin/PrecosTab.tsx` — nova aba para editar `plan_pricing` (você ajusta preços e o MRR recalcula).
+- `src/components/SuperAdmin/ClientDrawer.tsx` — drawer lateral com detalhes do cliente.
+- `src/components/SuperAdmin/KpiCard.tsx` — card de KPI reutilizável com delta e ícone.
+- `src/components/SuperAdmin/MrrChart.tsx` — gráfico recharts de evolução.
+
+### Estética (skill frontend-design aplicada)
+
+- Layout: dashboard estilo "comando" — KPIs grandes em grid 4-col no desktop, 2-col no mobile.
+- Tipografia: heading Sora/Manrope (já no design system), números MRR em destaque tabular (`font-variant-numeric: tabular-nums`).
+- Cor: verde primário LexFlow para "saudável" (ativa, crescendo), mostarda para "atenção" (trial expirando, pendente), vermelho para "ação urgente" (suspensa, churn).
+- Microinteração: cards de KPI com hover sutil (shadow lift), badges de status com bolinha pulsante para "ativa".
+- Densidade: tabela com linhas de 56px, zebra leve, ações inline aparecem no hover da linha (não poluem o estado padrão).
+- Drawer: slide-in da direita com 480px de largura, conteúdo organizado em seções colapsáveis.
+
+### Fora de escopo
+
+- Cobrança real / Stripe / Paddle — MRR é **calculado** a partir do plano configurado, não vem de gateway. Quando ativar pagamento, o valor vira fonte de verdade.
+- Página pública de planos — continua fora.
+- Impersonation ("acessar como cliente") — listado como TODO, implementamos só se você quiser depois (precisa revisão de segurança).
