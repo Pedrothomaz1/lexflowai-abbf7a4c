@@ -264,7 +264,17 @@ export const ProtectedRoute = ({
         return <Navigate to="/waiting-for-invite" replace />;
       }
     }
+
+    // Onboarding redirect — only when org is active and user hasn't completed it
+    if (
+      hasOrganization &&
+      onboardingDone === false &&
+      location.pathname !== "/onboarding"
+    ) {
+      return <Navigate to="/onboarding" replace />;
+    }
   }
+
 
   // Check permission
   if (requiredPermission && hasPermission === false) {
