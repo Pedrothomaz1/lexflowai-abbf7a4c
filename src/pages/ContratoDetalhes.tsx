@@ -223,7 +223,7 @@ const ContratoDetalhes = () => {
     }
   };
 
-  const handleAnalisarIA = async () => {
+  const handleAnalisarIA = async (skill: "auto" | "full" | "contract-review" | "nda-triage" | "risk-assessment" | "compliance" = "auto") => {
     if (!contrato) return;
 
     setIsAnalyzing(true);
@@ -238,15 +238,15 @@ const ContratoDetalhes = () => {
       `;
 
       const { data, error } = await supabase.functions.invoke("analisar-contrato-ia", {
-        body: { contratoId: contrato.id, conteudo },
+        body: { contratoId: contrato.id, conteudo, skill },
       });
 
       if (error) throw error;
 
       if (data.success) {
         toast({
-          title: "Análise concluída!",
-          description: "O contrato foi analisado com sucesso pela IA.",
+          title: "Análise concluída",
+          description: `Skill aplicada: ${data.skill ?? skill}`,
         });
         setAnalise(data.analise);
         setShowAnalise(true);
