@@ -63,6 +63,7 @@ import { NegotiationThread } from "@/components/Negociacao/NegotiationThread";
 import { AssistenteIA } from "@/components/IA/AssistenteIA";
 import { RevisaoExtracoesPanel } from "@/components/IA/RevisaoExtracoesPanel";
 import { PortalContraparteDialog } from "@/components/Portal/PortalContraparteDialog";
+import { PortalLinksPanel } from "@/components/Portal/PortalLinksPanel";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { handleDbError } from "@/utils/dbErrorHandler";
@@ -814,6 +815,7 @@ const ContratoDetalhes = () => {
             <div className="flex justify-end">
               <PortalContraparteDialog contratoId={contrato.id} />
             </div>
+            <PortalLinksPanel contratoId={contrato.id} />
             <NegotiationThread contratoId={contrato.id} />
             <NegotiationMetrics contratoId={contrato.id} />
           </TabsContent>
