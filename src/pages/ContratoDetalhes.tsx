@@ -715,8 +715,7 @@ const ContratoDetalhes = () => {
             <TabsTrigger value="aprovacoes">Aprovações</TabsTrigger>
             <TabsTrigger value="assinaturas">Assinaturas</TabsTrigger>
             <TabsTrigger value="comentarios">Comentários</TabsTrigger>
-            <TabsTrigger value="redlining">Redlining</TabsTrigger>
-            <TabsTrigger value="versoes">Versões</TabsTrigger>
+            <TabsTrigger value="revisoes">Revisões</TabsTrigger>
             <TabsTrigger value="negociacao">Negociação</TabsTrigger>
             <TabsTrigger value="revisao-ia">Revisão IA</TabsTrigger>
             <TabsTrigger value="ia">Assistente IA</TabsTrigger>
