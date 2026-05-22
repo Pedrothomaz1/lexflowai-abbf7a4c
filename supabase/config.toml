@@ -71,3 +71,6 @@ verify_jwt = false
 
 [functions.security-regression-runner]
 verify_jwt = false
+
+[functions.cron-lexflow-diario]
+verify_jwt = false
