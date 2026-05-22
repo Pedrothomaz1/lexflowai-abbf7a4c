@@ -626,8 +626,7 @@ const ContratoDetalhes = () => {
             </AnimatedCard>
           </StaggerItem>
 
-          {/* (closing for cards below restored) */}
-          <></>
+
 
 
           {/* Supplier Card */}
