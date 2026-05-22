@@ -33,6 +33,7 @@ import { exportContratoDetalhePDF } from "@/utils/pdfExport";
 import { ContractComments } from "@/components/ContractComments";
 import { ContractSignature } from "@/components/ContractSignature";
 import { ZapsignPanel } from "@/components/Assinaturas/ZapsignPanel";
+import { PacoteFinalCard } from "@/components/Assinaturas/PacoteFinalCard";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion, AnimatePresence } from "framer-motion";
@@ -736,7 +737,12 @@ const ContratoDetalhes = () => {
             </AnimatedCard>
           </TabsContent>
 
-          <TabsContent value="assinaturas">
+          <TabsContent value="assinaturas" className="space-y-4">
+            <PacoteFinalCard
+              pacoteFinalUrl={(contrato as any).pacote_final_url ?? null}
+              pacoteFinalHash={(contrato as any).pacote_final_hash ?? null}
+              congeladoEm={(contrato as any).pacote_final_congelado_at ?? null}
+            />
             <PreSignatureGuard contratoId={contrato.id}>
               <ZapsignPanel contratoId={contrato.id} arquivoUrl={contrato.arquivo_url} />
             </PreSignatureGuard>
