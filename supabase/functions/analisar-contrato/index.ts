@@ -304,11 +304,7 @@ serve(async (req) => {
       }
     }
 
-    // Extrair dados do tool call
-    const toolCall = aiResponse.choices?.[0]?.message?.tool_calls?.[0];
-    if (toolCall && toolCall.function?.arguments) {
-      const extractedData = JSON.parse(toolCall.function.arguments);
-
+    if (extractedData) {
       return new Response(
         JSON.stringify({
           success: true,
