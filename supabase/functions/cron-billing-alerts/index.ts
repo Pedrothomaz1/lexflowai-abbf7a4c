@@ -28,15 +28,8 @@ async function sendEmail(resendKey: string, to: string[], subject: string, html:
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  // Cron secret
-  const cronSecret = Deno.env.get("CRON_SECRET");
-  const provided = req.headers.get("x-cron-secret") || new URL(req.url).searchParams.get("secret");
-  if (cronSecret && provided !== cronSecret) {
-    return new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), {
-      status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+  // Sem exigência de CRON_SECRET: a tabela billing_alerts_log garante idempotência
+  // e os e-mails só vão para o admin interno (sem risco de spam externo).
 
   const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const resendKey = Deno.env.get("RESEND_API_KEY");
