@@ -24,7 +24,7 @@ serve(async (req) => {
     const { data: { user } } = await supabase.auth.getUser(auth.replace('Bearer ', ''));
     if (!user) return json({ ok: false, error: 'Unauthorized' }, 401);
 
-    const { contratoId, contraparteEmail, contraparteNome, escopo = 'view', validadeDias = 14 } = await req.json().catch(() => ({}));
+    const { contratoId, contraparteEmail, contraparteNome, escopo = 'view', validadeDias = 14, enviarEmail = true, mensagem } = await req.json().catch(() => ({}));
     if (!contratoId || !UUID_REGEX.test(contratoId)) return json({ ok: false, error: 'contratoId inválido' });
     if (!contraparteEmail || !EMAIL_REGEX.test(contraparteEmail)) return json({ ok: false, error: 'E-mail inválido' });
     if (!['view', 'comment', 'sign'].includes(escopo)) return json({ ok: false, error: 'Escopo inválido' });
@@ -56,7 +56,59 @@ serve(async (req) => {
     const origin = req.headers.get('origin') || req.headers.get('referer') || 'https://lexflowai.com.br';
     const url = `${new URL(origin).origin}/portal/${token}`;
 
-    return json({ ok: true, token: saved, url });
+    // Send email via Resend
+    let emailStatus: { sent: boolean; error?: string } = { sent: false };
+    if (enviarEmail) {
+      const resendKey = Deno.env.get('RESEND_API_KEY');
+      if (!resendKey) {
+        emailStatus = { sent: false, error: 'RESEND_API_KEY não configurada' };
+      } else {
+        try {
+          const escopoLabel = escopo === 'sign' ? 'visualizar, comentar e assinar' : escopo === 'comment' ? 'visualizar e comentar' : 'visualizar';
+          const nomeContrato = contrato.titulo || contrato.numero_contrato || 'Contrato';
+          const saudacao = contraparteNome ? `Olá, ${contraparteNome}` : 'Olá';
+          const mensagemCustom = mensagem ? `<p style="margin:0 0 16px;color:#374151;font-size:14px;line-height:1.6;white-space:pre-wrap">${escapeHtml(mensagem)}</p>` : '';
+          const html = `<!doctype html><html><body style="margin:0;background:#ffffff;font-family:-apple-system,Segoe UI,Arial,sans-serif">
+<div style="max-width:560px;margin:0 auto;padding:32px 24px">
+  <h1 style="font-size:20px;color:#111827;margin:0 0 16px">LexFlow — Acesso ao contrato</h1>
+  <p style="margin:0 0 12px;color:#374151;font-size:14px;line-height:1.6">${saudacao},</p>
+  <p style="margin:0 0 16px;color:#374151;font-size:14px;line-height:1.6">Você recebeu acesso ao contrato <strong>${escapeHtml(nomeContrato)}</strong> para <strong>${escopoLabel}</strong>. O link expira em ${validadeDias} dias.</p>
+  ${mensagemCustom}
+  <p style="margin:24px 0"><a href="${url}" style="background:#0f5132;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:600;font-size:14px;display:inline-block">Acessar contrato</a></p>
+  <p style="margin:16px 0 0;color:#6b7280;font-size:12px;word-break:break-all">Se o botão não funcionar, copie o link: ${url}</p>
+  <hr style="border:none;border-top:1px solid #e5e7eb;margin:32px 0" />
+  <p style="margin:0;color:#9ca3af;font-size:11px">Enviado por LexFlow. Não responda a este e-mail.</p>
+</div></body></html>`;
+
+          const resp = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${resendKey}` },
+            body: JSON.stringify({
+              from: 'LexFlow <onboarding@resend.dev>',
+              to: [contraparteEmail.toLowerCase()],
+              subject: `LexFlow — Acesso ao contrato ${nomeContrato}`,
+              html,
+            }),
+          });
+          if (!resp.ok) {
+            const txt = await resp.text();
+            emailStatus = { sent: false, error: `Resend ${resp.status}: ${txt.slice(0, 200)}` };
+          } else {
+            emailStatus = { sent: true };
+            await supabase.from('portal_externo_eventos').insert({
+              organization_id: contrato.organization_id,
+              token_id: saved.id,
+              tipo: 'email_enviado',
+              metadata: { destinatario: contraparteEmail.toLowerCase() },
+            });
+          }
+        } catch (e) {
+          emailStatus = { sent: false, error: e instanceof Error ? e.message : 'Erro envio' };
+        }
+      }
+    }
+
+    return json({ ok: true, token: saved, url, email: emailStatus });
   } catch (e) {
     console.error(e);
     return json({ ok: false, error: e instanceof Error ? e.message : 'Erro' }, 500);
