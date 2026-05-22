@@ -1234,6 +1234,7 @@ export type Database = {
           data_necessidade: string | null
           departamento: string
           descricao: string
+          form_version_id: string | null
           fornecedor_sugerido: string | null
           id: string
           ip_address: string | null
@@ -1241,6 +1242,7 @@ export type Database = {
           numero_requisicao: string
           observacoes_analise: string | null
           organization_id: string | null
+          respostas: Json | null
           solicitante_email: string
           solicitante_nome: string
           solicitante_telefone: string | null
@@ -1260,6 +1262,7 @@ export type Database = {
           data_necessidade?: string | null
           departamento: string
           descricao: string
+          form_version_id?: string | null
           fornecedor_sugerido?: string | null
           id?: string
           ip_address?: string | null
@@ -1267,6 +1270,7 @@ export type Database = {
           numero_requisicao: string
           observacoes_analise?: string | null
           organization_id?: string | null
+          respostas?: Json | null
           solicitante_email: string
           solicitante_nome: string
           solicitante_telefone?: string | null
@@ -1286,6 +1290,7 @@ export type Database = {
           data_necessidade?: string | null
           departamento?: string
           descricao?: string
+          form_version_id?: string | null
           fornecedor_sugerido?: string | null
           id?: string
           ip_address?: string | null
@@ -1293,6 +1298,7 @@ export type Database = {
           numero_requisicao?: string
           observacoes_analise?: string | null
           organization_id?: string | null
+          respostas?: Json | null
           solicitante_email?: string
           solicitante_nome?: string
           solicitante_telefone?: string | null
@@ -1323,6 +1329,13 @@ export type Database = {
             columns: ["contrato_id"]
             isOneToOne: false
             referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_requests_form_version_id_fkey"
+            columns: ["form_version_id"]
+            isOneToOne: false
+            referencedRelation: "request_form_versions"
             referencedColumns: ["id"]
           },
           {
@@ -3252,6 +3265,103 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "super_admin_organizations_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      request_form_versions: {
+        Row: {
+          changelog: string | null
+          created_at: string
+          created_by: string | null
+          form_id: string
+          id: string
+          is_published: boolean
+          organization_id: string
+          schema_campos: Json
+          versao: number
+        }
+        Insert: {
+          changelog?: string | null
+          created_at?: string
+          created_by?: string | null
+          form_id: string
+          id?: string
+          is_published?: boolean
+          organization_id: string
+          schema_campos?: Json
+          versao: number
+        }
+        Update: {
+          changelog?: string | null
+          created_at?: string
+          created_by?: string | null
+          form_id?: string
+          id?: string
+          is_published?: boolean
+          organization_id?: string
+          schema_campos?: Json
+          versao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "request_form_versions_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "request_forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      request_forms: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          current_version: number
+          descricao: string | null
+          escopo_area: string | null
+          escopo_tipo: Database["public"]["Enums"]["contract_type"] | null
+          id: string
+          is_active: boolean
+          nome: string
+          organization_id: string
+          updated_at: string
+          workflow_definition_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          current_version?: number
+          descricao?: string | null
+          escopo_area?: string | null
+          escopo_tipo?: Database["public"]["Enums"]["contract_type"] | null
+          id?: string
+          is_active?: boolean
+          nome: string
+          organization_id: string
+          updated_at?: string
+          workflow_definition_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          current_version?: number
+          descricao?: string | null
+          escopo_area?: string | null
+          escopo_tipo?: Database["public"]["Enums"]["contract_type"] | null
+          id?: string
+          is_active?: boolean
+          nome?: string
+          organization_id?: string
+          updated_at?: string
+          workflow_definition_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "request_forms_workflow_definition_id_fkey"
+            columns: ["workflow_definition_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_definitions"
             referencedColumns: ["id"]
           },
         ]
