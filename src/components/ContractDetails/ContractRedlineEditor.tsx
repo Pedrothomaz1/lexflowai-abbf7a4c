@@ -15,7 +15,9 @@ import {
   CheckCheck,
   XCircle,
   Eye,
-  EyeOff
+  EyeOff,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -80,6 +82,28 @@ export function ContractRedlineEditor({ contratoId, conteudoOriginal = "" }: Con
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(conteudoOriginal);
   const [showChanges, setShowChanges] = useState(true);
+  const [iaLoading, setIaLoading] = useState(false);
+
+  const handleSugerirIA = async () => {
+    if (!conteudoOriginal || conteudoOriginal.trim().length < 50) {
+      toast.error("Contrato sem texto suficiente para a IA analisar.");
+      return;
+    }
+    setIaLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("ia-redline-sugerir", {
+        body: { contratoId, conteudo: conteudoOriginal },
+      });
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error || "Falha na sugestão da IA");
+      toast.success(`IA gerou ${data.total_alteracoes} alteração(ões) como rascunho.`);
+      queryClient.invalidateQueries({ queryKey: ['contract-redlines', contratoId] });
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao chamar a IA");
+    } finally {
+      setIaLoading(false);
+    }
+  };
 
   // Fetch existing redlines
   const { data: redlines, isLoading } = useQuery({
@@ -295,6 +319,18 @@ export function ContractRedlineEditor({ contratoId, conteudoOriginal = "" }: Con
             >
               {showChanges ? <EyeOff className="h-4 w-4 mr-1" /> : <Eye className="h-4 w-4 mr-1" />}
               {showChanges ? 'Ocultar' : 'Mostrar'} Alterações
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleSugerirIA}
+              disabled={iaLoading || isEditing}
+              title="Gera uma versão revisada com marcações automáticas como rascunho"
+            >
+              {iaLoading
+                ? <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                : <Sparkles className="h-4 w-4 mr-1" />}
+              Sugerir com IA
             </Button>
             {!isEditing ? (
               <Button onClick={() => setIsEditing(true)}>
