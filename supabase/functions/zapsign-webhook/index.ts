@@ -58,7 +58,13 @@ serve(async (req) => {
     if (provided !== SECRET) return json(401, { ok: false, error: "Invalid secret" });
 
     const admin = createClient(SUPABASE_URL, SERVICE);
-    const payload = await req.json().catch(() => ({} as any));
+    const rawPayload = await req.json().catch(() => ({} as any));
+    const parsedPayload = PayloadSchema.safeParse(rawPayload);
+    if (!parsedPayload.success) {
+      console.warn("zapsign-webhook payload inválido", parsedPayload.error.flatten().fieldErrors);
+      return json(400, { ok: false, error: "Invalid payload" });
+    }
+    const payload = parsedPayload.data as any;
     console.log("zapsign-webhook payload", JSON.stringify(payload).slice(0, 800));
 
     const eventType: string = payload?.event_type || payload?.event || "evento";
