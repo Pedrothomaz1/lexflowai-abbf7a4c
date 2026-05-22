@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { CheckCircle2, Ban, RefreshCw, Search, Building2, Plus, Copy } from "lucide-react";
+import { CheckCircle2, Ban, RefreshCw, Search, Building2, Plus, Copy, LogIn } from "lucide-react";
+import { ImpersonateDialog } from "@/components/SuperAdmin/ImpersonateDialog";
 import { Label } from "@/components/ui/label";
 import { CnpjAutoFillInput } from "@/components/ui/cnpj-autofill-input";
 import { toast } from "sonner";
@@ -57,6 +58,7 @@ export default function OrganizacoesTab() {
   });
   const [createdInviteUrl, setCreatedInviteUrl] = useState<string | null>(null);
   const [createdEmailSent, setCreatedEmailSent] = useState(false);
+  const [impersonateOrg, setImpersonateOrg] = useState<OrgRow | null>(null);
 
   const resetCreate = () => {
     setNewOrg({ nome: "", cnpj: "", owner_email: "", owner_nome: "", plano: "pro", telefone: "", cidade: "", estado: "" });
@@ -242,6 +244,16 @@ export default function OrganizacoesTab() {
                           Aprovar
                         </Button>
                       )}
+                      {org.status === "ativa" && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => setImpersonateOrg(org)}
+                        >
+                          <LogIn className="h-3.5 w-3.5 mr-1" />
+                          Acessar como
+                        </Button>
+                      )}
                       {org.status !== "suspensa" && org.status !== "cancelada" && (
                         <Button
                           size="sm"
@@ -376,6 +388,13 @@ export default function OrganizacoesTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ImpersonateDialog
+        open={!!impersonateOrg}
+        onOpenChange={(v) => !v && setImpersonateOrg(null)}
+        orgId={impersonateOrg?.id || null}
+        orgNome={impersonateOrg?.nome || null}
+      />
     </Card>
   );
 }

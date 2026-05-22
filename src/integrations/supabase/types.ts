@@ -2347,6 +2347,51 @@ export type Database = {
           },
         ]
       }
+      impersonation_logs: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          id: string
+          ip: string | null
+          motivo: string
+          started_at: string
+          super_admin_id: string
+          target_organization_id: string | null
+          target_organization_nome: string | null
+          target_user_email: string
+          target_user_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          ip?: string | null
+          motivo: string
+          started_at?: string
+          super_admin_id: string
+          target_organization_id?: string | null
+          target_organization_nome?: string | null
+          target_user_email: string
+          target_user_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          ip?: string | null
+          motivo?: string
+          started_at?: string
+          super_admin_id?: string
+          target_organization_id?: string | null
+          target_organization_nome?: string | null
+          target_user_email?: string
+          target_user_id?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       incident_playbooks: {
         Row: {
           created_at: string | null
