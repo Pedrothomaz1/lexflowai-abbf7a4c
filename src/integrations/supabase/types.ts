@@ -1439,6 +1439,9 @@ export type Database = {
           numero_contrato: string
           observacoes: string | null
           organization_id: string
+          pacote_final_congelado_at: string | null
+          pacote_final_hash: string | null
+          pacote_final_url: string | null
           renovacao_automatica: boolean | null
           status: Database["public"]["Enums"]["contract_status"]
           tags: string[] | null
@@ -1466,6 +1469,9 @@ export type Database = {
           numero_contrato: string
           observacoes?: string | null
           organization_id: string
+          pacote_final_congelado_at?: string | null
+          pacote_final_hash?: string | null
+          pacote_final_url?: string | null
           renovacao_automatica?: boolean | null
           status?: Database["public"]["Enums"]["contract_status"]
           tags?: string[] | null
@@ -1493,6 +1499,9 @@ export type Database = {
           numero_contrato?: string
           observacoes?: string | null
           organization_id?: string
+          pacote_final_congelado_at?: string | null
+          pacote_final_hash?: string | null
+          pacote_final_url?: string | null
           renovacao_automatica?: boolean | null
           status?: Database["public"]["Enums"]["contract_status"]
           tags?: string[] | null
