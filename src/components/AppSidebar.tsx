@@ -217,7 +217,6 @@ const servicosMenuSections: MenuSectionType[] = [
 const roleLabels: Record<string, string> = {
   administrador: "Administrador",
   analista_juridico: "Analista Jurídico",
-  consultoria_juridica: "Consultoria Jurídica",
 };
 
 export function AppSidebar() {
