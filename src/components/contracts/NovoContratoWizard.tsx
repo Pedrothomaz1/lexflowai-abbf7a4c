@@ -148,33 +148,55 @@ export function NovoContratoWizard({
       // guarda o path para reaproveitar ao salvar
       (file as any).__tempPath = tempPath;
 
-      // analisar datas
+      // analisar contrato (datas + demais campos)
       try {
         const { data: dt } = await supabase.functions.invoke("analisar-contrato", {
           body: { fileUrl: tempPath },
         });
         if (dt?.success) {
+          // tentar mapear fornecedor pelo nome
+          let matchedFornecedorId = "";
+          if (dt.fornecedor_nome && fornecedores.length > 0) {
+            const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+            const target = norm(dt.fornecedor_nome);
+            const found = fornecedores.find((f) => {
+              const n = norm(f.nome);
+              return n === target || n.includes(target) || target.includes(n);
+            });
+            if (found) matchedFornecedorId = found.id;
+          }
+
           setFormData((p) => ({
             ...p,
             data_inicio: dt.data_inicio || p.data_inicio,
             data_fim: dt.data_fim || p.data_fim,
+            titulo: dt.titulo || p.titulo,
+            descricao: dt.descricao || p.descricao,
+            tipo: dt.tipo || p.tipo,
+            valor_total: dt.valor_total || p.valor_total,
+            moeda: dt.moeda || p.moeda,
+            fornecedor_id: matchedFornecedorId || p.fornecedor_id,
           }));
+
+          const partes: string[] = [];
+          if (dt.data_inicio || dt.data_fim) partes.push("datas");
+          if (dt.titulo) partes.push("título");
+          if (dt.valor_total) partes.push("valor");
+          if (dt.tipo) partes.push("tipo");
+          if (matchedFornecedorId) partes.push("fornecedor");
+          else if (dt.fornecedor_nome) partes.push(`fornecedor sugerido: "${dt.fornecedor_nome}" (não encontrado — selecione manualmente)`);
+
+          setExtractionNote(
+            partes.length > 0
+              ? `Extraído: ${partes.join(", ")}. Revise antes de salvar.`
+              : "Extração concluída sem campos identificáveis. Preencha manualmente."
+          );
+        } else {
+          setExtractionNote("Não foi possível extrair dados. Preencha manualmente.");
         }
       } catch (e) {
         console.warn("analisar-contrato falhou:", e);
-      }
-
-      // tentar extrair campos (só funciona com texto >= 50 chars)
-      if (texto && texto.length >= 50) {
-        try {
-          // Cria contrato temporário? não — função exige contrato_id. Pulamos por ora.
-          // Apenas exibimos mensagem ao usuário.
-          setExtractionNote("Datas extraídas. Após criar o rascunho, rode a Revisão IA para extrair os demais campos.");
-        } catch (e) {
-          console.warn("ia-extrair-campos falhou:", e);
-        }
-      } else {
-        setExtractionNote("Datas extraídas. Os demais campos podem ser revisados manualmente. A análise IA completa estará disponível após salvar o rascunho.");
+        setExtractionNote("Falha na extração IA. Preencha manualmente.");
       }
     } finally {
       setExtracting(false);
