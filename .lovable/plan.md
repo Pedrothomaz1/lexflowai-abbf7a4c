@@ -1,43 +1,67 @@
-# Workflow #7 — Export, validação e auditoria
+# Plano: Painel do Dono do SaaS + Onboarding por E-mail
 
-Três entregas sobre a tela `/contratos/:id/workflow` e o editor de regras.
+Você quer operar como dono de um SaaS multi-tenant: enxergar todos os clientes em um lugar, ativar/cortar acesso rápido, e dar boas-vindas automáticas pra cada cliente novo. Hoje já existe um Painel Super Admin básico (`/super-admin`) e funções de aprovar/suspender. Esta entrega completa o que falta.
 
-## 1. Exportar histórico em PDF e Excel
+## O que será entregue
 
-Na tela `ContratoWorkflow`, adicionar dois botões no cabeçalho ("Exportar PDF" e "Exportar Excel") que geram o histórico do `workflow_run` corrente — etapas, decisão, regra aplicada, responsável, horários, SLA e comentário.
+### 1. Painel Super Admin reforçado (`/super-admin`)
+Aprimorar as abas existentes (Organizações, Usuários, Métricas):
 
-- Usa libs já instaladas: `jspdf` + `jspdf-autotable` e `exceljs`.
-- Resolve nomes dos responsáveis via consulta em `profiles` por `id IN (executado_por…)`.
-- Arquivos: `workflow-<numero_contrato>.pdf` e `.xlsx`.
+- **Métricas executivas (nova versão da aba)**: cards com Total de clientes, Ativos, Em trial, Suspensos, Receita mensal estimada (MRR baseada no plano de cada org), Usuários totais, Novas nos últimos 7/30 dias, Clientes inativos (sem login há 30+ dias).
+- **Breakdown por plano**: quantos clientes em Free, Pro, Business, Enterprise — com receita estimada por faixa.
+- **Aba "Saúde dos clientes"** (nova): tabela ordenável com último login do admin, nº de contratos cadastrados nos últimos 30 dias, status (engajado / em risco / inativo). Pra você bater na porta antes do cliente cancelar.
+- **Aba Organizações melhorada**: filtros por plano e status, busca por nome/CNPJ, ações em 1 clique (aprovar, suspender, reativar, mudar plano), e botão "Reenviar convite" caso o admin não tenha aceitado ainda.
 
-## 2. Validação no editor de regras condicionais
+### 2. Fluxo de boas-vindas automatizado por e-mail
+Quando uma organização passa para status `ativa`, o sistema dispara automaticamente:
 
-Estender `ConditionalRulesEditor` com função `validateRulesForStage` que detecta:
+- **E-mail 1 — Boas-vindas (imediato)**: confirma ativação, link de login, credenciais do primeiro admin, prazos do plano contratado.
+- **E-mail 2 — Primeiros passos (D+1)**: tutorial de 5 passos (cadastrar fornecedor, criar primeiro contrato, convidar equipe, configurar workflow, ver alertas).
+- **E-mail 3 — Check-in (D+7)**: pergunta como está sendo a experiência, link pra suporte.
 
-- Valor vazio ou numérico inválido (quando campo = `valor_total`).
-- `jump_to_ordem` não selecionado, igual à própria etapa ou fora do intervalo `[1..N]`.
-- Regras duplicadas (mesmo `campo|op|valor`).
-- **Loop entre estágios** via DFS no grafo de saltos: marca como erro se ao seguir os saltos voltar a uma etapa já visitada.
+Disparado por trigger de banco + cron diário (já temos `cron-lexflow-diario`), tudo via Resend (já configurado).
 
-Erros aparecem inline (caixa vermelha). Bloqueia "Salvar workflow" em `WorkflowBuilder` quando alguma etapa tem erro (mostrando toast). O Editor recebe `allStagesRules` (mapa `ordem → regras`) para a detecção cruzada de ciclos.
+### 3. Logs de envio + reenvio manual
+- Tabela `onboarding_emails_log` com status (enviado/falhou) por organização.
+- Botão "Reenviar e-mail de boas-vindas" na aba Organizações pra você forçar reenvio se o cliente não recebeu.
 
-## 3. Trilha de auditoria completa
+## Como vai funcionar na sua rotina (linguagem leiga)
 
-- **DB (já aplicado):** coluna `workflow_run_stages.regra_aplicada` e gatilhos `audit_trigger_func` anexados a `workflow_runs` e `workflow_run_stages` → todas as ações vão para `audit_logs` automaticamente.
-- **Edge `workflow-advance`:** salva `regra_aplicada` ao criar a próxima `run_stage`.
-- **Painel de histórico** em `ContratoWorkflow`: mostrar para cada etapa o nome do responsável, decisão, badge "regra aplicada", `executado_em`, SLA. Botão "Ver auditoria" abre `Dialog` com as últimas entradas de `audit_logs` filtradas por `entidade IN ('workflow_runs','workflow_run_stages')` e `entidade_id IN (run.id, runStages[].id)` — colunas: ação, usuário, timestamp, payload resumido.
+1. **Cliente paga** (você confirma manualmente o pagamento por enquanto).
+2. **Você abre `/super-admin` → Organizações** → encontra a organização (ou cria via "+ Nova Organização Cliente" que já existe) → clica **Aprovar**.
+3. **Sistema dispara automaticamente**: e-mail de boas-vindas pro admin do cliente, com link e instruções.
+4. **Nos dias seguintes**, sistema manda os e-mails de tutorial e check-in sem você fazer nada.
+5. **Toda semana**, você abre o painel **Métricas** pra ver MRR, novos clientes, quem está inativo.
+6. **Se um cliente atrasar pagamento**: 1 clique em **Suspender** corta o acesso. 1 clique em **Reativar** devolve.
 
-## Arquivos
+## Detalhes técnicos
 
-```text
-Edge / DB
-- supabase/functions/workflow-advance/index.ts  (set regra_aplicada)
+### Banco de dados (1 migration)
+- `onboarding_emails_log`: registra cada e-mail enviado (org_id, tipo, status, sent_at, error_msg).
+- Trigger `on_organization_activated` na tabela `organizations`: quando `status` muda para `ativa` e o e-mail de boas-vindas ainda não foi enviado, agenda o envio.
+- View `super_admin_health_view`: agrega último login por org (via `auth.users.last_sign_in_at` do admin principal) + contagem de contratos recentes.
 
-Frontend
-- src/utils/workflowExport.ts  (novo — PDF + XLSX)
-- src/components/workflow/ConditionalRulesEditor.tsx  (validação + loop detection)
-- src/pages/WorkflowBuilder.tsx  (bloqueia salvar se houver erro de regra)
-- src/pages/ContratoWorkflow.tsx  (botões export + responsáveis + dialog de auditoria)
-```
+### Edge functions (3 novas)
+- `enviar-email-boas-vindas`: envia o e-mail #1 (imediato após ativação). Chamada via trigger HTTP do banco.
+- `processar-onboarding-followup`: roda dentro do `cron-lexflow-diario` (já existe). Busca orgs com 1 dia e 7 dias de ativação e dispara e-mails #2 e #3.
+- Aproveitar `super-admin-create-client-org` já existente — sem mudanças.
 
-Sem novas dependências. Migration de DB já aplicada.
+### Frontend
+- Reescrever `MetricasTab.tsx` com MRR e breakdown por plano.
+- Nova aba `SaudeClientesTab.tsx`.
+- Adicionar filtros + ações extras em `OrganizacoesTab.tsx`.
+- Templates de e-mail em HTML inline dentro das edge functions (sem dependência externa).
+
+### Segurança
+- Toda RPC e edge function exige `is_super_admin(auth.uid())`.
+- `onboarding_emails_log` com RLS: só super admin lê.
+- E-mails enviados via Resend com domínio `lexflowai.com.br` (já configurado).
+
+## Fora de escopo desta entrega
+- Cobrança automática (Stripe/Paddle).
+- Página pública de planos (`/precos`).
+- Trial automático (hoje você ativa manualmente; trial vira evolução futura).
+- Página de status pública / SLA dashboard.
+
+## Estimativa
+~1 sessão de implementação. Entregue em 3 commits: migration, edge functions, frontend.
