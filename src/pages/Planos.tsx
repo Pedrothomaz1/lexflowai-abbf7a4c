@@ -107,42 +107,55 @@ export default function Planos() {
     setDialogOpen(true);
   };
 
-  const jsonLd = rows.map((r) => ({
-    "@context": "https://schema.org",
-    "@type": "Product",
-    name: `LexFlow ${r.nome_exibicao}`,
-    description: PLAN_FEATURES[r.plano]?.tagline,
-    brand: { "@type": "Brand", name: "LexFlow" },
-    offers: {
-      "@type": "Offer",
-      price: (r.preco_mensal_centavos / 100).toFixed(2),
-      priceCurrency: "BRL",
-      availability: "https://schema.org/InStock",
-      url: "https://www.lexflowai.com.br/planos",
-    },
-  }));
+  useEffect(() => {
+    document.title = "Planos e preços | LexFlow";
+    const desc = cheapestPaid
+      ? `Gestão preventiva de contratos a partir de ${formatBRL(cheapestPaid.preco_mensal_centavos)}/mês. Comece grátis e evolua quando o time crescer.`
+      : "Gestão preventiva de contratos para times que decidem com agilidade. Comece grátis.";
+    let meta = document.querySelector('meta[name="description"]');
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.setAttribute("name", "description");
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute("content", desc);
+
+    let canonical = document.querySelector('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.setAttribute("rel", "canonical");
+      document.head.appendChild(canonical);
+    }
+    canonical.setAttribute("href", "https://www.lexflowai.com.br/planos");
+
+    const ldScripts: HTMLScriptElement[] = [];
+    rows.forEach((r) => {
+      const s = document.createElement("script");
+      s.type = "application/ld+json";
+      s.dataset.planos = "1";
+      s.text = JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "Product",
+        name: `LexFlow ${r.nome_exibicao}`,
+        description: PLAN_FEATURES[r.plano]?.tagline,
+        brand: { "@type": "Brand", name: "LexFlow" },
+        offers: {
+          "@type": "Offer",
+          price: (r.preco_mensal_centavos / 100).toFixed(2),
+          priceCurrency: "BRL",
+          availability: "https://schema.org/InStock",
+          url: "https://www.lexflowai.com.br/planos",
+        },
+      });
+      document.head.appendChild(s);
+      ldScripts.push(s);
+    });
+    return () => ldScripts.forEach((s) => s.remove());
+  }, [rows, cheapestPaid]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-background">
-      <Helmet>
-        <title>Planos e preços | LexFlow</title>
-        <meta
-          name="description"
-          content={
-            cheapestPaid
-              ? `Gestão preventiva de contratos a partir de ${formatBRL(cheapestPaid.preco_mensal_centavos)}/mês. Comece grátis e evolua quando o time crescer.`
-              : "Gestão preventiva de contratos para times que decidem com agilidade. Comece grátis."
-          }
-        />
-        <link rel="canonical" href="/planos" />
-        <meta property="og:title" content="Planos e preços | LexFlow" />
-        <meta property="og:url" content="/planos" />
-        {jsonLd.map((j, i) => (
-          <script key={i} type="application/ld+json">
-            {JSON.stringify(j)}
-          </script>
-        ))}
-      </Helmet>
+
 
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
