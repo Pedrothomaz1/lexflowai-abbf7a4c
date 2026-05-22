@@ -65,6 +65,7 @@ const AguardandoAprovacao = React.lazy(() => import("./pages/AguardandoAprovacao
 const ContaSuspensa = React.lazy(() => import("./pages/ContaSuspensa"));
 const SuperAdminPage = React.lazy(() => import("./pages/SuperAdmin"));
 const DashboardIA = React.lazy(() => import("./pages/DashboardIA"));
+const ContratoWorkflow = React.lazy(() => import("./pages/ContratoWorkflow"));
 
 // Catches chunk load failures (e.g. deploy after user session, offline)
 class AppErrorBoundary extends Component<
