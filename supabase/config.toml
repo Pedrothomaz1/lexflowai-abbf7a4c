@@ -87,3 +87,16 @@ verify_jwt = true
 [functions.criar-portal-contraparte]
 verify_jwt = true
 
+[functions.zapsign-criar-envelope]
+verify_jwt = true
+
+[functions.zapsign-cancelar-envelope]
+verify_jwt = true
+
+[functions.zapsign-lembrar-signatarios]
+verify_jwt = true
+
+[functions.zapsign-webhook]
+verify_jwt = false
+
+
