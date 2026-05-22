@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Scale, Loader2, AlertCircle, Send } from "lucide-react";
+import { Scale, Loader2, AlertCircle, Send, ShieldCheck, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -80,14 +80,26 @@ export default function PortalExterno() {
   const canComment = ["comment", "sign"].includes(data?.contraparte?.escopo);
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 flex flex-col">
+      <header className="border-b bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/60 sticky top-0 z-10">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2">
-            <Scale className="h-6 w-6 text-primary" />
-            <span className="font-semibold">LexFlow — Portal da Contraparte</span>
+            <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Scale className="h-5 w-5 text-primary" />
+            </div>
+            <div className="leading-tight">
+              <p className="font-semibold text-sm">LexFlow</p>
+              <p className="text-xs text-muted-foreground">Portal da Contraparte</p>
+            </div>
           </div>
-          <Badge variant="outline">Acesso válido até {format(new Date(data.expires_at), "dd/MM/yyyy", { locale: ptBR })}</Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="gap-1">
+              <ShieldCheck className="h-3 w-3 text-success" /> Ambiente seguro
+            </Badge>
+            <Badge variant="outline">
+              Válido até {format(new Date(data.expires_at), "dd/MM/yyyy", { locale: ptBR })}
+            </Badge>
+          </div>
         </div>
       </header>
 
@@ -144,6 +156,14 @@ export default function PortalExterno() {
           </Card>
         )}
       </main>
+      <footer className="border-t mt-auto py-4 bg-card/40">
+        <div className="container mx-auto px-4 flex items-center justify-between text-xs text-muted-foreground flex-wrap gap-2">
+          <span className="flex items-center gap-1">
+            <Lock className="h-3 w-3" /> Conexão criptografada · LexFlow protege seus dados.
+          </span>
+          <span>© {new Date().getFullYear()} LexFlow</span>
+        </div>
+      </footer>
     </div>
   );
 }
