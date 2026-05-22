@@ -546,8 +546,16 @@ const WorkflowBuilder = () => {
                           />
                         </div>
                       </div>
+
+                      <ConditionalRulesEditor
+                        regras={s.regras}
+                        totalEtapas={stages.length}
+                        etapaAtualOrdem={idx + 1}
+                        onChange={(regras) => updateStage(idx, { regras })}
+                      />
                     </CardContent>
                   </Card>
+
                   {idx < stages.length - 1 && (
                     <div className="flex justify-center py-1">
                       <ArrowDown className="h-5 w-5 text-muted-foreground" />
