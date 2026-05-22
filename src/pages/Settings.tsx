@@ -261,7 +261,6 @@ const Settings = () => {
   const getRoleBadge = () => {
     const config: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
       analista_juridico: { label: "Analista Jurídico", variant: "secondary" },
-      consultoria_juridica: { label: "Consultoria Jurídica", variant: "default" },
       administrador: { label: "Administrador", variant: "outline" },
     };
 
