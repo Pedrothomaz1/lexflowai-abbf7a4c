@@ -30,7 +30,7 @@ export function useRoles(userId?: string) {
   );
 
   const isAdmin = roles.includes("administrador");
-  const isConsultor = roles.includes("consultoria_juridica");
+  const isConsultor = false;
   const isAnalista = roles.includes("analista_juridico");
 
   return { roles, loading, hasRole, isAdmin, isConsultor, isAnalista };
