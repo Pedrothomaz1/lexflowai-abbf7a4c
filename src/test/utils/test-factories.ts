@@ -358,8 +358,8 @@ export const createRBACScenario = (organizationId: string) => {
     role_in_org: 'member',
   });
 
-  const consultant = createTestUser({ email: 'consultant@test.com', full_name: 'Consultoria Jurídica' });
-  const consultantRole = createTestUserRole({ user_id: consultant.id, role: 'consultoria_juridica' });
+  const consultant = createTestUser({ email: 'consultant@test.com', full_name: 'Analista Sênior' });
+  const consultantRole = createTestUserRole({ user_id: consultant.id, role: 'analista_juridico' });
   const consultantMember = createTestOrganizationMember({
     organization_id: organizationId,
     user_id: consultant.id,
