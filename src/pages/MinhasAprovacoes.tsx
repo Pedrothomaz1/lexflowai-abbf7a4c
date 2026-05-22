@@ -90,6 +90,8 @@ export default function MinhasAprovacoes() {
         description="Fila de contratos aguardando sua decisão. Aprovação obrigatória antes da assinatura."
       />
 
+      <SlaAlertBanner steps={steps} />
+
       <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
         <TabsList>
           <TabsTrigger value="pendentes">Pendentes</TabsTrigger>
