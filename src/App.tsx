@@ -68,6 +68,7 @@ const ContaSuspensa = React.lazy(() => import("./pages/ContaSuspensa"));
 const SuperAdminPage = React.lazy(() => import("./pages/SuperAdmin"));
 const DashboardIA = React.lazy(() => import("./pages/DashboardIA"));
 const ContratoWorkflow = React.lazy(() => import("./pages/ContratoWorkflow"));
+const Onboarding = React.lazy(() => import("./pages/Onboarding"));
 
 // Catches chunk load failures (e.g. deploy after user session, offline)
 class AppErrorBoundary extends Component<
@@ -151,6 +152,7 @@ function App() {
                     <Route path="/super-admin" element={<ProtectedRoute requireOrg={false}><SuperAdminPage /></ProtectedRoute>} />
 
                     {/* Protected routes requiring organization */}
+                    <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
                     <Route path="/seletor-modulo" element={<ProtectedRoute><SeletorModulo /></ProtectedRoute>} />
                     <Route path="/requisicoes" element={<ProtectedRoute><DashboardLayout><Requisicoes /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout><Dashboard /></DashboardLayout></ProtectedRoute>} />
