@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCallback } from "react";
 
-export type AppRole = "administrador" | "consultoria_juridica" | "analista_juridico";
+export type AppRole = "administrador" | "analista_juridico";
 
 export function useRoles(userId?: string) {
   const { user } = useAuth();
