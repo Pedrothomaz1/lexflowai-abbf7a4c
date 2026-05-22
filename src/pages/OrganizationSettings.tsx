@@ -20,6 +20,7 @@ const OrganizationSettings = () => {
     nome: "",
     cnpj: "",
     email_contato: "",
+    email_financeiro: "",
     telefone: "",
     endereco: "",
     cidade: "",
