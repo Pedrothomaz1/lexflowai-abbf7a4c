@@ -37,6 +37,9 @@ import {
   Edit3,
 } from "lucide-react";
 import { handleDbError } from "@/utils/dbErrorHandler";
+import { ConditionalRulesEditor } from "@/components/workflow/ConditionalRulesEditor";
+
+
 
 type Definition = {
   id: string;
