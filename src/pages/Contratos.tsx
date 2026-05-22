@@ -19,6 +19,7 @@ import { ContratoFormDialog } from "@/components/contracts/ContratoFormDialog";
 import { helpTexts } from "@/lib/help-texts";
 import { HelpTooltip } from "@/components/ui/help-tooltip";
 import { handleDbError } from "@/utils/dbErrorHandler";
+import { ContractRiskBadge } from "@/components/contracts/ContractRiskBadge";
 
 type Contrato = {
   id: string;
@@ -49,6 +50,7 @@ const Contratos = () => {
   const { toast } = useToast();
   const { organization } = useOrganization();
   const [contratos, setContratos] = useState<Contrato[]>([]);
+  const [riskScores, setRiskScores] = useState<Record<string, number | null>>({});
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -158,6 +160,23 @@ const Contratos = () => {
       });
     } else {
       setContratos(data || []);
+      const ids = (data || []).map((c: any) => c.id);
+      if (ids.length > 0) {
+        const { data: analises } = await supabase
+          .from("contract_analysis")
+          .select("contrato_id, score_risco, analisado_em")
+          .in("contrato_id", ids)
+          .order("analisado_em", { ascending: false });
+        const map: Record<string, number | null> = {};
+        (analises || []).forEach((a: any) => {
+          if (!(a.contrato_id in map)) {
+            map[a.contrato_id] = a.score_risco !== null ? Number(a.score_risco) : null;
+          }
+        });
+        setRiskScores(map);
+      } else {
+        setRiskScores({});
+      }
     }
     setLoading(false);
   };
@@ -380,6 +399,12 @@ const Contratos = () => {
       header: "Status",
       cell: (contrato) => <StatusBadge status={contrato.status} />,
       className: "w-[120px]",
+    },
+    {
+      key: "risco",
+      header: "Risco",
+      cell: (contrato) => <ContractRiskBadge score={riskScores[contrato.id] ?? null} />,
+      className: "w-[140px]",
     },
     {
       key: "valor_total",
