@@ -71,6 +71,10 @@ export default function SuperAdminPage() {
           <TabsContent value="organizacoes" className="mt-6">
             <OrganizacoesTab />
           </TabsContent>
+          <TabsContent value="leads" className="mt-6">
+            <LeadsTab />
+          </TabsContent>
+
           <TabsContent value="onboarding" className="mt-6">
             <OnboardingTab />
           </TabsContent>
