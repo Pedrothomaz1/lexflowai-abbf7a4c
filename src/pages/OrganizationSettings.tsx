@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/hooks/use-toast";
 import { Building2, Loader2, Save, ArrowLeft } from "lucide-react";
+import { CnpjAutoFillInput } from "@/components/ui/cnpj-autofill-input";
 
 const OrganizationSettings = () => {
   const navigate = useNavigate();
@@ -137,12 +138,22 @@ const OrganizationSettings = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="cnpj">CNPJ</Label>
-                <Input
-                  id="cnpj"
+                <CnpjAutoFillInput
                   value={formData.cnpj}
-                  onChange={handleChange("cnpj")}
-                  placeholder="00.000.000/0000-00"
+                  onChange={(v) => setFormData((p) => ({ ...p, cnpj: v }))}
                   disabled={loading}
+                  onDataFetched={(data) => {
+                    setFormData((p) => ({
+                      ...p,
+                      nome: p.nome || data.nome || p.nome,
+                      email_contato: p.email_contato || data.email || p.email_contato,
+                      telefone: p.telefone || data.telefone || p.telefone,
+                      endereco: p.endereco || data.endereco || p.endereco,
+                      cidade: p.cidade || data.cidade || p.cidade,
+                      estado: p.estado || data.uf || p.estado,
+                      cep: p.cep || data.cep || p.cep,
+                    }));
+                  }}
                 />
               </div>
 
