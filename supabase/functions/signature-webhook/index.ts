@@ -217,17 +217,27 @@ serve(async (req) => {
 
     // Read body as text for signature verification
     const bodyText = await req.text();
-    let payload: any;
-    
+    let rawPayload: unknown;
+
     try {
-      payload = JSON.parse(bodyText);
-    } catch (parseError) {
+      rawPayload = JSON.parse(bodyText);
+    } catch (_parseError) {
       console.error(`[${clientIP}] Invalid JSON payload`);
       return new Response(
         JSON.stringify({ error: 'Invalid JSON payload' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const parsedPayload = PayloadSchema.safeParse(rawPayload);
+    if (!parsedPayload.success) {
+      console.warn(`[${clientIP}] Payload com tipos inválidos`, parsedPayload.error.flatten().fieldErrors);
+      return new Response(
+        JSON.stringify({ error: 'Invalid payload shape', details: parsedPayload.error.flatten().fieldErrors }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const payload = parsedPayload.data as any;
 
     console.log(`[${clientIP}] Webhook received:`, JSON.stringify(payload, null, 2));
 
