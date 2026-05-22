@@ -3491,6 +3491,193 @@ export type Database = {
           },
         ]
       }
+      signature_envelopes: {
+        Row: {
+          assunto: string | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          completed_at: string | null
+          contrato_id: string
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          mensagem: string | null
+          metadata: Json | null
+          organization_id: string
+          original_file_url: string | null
+          provedor: string
+          provedor_envelope_id: string | null
+          sent_at: string | null
+          signed_file_url: string | null
+          status: Database["public"]["Enums"]["signature_envelope_status"]
+          updated_at: string
+        }
+        Insert: {
+          assunto?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          completed_at?: string | null
+          contrato_id: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          mensagem?: string | null
+          metadata?: Json | null
+          organization_id: string
+          original_file_url?: string | null
+          provedor?: string
+          provedor_envelope_id?: string | null
+          sent_at?: string | null
+          signed_file_url?: string | null
+          status?: Database["public"]["Enums"]["signature_envelope_status"]
+          updated_at?: string
+        }
+        Update: {
+          assunto?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          completed_at?: string | null
+          contrato_id?: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          mensagem?: string | null
+          metadata?: Json | null
+          organization_id?: string
+          original_file_url?: string | null
+          provedor?: string
+          provedor_envelope_id?: string | null
+          sent_at?: string | null
+          signed_file_url?: string | null
+          status?: Database["public"]["Enums"]["signature_envelope_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "signature_envelopes_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      signature_events: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          envelope_id: string
+          id: string
+          organization_id: string
+          payload: Json | null
+          signer_id: string | null
+          tipo: string
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          envelope_id: string
+          id?: string
+          organization_id: string
+          payload?: Json | null
+          signer_id?: string | null
+          tipo: string
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          envelope_id?: string
+          id?: string
+          organization_id?: string
+          payload?: Json | null
+          signer_id?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "signature_events_envelope_id_fkey"
+            columns: ["envelope_id"]
+            isOneToOne: false
+            referencedRelation: "signature_envelopes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "signature_events_signer_id_fkey"
+            columns: ["signer_id"]
+            isOneToOne: false
+            referencedRelation: "signature_signers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      signature_signers: {
+        Row: {
+          created_at: string
+          email: string
+          envelope_id: string
+          geolocation: Json | null
+          id: string
+          ip_address: string | null
+          lado: Database["public"]["Enums"]["signature_signer_lado"]
+          nome: string
+          ordem: number
+          organization_id: string
+          provedor_signer_id: string | null
+          sign_url: string | null
+          signed_at: string | null
+          status: Database["public"]["Enums"]["signature_signer_status"]
+          telefone: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          envelope_id: string
+          geolocation?: Json | null
+          id?: string
+          ip_address?: string | null
+          lado?: Database["public"]["Enums"]["signature_signer_lado"]
+          nome: string
+          ordem?: number
+          organization_id: string
+          provedor_signer_id?: string | null
+          sign_url?: string | null
+          signed_at?: string | null
+          status?: Database["public"]["Enums"]["signature_signer_status"]
+          telefone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          envelope_id?: string
+          geolocation?: Json | null
+          id?: string
+          ip_address?: string | null
+          lado?: Database["public"]["Enums"]["signature_signer_lado"]
+          nome?: string
+          ordem?: number
+          organization_id?: string
+          provedor_signer_id?: string | null
+          sign_url?: string | null
+          signed_at?: string | null
+          status?: Database["public"]["Enums"]["signature_signer_status"]
+          telefone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "signature_signers_envelope_id_fkey"
+            columns: ["envelope_id"]
+            isOneToOne: false
+            referencedRelation: "signature_envelopes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sod_approvals: {
         Row: {
           amount: number | null
@@ -4370,6 +4557,20 @@ export type Database = {
         | "administrador"
       notification_frequency: "immediate" | "daily" | "weekly"
       org_status: "pendente_aprovacao" | "ativa" | "suspensa" | "cancelada"
+      signature_envelope_status:
+        | "rascunho"
+        | "enviado"
+        | "parcialmente_assinado"
+        | "concluido"
+        | "recusado"
+        | "cancelado"
+        | "expirado"
+      signature_signer_lado: "empresa" | "contraparte" | "testemunha"
+      signature_signer_status:
+        | "pendente"
+        | "visualizado"
+        | "assinado"
+        | "recusado"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -4533,6 +4734,22 @@ export const Constants = {
       ],
       notification_frequency: ["immediate", "daily", "weekly"],
       org_status: ["pendente_aprovacao", "ativa", "suspensa", "cancelada"],
+      signature_envelope_status: [
+        "rascunho",
+        "enviado",
+        "parcialmente_assinado",
+        "concluido",
+        "recusado",
+        "cancelado",
+        "expirado",
+      ],
+      signature_signer_lado: ["empresa", "contraparte", "testemunha"],
+      signature_signer_status: [
+        "pendente",
+        "visualizado",
+        "assinado",
+        "recusado",
+      ],
     },
   },
 } as const
