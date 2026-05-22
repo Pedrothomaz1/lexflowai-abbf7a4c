@@ -11,6 +11,7 @@ import PrecosTab from "./PrecosTab";
 import OnboardingTab from "./OnboardingTab";
 import LeadsTab from "./LeadsTab";
 import AuditoriaTab from "./AuditoriaTab";
+import CobrancaTab from "./CobrancaTab";
 
 
 export default function SuperAdminPage() {
@@ -64,6 +65,7 @@ export default function SuperAdminPage() {
             <TabsTrigger value="usuarios">Usuários</TabsTrigger>
             <TabsTrigger value="super-admins">Super Admins</TabsTrigger>
             <TabsTrigger value="metricas">Métricas</TabsTrigger>
+            <TabsTrigger value="cobranca">Cobrança</TabsTrigger>
             <TabsTrigger value="auditoria">Auditoria</TabsTrigger>
           </TabsList>
 
@@ -91,6 +93,9 @@ export default function SuperAdminPage() {
           </TabsContent>
           <TabsContent value="metricas" className="mt-6">
             <MetricasTab />
+          </TabsContent>
+          <TabsContent value="cobranca" className="mt-6">
+            <CobrancaTab />
           </TabsContent>
           <TabsContent value="auditoria" className="mt-6">
             <AuditoriaTab />

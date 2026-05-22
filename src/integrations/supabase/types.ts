@@ -372,6 +372,36 @@ export type Database = {
           },
         ]
       }
+      billing_alerts_log: {
+        Row: {
+          data_alvo: string
+          destinatarios: string[]
+          detalhes: Json | null
+          enviado_em: string
+          id: string
+          organization_id: string
+          tipo: string
+        }
+        Insert: {
+          data_alvo: string
+          destinatarios?: string[]
+          detalhes?: Json | null
+          enviado_em?: string
+          id?: string
+          organization_id: string
+          tipo: string
+        }
+        Update: {
+          data_alvo?: string
+          destinatarios?: string[]
+          detalhes?: Json | null
+          enviado_em?: string
+          id?: string
+          organization_id?: string
+          tipo?: string
+        }
+        Relationships: []
+      }
       cnpj_verification_log: {
         Row: {
           cnpj: string
@@ -2970,6 +3000,7 @@ export type Database = {
           aprovada_em: string | null
           aprovada_por: string | null
           cep: string | null
+          ciclo_cobranca: string
           cidade: string | null
           cnpj: string | null
           configuracoes: Json | null
@@ -2984,20 +3015,25 @@ export type Database = {
           max_usuarios: number | null
           motivo_suspensao: string | null
           nome: string
+          notas_cobranca: string | null
           plano: string | null
           plano_changed_at: string | null
+          proximo_vencimento: string | null
           slug: string
           status: Database["public"]["Enums"]["org_status"]
           suspensa_em: string | null
           suspensa_por: string | null
           telefone: string | null
           trial_ends_at: string | null
+          ultimo_pagamento_em: string | null
           updated_at: string
+          valor_mensal_centavos: number | null
         }
         Insert: {
           aprovada_em?: string | null
           aprovada_por?: string | null
           cep?: string | null
+          ciclo_cobranca?: string
           cidade?: string | null
           cnpj?: string | null
           configuracoes?: Json | null
@@ -3012,20 +3048,25 @@ export type Database = {
           max_usuarios?: number | null
           motivo_suspensao?: string | null
           nome: string
+          notas_cobranca?: string | null
           plano?: string | null
           plano_changed_at?: string | null
+          proximo_vencimento?: string | null
           slug: string
           status?: Database["public"]["Enums"]["org_status"]
           suspensa_em?: string | null
           suspensa_por?: string | null
           telefone?: string | null
           trial_ends_at?: string | null
+          ultimo_pagamento_em?: string | null
           updated_at?: string
+          valor_mensal_centavos?: number | null
         }
         Update: {
           aprovada_em?: string | null
           aprovada_por?: string | null
           cep?: string | null
+          ciclo_cobranca?: string
           cidade?: string | null
           cnpj?: string | null
           configuracoes?: Json | null
@@ -3040,15 +3081,19 @@ export type Database = {
           max_usuarios?: number | null
           motivo_suspensao?: string | null
           nome?: string
+          notas_cobranca?: string | null
           plano?: string | null
           plano_changed_at?: string | null
+          proximo_vencimento?: string | null
           slug?: string
           status?: Database["public"]["Enums"]["org_status"]
           suspensa_em?: string | null
           suspensa_por?: string | null
           telefone?: string | null
           trial_ends_at?: string | null
+          ultimo_pagamento_em?: string | null
           updated_at?: string
+          valor_mensal_centavos?: number | null
         }
         Relationships: []
       }
@@ -5272,6 +5317,18 @@ export type Database = {
         Returns: string
       }
       revoke_super_admin_by_email: { Args: { _email: string }; Returns: Json }
+      super_admin_update_billing: {
+        Args: {
+          _ciclo_cobranca?: string
+          _notas_cobranca?: string
+          _org_id: string
+          _proximo_vencimento?: string
+          _trial_ends_at?: string
+          _ultimo_pagamento_em?: string
+          _valor_mensal_centavos?: number
+        }
+        Returns: Json
+      }
       suspend_organization: {
         Args: { _motivo?: string; _org_id: string }
         Returns: Json
