@@ -417,6 +417,21 @@ const ContratoDetalhes = () => {
     }
   };
 
+  const handleExportExecutivoPDF = async () => {
+    if (!contrato) return;
+    try {
+      toast({ title: "Gerando relatório executivo…" });
+      await exportContratoExecutivoPDF({ contrato, aprovacoes });
+    } catch (err: any) {
+      console.error(err);
+      toast({
+        variant: "destructive",
+        title: "Erro ao gerar relatório",
+        description: err?.message ?? "Tente novamente.",
+      });
+    }
+  };
+
   const getTipoLabel = (tipo: string) => {
     const labels: Record<string, string> = {
       prestacao_servicos: 'Prestação de Serviços',
