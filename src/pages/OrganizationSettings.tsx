@@ -70,6 +70,7 @@ const OrganizationSettings = () => {
           nome: formData.nome.trim(),
           cnpj: formData.cnpj.trim() || null,
           email_contato: formData.email_contato.trim() || null,
+          email_financeiro: formData.email_financeiro.trim() || null,
           telefone: formData.telefone.trim() || null,
           endereco: formData.endereco.trim() || null,
           cidade: formData.cidade.trim() || null,
