@@ -11,13 +11,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DocumentInput } from "@/components/ui/document-input";
+import { CnpjAutoFillInput } from "@/components/ui/cnpj-autofill-input";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, X, UserPlus, Search } from "lucide-react";
+import { Loader2, X, UserPlus } from "lucide-react";
 import { useCnpjVerification } from "@/hooks/useCnpjVerification";
-import { CnpjStatusBadge, isCnpjProblem } from "@/components/cnpj/CnpjStatusBadge";
-import { CnpjDetailsDialog } from "@/components/cnpj/CnpjDetailsDialog";
+import { isCnpjProblem } from "@/components/cnpj/CnpjStatusBadge";
 
 type Fornecedor = {
   id: string;
