@@ -22,13 +22,8 @@ Deno.serve(async (req) => {
     const bearerOk = auth === `Bearer ${SERVICE_ROLE}`;
     let cronOk = false;
     if (!bearerOk && cronSecret) {
-      const { data: vaultRow } = await supabase
-        .schema('vault' as any)
-        .from('decrypted_secrets')
-        .select('decrypted_secret')
-        .eq('name', 'monitor_cron_secret')
-        .maybeSingle();
-      cronOk = !!vaultRow && (vaultRow as any).decrypted_secret === cronSecret;
+      const { data } = await supabase.rpc('verify_monitor_cron_secret', { _secret: cronSecret });
+      cronOk = data === true;
     }
     if (!bearerOk && !cronOk) {
       return json({ error: 'Unauthorized' }, 401);
