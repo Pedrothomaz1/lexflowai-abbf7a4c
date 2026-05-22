@@ -29,11 +29,13 @@ function sleep(ms: number) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  // Auth via CRON_SECRET
+  // Auth via CRON_SECRET — header only (never via URL query string, which is logged)
   const cronSecret = Deno.env.get("CRON_SECRET");
-  const provided =
-    req.headers.get("x-cron-secret") ||
-    new URL(req.url).searchParams.get("secret");
+  const authHeader = req.headers.get("authorization") || "";
+  const bearer = authHeader.toLowerCase().startsWith("bearer ")
+    ? authHeader.slice(7).trim()
+    : "";
+  const provided = req.headers.get("x-cron-secret") || bearer;
   if (!cronSecret || provided !== cronSecret) {
     return new Response(JSON.stringify({ error: "Não autorizado" }), {
       status: 401,
