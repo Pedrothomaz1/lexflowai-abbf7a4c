@@ -105,7 +105,7 @@ const AuthCallback = () => {
           .from("user_roles")
           .select("modulo_padrao")
           .eq("user_id", userId)
-          .single();
+          .maybeSingle();
 
         if (error) {
           console.error("Erro ao buscar módulo:", error);
