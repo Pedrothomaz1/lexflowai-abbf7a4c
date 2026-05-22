@@ -61,6 +61,7 @@ import { FinanceNotificationModal } from "@/components/FinanceNotificationModal"
 import { PreSignatureGuard } from "@/components/Aprovacoes/PreSignatureGuard";
 import { NegotiationThread } from "@/components/Negociacao/NegotiationThread";
 import { AssistenteIA } from "@/components/IA/AssistenteIA";
+import { RevisaoExtracoesPanel } from "@/components/IA/RevisaoExtracoesPanel";
 import { PortalContraparteDialog } from "@/components/Portal/PortalContraparteDialog";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { useOrganization } from "@/contexts/OrganizationContext";
