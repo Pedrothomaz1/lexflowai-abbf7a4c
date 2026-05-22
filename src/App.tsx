@@ -31,6 +31,7 @@ const Alertas = React.lazy(() => import("./pages/Alertas"));
 const Calendario = React.lazy(() => import("./pages/Calendario"));
 const Obrigacoes = React.lazy(() => import("./pages/Obrigacoes"));
 const WorkflowAprovacoes = React.lazy(() => import("./pages/WorkflowAprovacoes"));
+const WorkflowBuilder = React.lazy(() => import("./pages/WorkflowBuilder"));
 const SignatureSettings = React.lazy(() => import("./pages/SignatureSettings"));
 const NotificationSettings = React.lazy(() => import("./pages/NotificationSettings"));
 const Servicos = React.lazy(() => import("./pages/Servicos"));
