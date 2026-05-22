@@ -14,6 +14,7 @@ import { CookieBanner } from "./components/CookieBanner";
 import { PageSkeleton } from "./components/ui/skeleton-loaders";
 
 const Index = React.lazy(() => import("./pages/Index"));
+const PortalExterno = React.lazy(() => import("./pages/PortalExterno"));
 const Auth = React.lazy(() => import("./pages/Auth"));
 const Privacidade = React.lazy(() => import("./pages/Privacidade"));
 const AuthCallback = React.lazy(() => import("./pages/AuthCallback"));
@@ -128,6 +129,7 @@ function App() {
                     <Route path="/termos" element={<TermosDeUso />} />
                     <Route path="/requisicao" element={<RequisicaoPublica />} />
                     <Route path="/reset-password" element={<ResetPassword />} />
+                    <Route path="/portal/:token" element={<PortalExterno />} />
 
                     {/* Organization status routes (no public onboarding — orgs are created by super-admin) */}
                     <Route path="/waiting-for-invite" element={<ProtectedRoute requireOrg={false}><WaitingForInvite /></ProtectedRoute>} />

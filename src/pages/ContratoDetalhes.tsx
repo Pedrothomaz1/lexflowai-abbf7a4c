@@ -57,6 +57,8 @@ import { ContractApprovalCard } from "@/components/ContractDetails/ContractAppro
 import { FinanceNotificationModal } from "@/components/FinanceNotificationModal";
 import { PreSignatureGuard } from "@/components/Aprovacoes/PreSignatureGuard";
 import { NegotiationThread } from "@/components/Negociacao/NegotiationThread";
+import { AssistenteIA } from "@/components/IA/AssistenteIA";
+import { PortalContraparteDialog } from "@/components/Portal/PortalContraparteDialog";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { handleDbError } from "@/utils/dbErrorHandler";
@@ -659,13 +661,14 @@ const ContratoDetalhes = () => {
       {/* Tabs Section */}
       <FadeIn delay={0.3}>
         <Tabs defaultValue="aprovacoes" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-6 lg:w-[720px]">
+          <TabsList className="grid w-full grid-cols-7 lg:w-[840px]">
             <TabsTrigger value="aprovacoes">Aprovações</TabsTrigger>
             <TabsTrigger value="assinaturas">Assinaturas</TabsTrigger>
             <TabsTrigger value="comentarios">Comentários</TabsTrigger>
             <TabsTrigger value="redlining">Redlining</TabsTrigger>
             <TabsTrigger value="versoes">Versões</TabsTrigger>
             <TabsTrigger value="negociacao">Negociação</TabsTrigger>
+            <TabsTrigger value="ia">Assistente IA</TabsTrigger>
           </TabsList>
 
           <TabsContent value="aprovacoes">
@@ -791,8 +794,26 @@ const ContratoDetalhes = () => {
           </TabsContent>
 
           <TabsContent value="negociacao" className="space-y-4">
+            <div className="flex justify-end">
+              <PortalContraparteDialog contratoId={contrato.id} />
+            </div>
             <NegotiationThread contratoId={contrato.id} />
             <NegotiationMetrics contratoId={contrato.id} />
+          </TabsContent>
+
+          <TabsContent value="ia" className="space-y-4">
+            <AssistenteIA
+              contratoId={contrato.id}
+              tipoContrato={contrato.tipo}
+              contratoConteudo={[
+                `Contrato: ${contrato.numero_contrato}`,
+                `Título: ${contrato.titulo}`,
+                `Tipo: ${contrato.tipo}`,
+                `Valor: ${contrato.valor_total ?? "N/A"}`,
+                `Descrição: ${contrato.descricao || ""}`,
+                `Observações: ${contrato.observacoes || ""}`,
+              ].join("\n")}
+            />
           </TabsContent>
         </Tabs>
       </FadeIn>

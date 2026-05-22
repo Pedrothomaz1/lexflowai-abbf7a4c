@@ -74,3 +74,16 @@ verify_jwt = false
 
 [functions.cron-lexflow-diario]
 verify_jwt = false
+
+[functions.portal-externo-publico]
+verify_jwt = false
+
+[functions.ia-resumo-executivo]
+verify_jwt = true
+
+[functions.ia-sugerir-clausulas]
+verify_jwt = true
+
+[functions.criar-portal-contraparte]
+verify_jwt = true
+
