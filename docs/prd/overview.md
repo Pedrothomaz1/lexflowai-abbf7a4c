@@ -15,8 +15,7 @@ LexFlow AI é uma plataforma SaaS de gestão jurídica e de contratos para empre
 
 ## Usuários
 - **Analista Jurídico** — Visualiza e cadastra contratos em rascunho
-- **Consultoria Jurídica** — Aprova e edita qualquer contrato
-- **Administrador** — Gerencia usuários, integrações e configurações
+- **Administrador** — Gerencia usuários, integrações e configurações; aprova e edita qualquer contrato
 
 ## Multi-tenancy
 - Cada organização é isolada via RLS no Supabase
