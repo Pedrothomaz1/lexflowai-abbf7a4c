@@ -50,6 +50,7 @@ export const ProtectedRoute = ({
   const [twoFAVerified, setTwoFAVerified] = useState(false);
   const [checkingMFA, setCheckingMFA] = useState(true);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
 
   const checkMFAStatus = useCallback(async () => {
     if (!user) {
@@ -156,6 +157,28 @@ export const ProtectedRoute = ({
     verifyStoredToken();
     checkMFAStatus();
   }, [checkMFAStatus, user, session]);
+
+  // Onboarding status check (lightweight)
+  useEffect(() => {
+    if (!user) {
+      setOnboardingDone(null);
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .from("profiles")
+      .select("onboarding_completed_at, onboarding_skipped")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled) return;
+        const done = !!(data?.onboarding_completed_at || data?.onboarding_skipped);
+        setOnboardingDone(done);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   const handleTwoFASuccess = async () => {
     if (!user || !session) return;
