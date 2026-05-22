@@ -3,8 +3,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Share2, Copy, Loader2 } from "lucide-react";
+import { Share2, Copy, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -17,21 +19,30 @@ export function PortalContraparteDialog({ contratoId, trigger }: Props) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [nome, setNome] = useState("");
+  const [mensagem, setMensagem] = useState("");
+  const [enviarEmail, setEnviarEmail] = useState(true);
   const [escopo, setEscopo] = useState<"view" | "comment" | "sign">("comment");
   const [validade, setValidade] = useState(14);
   const [loading, setLoading] = useState(false);
   const [url, setUrl] = useState<string | null>(null);
+  const [emailStatus, setEmailStatus] = useState<{ sent: boolean; error?: string } | null>(null);
 
   async function handleSubmit() {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("criar-portal-contraparte", {
-        body: { contratoId, contraparteEmail: email, contraparteNome: nome, escopo, validadeDias: validade },
+        body: { contratoId, contraparteEmail: email, contraparteNome: nome, escopo, validadeDias: validade, enviarEmail, mensagem: mensagem || undefined },
       });
       if (error) throw error;
       if (!data?.ok) throw new Error(data?.error || "Erro");
       setUrl(data.url);
-      toast.success("Link gerado.");
+      setEmailStatus(data.email ?? null);
+      if (enviarEmail) {
+        if (data.email?.sent) toast.success("Link gerado e e-mail enviado.");
+        else toast.warning(`Link gerado, mas e-mail falhou: ${data.email?.error || "desconhecido"}`);
+      } else {
+        toast.success("Link gerado.");
+      }
     } catch (e: any) {
       toast.error(e.message || "Falha");
     } finally {
@@ -46,7 +57,7 @@ export function PortalContraparteDialog({ contratoId, trigger }: Props) {
   }
 
   function reset() {
-    setUrl(null); setEmail(""); setNome(""); setEscopo("comment"); setValidade(14);
+    setUrl(null); setEmail(""); setNome(""); setMensagem(""); setEscopo("comment"); setValidade(14); setEnviarEmail(true); setEmailStatus(null);
   }
 
   return (
@@ -60,7 +71,13 @@ export function PortalContraparteDialog({ contratoId, trigger }: Props) {
         </DialogHeader>
         {url ? (
           <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">Envie este link à contraparte. Acesso expira em {validade} dias.</p>
+            {emailStatus && (
+              <div className={`flex items-start gap-2 text-sm rounded-md p-3 ${emailStatus.sent ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'}`}>
+                {emailStatus.sent ? <CheckCircle2 className="h-4 w-4 mt-0.5" /> : <AlertCircle className="h-4 w-4 mt-0.5" />}
+                <span>{emailStatus.sent ? `E-mail enviado para ${email}.` : `Falha no envio: ${emailStatus.error}`}</span>
+              </div>
+            )}
+            <p className="text-sm text-muted-foreground">Link de acesso (expira em {validade} dias):</p>
             <div className="flex gap-2">
               <Input value={url} readOnly />
               <Button onClick={copyLink}><Copy className="h-4 w-4" /></Button>
@@ -93,13 +110,21 @@ export function PortalContraparteDialog({ contratoId, trigger }: Props) {
                 <Input type="number" min={1} max={90} value={validade} onChange={(e) => setValidade(Number(e.target.value))} />
               </div>
             </div>
+            <div>
+              <Label>Mensagem (opcional)</Label>
+              <Textarea value={mensagem} onChange={(e) => setMensagem(e.target.value)} placeholder="Mensagem que será incluída no e-mail à contraparte." rows={3} />
+            </div>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox checked={enviarEmail} onCheckedChange={(c) => setEnviarEmail(!!c)} />
+              Enviar e-mail automaticamente para a contraparte
+            </label>
           </div>
         )}
         <DialogFooter>
           {!url && (
             <Button onClick={handleSubmit} disabled={loading || !email}>
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-              Gerar link
+              {enviarEmail ? "Gerar e enviar" : "Gerar link"}
             </Button>
           )}
         </DialogFooter>
