@@ -237,23 +237,38 @@ async function runChecks(): Promise<Result[]> {
   });
   await wrap("realtime: notification stays in source org", async () => {
     const got: { a: any[]; b: any[] } = { a: [], b: [] };
-    const chA = sAnalista.client.channel("secqa-rt-a")
+    const chA = sAnalista.client.channel(`secqa-rt-a-${Date.now()}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications" }, (p) => got.a.push(p.new));
-    const chB = sB.client.channel("secqa-rt-b")
+    const chB = sB.client.channel(`secqa-rt-b-${Date.now()}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications" }, (p) => got.b.push(p.new));
     await Promise.all([
-      new Promise((r) => chA.subscribe((s) => s === "SUBSCRIBED" && r(null))),
-      new Promise((r) => chB.subscribe((s) => s === "SUBSCRIBED" && r(null))),
+      new Promise((r, j) => {
+        const t = setTimeout(() => j(new Error("chA subscribe timeout")), 8000);
+        chA.subscribe((s) => { if (s === "SUBSCRIBED") { clearTimeout(t); r(null); } });
+      }),
+      new Promise((r, j) => {
+        const t = setTimeout(() => j(new Error("chB subscribe timeout")), 8000);
+        chB.subscribe((s) => { if (s === "SUBSCRIBED") { clearTimeout(t); r(null); } });
+      }),
     ]);
+    // Pequena folga após SUBSCRIBED para o broker registrar o filtro RLS
+    await new Promise((r) => setTimeout(r, 800));
     const probe = `secqa-rt-${Date.now()}`;
     await svc().from("notifications").insert({
       organization_id: orgA, user_id: analistaA, tipo: "geral", titulo: probe, mensagem: "x",
     });
-    await new Promise((r) => setTimeout(r, 2500));
+    // Poll até 8s pelo evento em A
+    const deadline = Date.now() + 8000;
+    while (Date.now() < deadline && !got.a.some((n: any) => n.titulo === probe)) {
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    // Folga adicional para garantir que B também teria recebido se fosse vazar
+    await new Promise((r) => setTimeout(r, 1000));
     await Promise.all([sAnalista.client.removeChannel(chA), sB.client.removeChannel(chB)]);
     if (!got.a.some((n: any) => n.titulo === probe)) throw new Error("Org A subscriber missed event");
     if (got.b.some((n: any) => n.titulo === probe)) throw new Error("Org B subscriber received Org A event!");
   });
+
 
   // ---- Edge functions auth ----
   const checkStatus = async (name: string, path: string, init: RequestInit, allowed: number[]) => {
