@@ -5405,6 +5405,10 @@ export type Database = {
         Args: { _motivo?: string; _org_id: string }
         Returns: Json
       }
+      verify_monitor_cron_secret: {
+        Args: { _secret: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "analista_juridico" | "consultoria_juridica" | "administrador"
