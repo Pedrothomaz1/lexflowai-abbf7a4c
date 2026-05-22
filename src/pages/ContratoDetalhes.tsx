@@ -665,13 +665,14 @@ const ContratoDetalhes = () => {
       {/* Tabs Section */}
       <FadeIn delay={0.3}>
         <Tabs defaultValue="aprovacoes" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-7 lg:w-[840px]">
+          <TabsList className="grid w-full grid-cols-8 lg:w-[960px]">
             <TabsTrigger value="aprovacoes">Aprovações</TabsTrigger>
             <TabsTrigger value="assinaturas">Assinaturas</TabsTrigger>
             <TabsTrigger value="comentarios">Comentários</TabsTrigger>
             <TabsTrigger value="redlining">Redlining</TabsTrigger>
             <TabsTrigger value="versoes">Versões</TabsTrigger>
             <TabsTrigger value="negociacao">Negociação</TabsTrigger>
+            <TabsTrigger value="revisao-ia">Revisão IA</TabsTrigger>
             <TabsTrigger value="ia">Assistente IA</TabsTrigger>
           </TabsList>
 
