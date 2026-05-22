@@ -155,6 +155,7 @@ function App() {
                     <Route path="/calendario" element={<ProtectedRoute><DashboardLayout><Calendario /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/obrigacoes" element={<ProtectedRoute><DashboardLayout><Obrigacoes /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/workflows" element={<ProtectedRoute><DashboardLayout><WorkflowAprovacoes /></DashboardLayout></ProtectedRoute>} />
+                    <Route path="/aprovacoes" element={<ProtectedRoute><DashboardLayout><MinhasAprovacoes /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/servicos" element={<ProtectedRoute><DashboardLayout><Servicos /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/unidades" element={<ProtectedRoute><DashboardLayout><Unidades /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/especificacoes" element={<ProtectedRoute><DashboardLayout><EspecificacoesServico /></DashboardLayout></ProtectedRoute>} />
