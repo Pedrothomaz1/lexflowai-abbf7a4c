@@ -132,6 +132,7 @@ function App() {
                     <Route path="/privacidade" element={<Privacidade />} />
                     <Route path="/termos" element={<TermosDeUso />} />
                     <Route path="/requisicao" element={<RequisicaoPublica />} />
+                    <Route path="/requisicao/form/:formId" element={<RequisicaoFormPublica />} />
                     <Route path="/reset-password" element={<ResetPassword />} />
                     <Route path="/portal/:token" element={<PortalExterno />} />
 
