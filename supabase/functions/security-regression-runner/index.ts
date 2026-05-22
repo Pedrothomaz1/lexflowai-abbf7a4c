@@ -340,14 +340,32 @@ Deno.serve(async (req) => {
       status: 500, headers: { ...corsHeaders, "content-type": "application/json" },
     });
   }
+  const finishedAt = new Date().toISOString();
   const summary = {
     started_at: startedAt,
-    finished_at: new Date().toISOString(),
+    finished_at: finishedAt,
     total: results.length,
     passed: results.filter((r) => r.pass).length,
     failed: results.filter((r) => !r.pass).length,
     results,
   };
+
+  // Persistir histórico (best-effort, não bloqueia resposta)
+  try {
+    await svc().from("security_regression_runs").insert({
+      started_at: startedAt,
+      finished_at: finishedAt,
+      duration_ms: new Date(finishedAt).getTime() - new Date(startedAt).getTime(),
+      total: summary.total,
+      passed: summary.passed,
+      failed: summary.failed,
+      results: summary.results,
+      triggered_by: userData.user.id,
+    });
+  } catch (e) {
+    console.error("Falha ao persistir run:", (e as Error).message);
+  }
+
   return new Response(JSON.stringify(summary, null, 2), {
     status: summary.failed === 0 ? 200 : 207,
     headers: { ...corsHeaders, "content-type": "application/json" },
