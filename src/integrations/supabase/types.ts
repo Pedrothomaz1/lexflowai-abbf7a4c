@@ -5132,6 +5132,33 @@ export type Database = {
         }
         Relationships: []
       }
+      vw_org_members_recent: {
+        Row: {
+          email: string | null
+          joined_at: string | null
+          org_name: string | null
+          organization_id: string | null
+          periodo: string | null
+          role_in_org: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "super_admin_organizations_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       accept_organization_invite: {
