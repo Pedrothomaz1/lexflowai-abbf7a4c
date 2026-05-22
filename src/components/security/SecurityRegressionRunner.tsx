@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,8 +6,18 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle2, XCircle, Loader2, PlayCircle, ShieldCheck } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, PlayCircle, ShieldCheck, History } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+interface RunRow {
+  id: string;
+  started_at: string;
+  finished_at: string;
+  duration_ms: number;
+  total: number;
+  passed: number;
+  failed: number;
+}
 
 interface RegressionResult {
   name: string;
