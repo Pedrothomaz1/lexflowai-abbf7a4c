@@ -230,8 +230,12 @@ export default function ContratoWorkflow() {
     setDialogOpen(true);
   };
 
-  const avancar = async (decisao: "aprovado" | "rejeitado" | "pulado", targetOrdem?: number | null) => {
+  const avancar = async (decisao: Decisao, targetOrdem?: number | null) => {
     if (!run) return;
+    if (decisao === "devolvido" && (!comentario || comentario.trim().length < 10)) {
+      toast({ title: "Motivo obrigatório", description: "Informe ao menos 10 caracteres no motivo da devolução.", variant: "destructive" });
+      return;
+    }
     setAdvancing(true);
     try {
       const { data, error } = await supabase.functions.invoke("workflow-advance", {
@@ -239,6 +243,7 @@ export default function ContratoWorkflow() {
           run_id: run.id,
           decisao,
           comentario: comentario || null,
+          motivo: decisao === "devolvido" ? comentario : undefined,
           target_stage_ordem: targetOrdem ?? undefined,
         },
       });
