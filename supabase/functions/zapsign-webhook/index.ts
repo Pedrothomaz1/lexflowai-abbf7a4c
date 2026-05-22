@@ -33,10 +33,13 @@ serve(async (req) => {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const SECRET = Deno.env.get("ZAPSIGN_WEBHOOK_SECRET");
-    if (SECRET) {
-      const provided = req.headers.get("x-zapsign-secret") || req.headers.get("X-Zapsign-Secret");
-      if (provided !== SECRET) return json(401, { ok: false, error: "Invalid secret" });
+    // Fail-closed: segredo é obrigatório em produção. Sem ele, não aceitamos webhook.
+    if (!SECRET) {
+      console.error("zapsign-webhook: ZAPSIGN_WEBHOOK_SECRET não configurado — rejeitando requisição");
+      return json(500, { ok: false, error: "Webhook secret not configured" });
     }
+    const provided = req.headers.get("x-zapsign-secret") || req.headers.get("X-Zapsign-Secret");
+    if (provided !== SECRET) return json(401, { ok: false, error: "Invalid secret" });
 
     const admin = createClient(SUPABASE_URL, SERVICE);
     const payload = await req.json().catch(() => ({} as any));

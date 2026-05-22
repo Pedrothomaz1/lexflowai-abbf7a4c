@@ -14,6 +14,20 @@ const corsHeaders = {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
+  // Auth obrigatória via CRON_SECRET (header only — nunca via query string)
+  const cronSecret = Deno.env.get("CRON_SECRET");
+  const authHeader = req.headers.get("authorization") || "";
+  const bearer = authHeader.toLowerCase().startsWith("bearer ")
+    ? authHeader.slice(7).trim()
+    : "";
+  const provided = req.headers.get("x-cron-secret") || bearer;
+  if (!cronSecret || provided !== cronSecret) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
