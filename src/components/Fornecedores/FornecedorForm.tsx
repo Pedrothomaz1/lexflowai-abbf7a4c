@@ -81,8 +81,7 @@ export function FornecedorForm({ onSuccess, onCancel }: FornecedorFormProps) {
   const [activeTab, setActiveTab] = useState("basico");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [documentValid, setDocumentValid] = useState(false);
-  const { verify, loading: verifyingCnpj, result: cnpjResult, setResult: setCnpjResult } = useCnpjVerification();
-  const [showCnpjDetails, setShowCnpjDetails] = useState(false);
+  const { verify, result: cnpjResult } = useCnpjVerification();
 
   const [formData, setFormData] = useState<FornecedorFormData>({
     nome: "",
