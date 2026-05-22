@@ -52,7 +52,6 @@ const statusColor: Record<string, string> = {
 
 export const RevisaoExtracoesPanel = ({ contratoId }: Props) => {
   const { toast } = useToast();
-  const { currentOrganization } = useOrganization();
   const [extracoes, setExtracoes] = useState<Extracao[]>([]);
   const [riscos, setRiscos] = useState<Risco[]>([]);
   const [loading, setLoading] = useState(true);
