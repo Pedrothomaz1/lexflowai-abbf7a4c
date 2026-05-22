@@ -832,45 +832,24 @@ const ContratoDetalhes = () => {
             <ContractComments contratoId={contrato.id} />
           </TabsContent>
 
-          <TabsContent value="redlining">
-            <AnimatedCard>
-              <AnimatedCardHeader>
-                <div className="flex items-center gap-2">
-                  <Edit3 className="h-5 w-5 text-primary" />
-                  <div>
-                    <h3 className="text-lg font-semibold">Redlining / Markup</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Edição colaborativa com marcações visuais
-                    </p>
-                  </div>
-                </div>
-              </AnimatedCardHeader>
-              <AnimatedCardContent>
-                <ContractRedlineEditor
-                  contratoId={contrato.id}
-                  conteudoOriginal={contrato.descricao || ""}
-                />
-              </AnimatedCardContent>
-            </AnimatedCard>
-          </TabsContent>
-
-          <TabsContent value="versoes">
+          <TabsContent value="revisoes">
             <AnimatedCard>
               <AnimatedCardHeader>
                 <div className="flex items-center gap-2">
                   <History className="h-5 w-5 text-primary" />
                   <div>
-                    <h3 className="text-lg font-semibold">Histórico de Versões</h3>
+                    <h3 className="text-lg font-semibold">Revisões</h3>
                     <p className="text-sm text-muted-foreground">
-                      Versão atual: v{contrato.versao}
+                      Histórico de versões, devoluções de workflow e redlining em uma visão única.
                     </p>
                   </div>
                 </div>
               </AnimatedCardHeader>
               <AnimatedCardContent>
-                <ContractVersionHistory
+                <ContractRevisionsTab
                   contratoId={contrato.id}
                   currentVersion={contrato.versao}
+                  conteudoOriginal={contrato.descricao}
                   onVersionRestored={fetchContrato}
                 />
               </AnimatedCardContent>
