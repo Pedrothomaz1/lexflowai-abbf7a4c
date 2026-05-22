@@ -449,7 +449,7 @@ const FormBuilder = () => {
                 <CardContent>
                   <DynamicFormRenderer
                     fields={fields}
-                    onSubmit={() => toast({ title: "Preview — sem envio" })}
+                    onSubmit={() => { toast({ title: "Preview — sem envio" }); }}
                     submitLabel="Enviar (preview)"
                   />
                 </CardContent>
