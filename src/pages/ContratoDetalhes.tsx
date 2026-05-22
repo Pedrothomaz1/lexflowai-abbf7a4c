@@ -59,10 +59,9 @@ import {
   ContractSupplierCard,
   ContractAttachments,
   ContractObligations,
-  ContractVersionHistory,
-  ContractRedlineEditor,
   NegotiationMetrics,
 } from "@/components/ContractDetails";
+import { ContractRevisionsTab } from "@/components/contracts/ContractRevisionsTab";
 import { ContractInfoCard } from "@/components/ContractDetails/ContractInfoCard";
 import { ContractAIAnalysis } from "@/components/ContractDetails/ContractAIAnalysis";
 import { ContractApprovalCard } from "@/components/ContractDetails/ContractApprovalCard";
