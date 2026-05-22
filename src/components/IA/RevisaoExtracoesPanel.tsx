@@ -73,8 +73,8 @@ export const RevisaoExtracoesPanel = ({ contratoId }: Props) => {
         .eq("contrato_id", contratoId)
         .order("created_at", { ascending: false }),
     ]);
-    if (ext.error) handleDbError(ext.error, toast);
-    if (risk.error) handleDbError(risk.error, toast);
+    if (ext.error) handleDbError(ext.error);
+    if (risk.error) handleDbError(risk.error);
     setExtracoes((ext.data as Extracao[]) || []);
     setRiscos((risk.data as Risco[]) || []);
     setLoading(false);
@@ -118,7 +118,7 @@ export const RevisaoExtracoesPanel = ({ contratoId }: Props) => {
       .select()
       .maybeSingle();
     if (error || !data) {
-      handleDbError(error, toast);
+      handleDbError(error);
       return;
     }
     setExtracoes((prev) => prev.map((e) => (e.id === id ? { ...e, ...(data as Extracao) } : e)));
@@ -135,7 +135,7 @@ export const RevisaoExtracoesPanel = ({ contratoId }: Props) => {
       .select()
       .maybeSingle();
     if (error || !data) {
-      handleDbError(error, toast);
+      handleDbError(error);
       return;
     }
     setRiscos((prev) => prev.map((r) => (r.id === id ? { ...r, ...(data as Risco) } : r)));
