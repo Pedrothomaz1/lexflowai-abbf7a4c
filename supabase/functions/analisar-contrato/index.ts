@@ -117,6 +117,53 @@ async function extractNativeText(fileBytes: Uint8Array, mimeType: string): Promi
   return '';
 }
 
+async function callExtractionAI(params: {
+  apiKey: string;
+  input: { kind: 'text'; text: string } | { kind: 'file'; base64: string; mimeType: string };
+}): Promise<{ payload: ExtractionPayload | null; usage: { total: number; prompt: number; completion: number } }> {
+  const content = params.input.kind === 'text'
+    ? `${extractionPrompt}\n\nTexto do contrato:\n${params.input.text.slice(0, 30000)}`
+    : [
+        { type: 'text', text: extractionPrompt },
+        { type: 'input_file', input_file: { data: params.input.base64, mime_type: params.input.mimeType } },
+      ];
+
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${params.apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      messages: [{ role: "user", content }],
+      tools: [EXTRACTION_TOOL],
+      tool_choice: { type: "function", function: { name: "extract_contract_dates" } },
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Erro na API Lovable:', response.status, errorText);
+    if (response.status === 429) throw new Error("Limite de requisições excedido. Tente novamente mais tarde.");
+    if (response.status === 402) throw new Error("Créditos insuficientes. Adicione fundos ao seu workspace Lovable AI.");
+    throw new Error('Erro na API de IA');
+  }
+
+  const aiResponse = await response.json();
+  const toolCall = aiResponse.choices?.[0]?.message?.tool_calls?.[0];
+  const payload = toolCall?.function?.arguments ? JSON.parse(toolCall.function.arguments) : null;
+
+  return {
+    payload,
+    usage: {
+      total: aiResponse.usage?.total_tokens || 0,
+      prompt: aiResponse.usage?.prompt_tokens || 0,
+      completion: aiResponse.usage?.completion_tokens || 0,
+    },
+  };
+}
+
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
 
