@@ -210,3 +210,12 @@ Ao final desta rodada eu pergunto se devemos seguir para o próximo grupo (prova
 - Comentários da contraparte gravados em `contract_negotiations` com `autor_lado='contraparte'` e metadados (nome, email, via).
 - Página pública `/portal/:token` (PortalExterno.tsx) com header, dados do contrato, thread e formulário de comentário.
 - Botão "Compartilhar com contraparte" na aba Negociação do ContratoDetalhes.
+
+---
+
+## Rodada de refinamento #11/#13
+
+- `lexflow-constants.ts`: novo `TIPO_OBRIGACAO_OPTIONS` com os 6 tipos da spec + comunicação/relatório/notificação.
+- `Obrigacoes.tsx`: filtro de tipo passa a consumir `TIPO_OBRIGACAO_OPTIONS`.
+- `SlaAlertBanner.tsx`: banner em `MinhasAprovacoes` com contagem de vencidos e em risco (≤4h).
+- `HistoricoDecisoes.tsx`: lê `approval_decisions` por step e exibe dentro do `AprovacaoDecisionDialog`.
