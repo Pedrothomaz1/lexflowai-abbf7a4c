@@ -131,6 +131,7 @@ const contratosMenuSections: MenuSectionType[] = [
     defaultOpen: false,
     items: [
       { title: "Fluxos de Aprovação", url: "/workflows", icon: GitBranch, roles: ["administrador"] },
+      { title: "Construtor de Workflows", url: "/workflows/builder", icon: GitBranch, roles: ["administrador"] },
     ],
   },
   {
