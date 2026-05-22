@@ -6,6 +6,9 @@ import OrganizacoesTab from "./OrganizacoesTab";
 import UsuariosTab from "./UsuariosTab";
 import MetricasTab from "./MetricasTab";
 import SuperAdminsTab from "./SuperAdminsTab";
+import DashboardTab from "./DashboardTab";
+import PrecosTab from "./PrecosTab";
+import OnboardingTab from "./OnboardingTab";
 
 export default function SuperAdminPage() {
   const { isSuperAdmin, loading } = useSuperAdmin();
@@ -48,15 +51,27 @@ export default function SuperAdminPage() {
           </p>
         </header>
 
-        <Tabs defaultValue="organizacoes">
-          <TabsList>
-            <TabsTrigger value="organizacoes">Organizações</TabsTrigger>
+        <Tabs defaultValue="dashboard">
+          <TabsList className="flex-wrap h-auto">
+            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="organizacoes">Clientes</TabsTrigger>
+            <TabsTrigger value="onboarding">Onboarding</TabsTrigger>
+            <TabsTrigger value="precos">Preços</TabsTrigger>
             <TabsTrigger value="usuarios">Usuários</TabsTrigger>
             <TabsTrigger value="super-admins">Super Admins</TabsTrigger>
             <TabsTrigger value="metricas">Métricas</TabsTrigger>
           </TabsList>
+          <TabsContent value="dashboard" className="mt-6">
+            <DashboardTab />
+          </TabsContent>
           <TabsContent value="organizacoes" className="mt-6">
             <OrganizacoesTab />
+          </TabsContent>
+          <TabsContent value="onboarding" className="mt-6">
+            <OnboardingTab />
+          </TabsContent>
+          <TabsContent value="precos" className="mt-6">
+            <PrecosTab />
           </TabsContent>
           <TabsContent value="usuarios" className="mt-6">
             <UsuariosTab />
