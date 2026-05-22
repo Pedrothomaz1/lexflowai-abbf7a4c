@@ -15,8 +15,10 @@ import {
 } from "@dnd-kit/core";
 import {
   ArrowLeft, CheckCircle2, XCircle, Clock, GitBranch, AlertTriangle, History,
+  FileDown, FileSpreadsheet, ScrollText, GitFork,
 } from "lucide-react";
 import { handleDbError } from "@/utils/dbErrorHandler";
+import { exportWorkflowHistoryPDF, exportWorkflowHistoryXLSX } from "@/utils/workflowExport";
 
 type Stage = {
   id: string; ordem: number; nome: string;
@@ -28,6 +30,7 @@ type RunStage = {
   decisao: string | null; comentario: string | null;
   executado_por: string | null; executado_em: string | null;
   due_at: string | null; created_at: string;
+  regra_aplicada?: boolean;
 };
 type Run = {
   id: string; status: string; current_stage_ordem: number;
@@ -131,6 +134,10 @@ export default function ContratoWorkflow() {
   const [pendingDecisao, setPendingDecisao] = useState<"aprovado" | "rejeitado" | "pulado">("aprovado");
   const [pendingTargetOrdem, setPendingTargetOrdem] = useState<number | null>(null);
   const [comentario, setComentario] = useState("");
+  const [userMap, setUserMap] = useState<Record<string, string>>({});
+  const [auditOpen, setAuditOpen] = useState(false);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -156,8 +163,24 @@ export default function ContratoWorkflow() {
           .eq("workflow_run_id", r.id)
           .order("ordem", { ascending: true }),
       ]);
-      setStages((s as Stage[]) ?? []);
-      setRunStages((rs as RunStage[]) ?? []);
+      const stagesData = (s as Stage[]) ?? [];
+      const rsData = (rs as RunStage[]) ?? [];
+      setStages(stagesData);
+      setRunStages(rsData);
+
+      // Resolver nomes dos responsáveis
+      const userIds = Array.from(new Set(
+        rsData.map(x => x.executado_por).filter(Boolean) as string[],
+      ));
+      if (userIds.length > 0) {
+        const { data: profs } = await supabase
+          .from("profiles").select("id, full_name, email").in("id", userIds);
+        const map: Record<string, string> = {};
+        (profs ?? []).forEach((p: any) => { map[p.id] = p.full_name || p.email || p.id; });
+        setUserMap(map);
+      } else {
+        setUserMap({});
+      }
     }
     setLoading(false);
   };
@@ -256,6 +279,33 @@ export default function ContratoWorkflow() {
             {run.status}
           </Badge>
         )}
+        {run && (
+          <div className="flex items-center gap-1">
+            <Button size="sm" variant="outline"
+              onClick={() => exportWorkflowHistoryPDF(contrato, run, stages, runStages, userMap)}>
+              <FileDown className="h-4 w-4 mr-1" /> PDF
+            </Button>
+            <Button size="sm" variant="outline"
+              onClick={() => exportWorkflowHistoryXLSX(contrato, run, stages, runStages, userMap)}>
+              <FileSpreadsheet className="h-4 w-4 mr-1" /> Excel
+            </Button>
+            <Button size="sm" variant="outline" onClick={async () => {
+              setAuditOpen(true); setAuditLoading(true);
+              const ids = [run.id, ...runStages.map(rs => rs.id)];
+              const { data } = await supabase
+                .from("audit_logs")
+                .select("id, acao, entidade, entidade_id, user_id, created_at, dados_novos, dados_anteriores")
+                .in("entidade", ["workflow_runs", "workflow_run_stages"])
+                .in("entidade_id", ids)
+                .order("created_at", { ascending: false })
+                .limit(200);
+              setAuditLogs(data ?? []);
+              setAuditLoading(false);
+            }}>
+              <ScrollText className="h-4 w-4 mr-1" /> Auditoria
+            </Button>
+          </div>
+        )}
       </div>
 
       {!run ? (
@@ -330,6 +380,7 @@ export default function ContratoWorkflow() {
               )}
               {runStages.map((rs) => {
                 const stage = stages.find(s => s.id === rs.stage_id);
+                const resp = rs.executado_por ? (userMap[rs.executado_por] ?? rs.executado_por.slice(0, 8)) : null;
                 return (
                   <div key={rs.id} className="border-l-2 border-primary/30 pl-3 pb-1">
                     <div className="flex items-center justify-between gap-2">
@@ -338,9 +389,27 @@ export default function ContratoWorkflow() {
                         {rs.status}
                       </Badge>
                     </div>
+                    <div className="flex flex-wrap items-center gap-1 mt-1">
+                      {rs.decisao && (
+                        <Badge variant="outline" className="text-[10px]">decisão: {rs.decisao}</Badge>
+                      )}
+                      {rs.regra_aplicada && (
+                        <Badge variant="outline" className="text-[10px] gap-1 border-primary/40 text-primary">
+                          <GitFork className="h-2.5 w-2.5" /> regra aplicada
+                        </Badge>
+                      )}
+                      {resp && (
+                        <Badge variant="outline" className="text-[10px]">por {resp}</Badge>
+                      )}
+                    </div>
                     {rs.executado_em && (
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {new Date(rs.executado_em).toLocaleString("pt-BR")}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Executado em {new Date(rs.executado_em).toLocaleString("pt-BR")}
+                      </p>
+                    )}
+                    {rs.due_at && (
+                      <p className="text-[11px] text-muted-foreground">
+                        SLA: {new Date(rs.due_at).toLocaleString("pt-BR")}
                       </p>
                     )}
                     {rs.comentario && (
@@ -387,6 +456,51 @@ export default function ContratoWorkflow() {
             >
               Confirmar
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={auditOpen} onOpenChange={setAuditOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ScrollText className="h-4 w-4" /> Trilha de auditoria do workflow
+            </DialogTitle>
+          </DialogHeader>
+          {auditLoading ? (
+            <p className="text-sm text-muted-foreground">Carregando...</p>
+          ) : auditLogs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Sem registros.</p>
+          ) : (
+            <div className="space-y-2">
+              {auditLogs.map((log) => {
+                const userName = log.user_id ? (userMap[log.user_id] ?? log.user_id.slice(0, 8)) : "sistema";
+                const novo = log.dados_novos ?? {};
+                const status = novo.status;
+                const decisao = novo.decisao;
+                const regra = novo.regra_aplicada;
+                return (
+                  <div key={log.id} className="border rounded-md p-2 bg-muted/20 text-xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant="outline" className="text-[10px]">{log.acao}</Badge>
+                        <Badge variant="outline" className="text-[10px]">{log.entidade}</Badge>
+                        {status && <Badge variant="outline" className="text-[10px]">status: {status}</Badge>}
+                        {decisao && <Badge variant="outline" className="text-[10px]">decisão: {decisao}</Badge>}
+                        {regra && <Badge variant="outline" className="text-[10px] text-primary border-primary/40">regra</Badge>}
+                      </div>
+                      <span className="text-muted-foreground whitespace-nowrap">
+                        {new Date(log.created_at).toLocaleString("pt-BR")}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-muted-foreground">por <span className="font-medium text-foreground">{userName}</span></p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setAuditOpen(false)}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
