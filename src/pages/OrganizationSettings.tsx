@@ -20,6 +20,7 @@ const OrganizationSettings = () => {
     nome: "",
     cnpj: "",
     email_contato: "",
+    email_financeiro: "",
     telefone: "",
     endereco: "",
     cidade: "",
@@ -29,10 +30,12 @@ const OrganizationSettings = () => {
 
   useEffect(() => {
     if (organization) {
+      const org = organization as typeof organization & { email_financeiro?: string | null };
       setFormData({
         nome: organization.nome || "",
         cnpj: organization.cnpj || "",
         email_contato: organization.email_contato || "",
+        email_financeiro: org.email_financeiro || "",
         telefone: organization.telefone || "",
         endereco: organization.endereco || "",
         cidade: organization.cidade || "",
@@ -67,6 +70,7 @@ const OrganizationSettings = () => {
           nome: formData.nome.trim(),
           cnpj: formData.cnpj.trim() || null,
           email_contato: formData.email_contato.trim() || null,
+          email_financeiro: formData.email_financeiro.trim() || null,
           telefone: formData.telefone.trim() || null,
           endereco: formData.endereco.trim() || null,
           cidade: formData.cidade.trim() || null,
@@ -166,6 +170,21 @@ const OrganizationSettings = () => {
                   onChange={handleChange("email_contato")}
                   disabled={loading}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email_financeiro">E-mail do Financeiro</Label>
+                <Input
+                  id="email_financeiro"
+                  type="email"
+                  value={formData.email_financeiro}
+                  onChange={handleChange("email_financeiro")}
+                  placeholder="financeiro@empresa.com"
+                  disabled={loading}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Destinatário das notificações automáticas pós-assinatura.
+                </p>
               </div>
 
               <div className="space-y-2">

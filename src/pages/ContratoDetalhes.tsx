@@ -74,6 +74,9 @@ import { RevisaoExtracoesPanel } from "@/components/IA/RevisaoExtracoesPanel";
 import { PortalContraparteDialog } from "@/components/Portal/PortalContraparteDialog";
 import { PortalLinksPanel } from "@/components/Portal/PortalLinksPanel";
 import { IntakeGatesPanel } from "@/components/contracts/IntakeGatesPanel";
+import { BlocoFinanceiroPanel } from "@/components/contracts/BlocoFinanceiroPanel";
+import { ComplianceChecklistPanel } from "@/components/contracts/ComplianceChecklistPanel";
+import { LegalReviewPanel } from "@/components/contracts/LegalReviewPanel";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { handleDbError } from "@/utils/dbErrorHandler";
@@ -705,8 +708,11 @@ const ContratoDetalhes = () => {
       {/* Tabs Section */}
       <FadeIn delay={0.3}>
         <Tabs defaultValue="intake" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-9 lg:w-[1080px]">
+          <TabsList className="flex w-full flex-wrap h-auto">
             <TabsTrigger value="intake">Intake</TabsTrigger>
+            <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
+            <TabsTrigger value="compliance">Compliance</TabsTrigger>
+            <TabsTrigger value="revisao-legal">Revisão Legal</TabsTrigger>
             <TabsTrigger value="aprovacoes">Aprovações</TabsTrigger>
             <TabsTrigger value="assinaturas">Assinaturas</TabsTrigger>
             <TabsTrigger value="comentarios">Comentários</TabsTrigger>
@@ -721,6 +727,22 @@ const ContratoDetalhes = () => {
             <IntakeGatesPanel
               contratoId={contrato.id}
               intakeStatus={(contrato as unknown as { intake_status?: string | null }).intake_status ?? null}
+              onChanged={fetchContrato}
+            />
+          </TabsContent>
+
+          <TabsContent value="financeiro">
+            <BlocoFinanceiroPanel contratoId={contrato.id} onSaved={fetchContrato} />
+          </TabsContent>
+
+          <TabsContent value="compliance">
+            <ComplianceChecklistPanel contratoId={contrato.id} onChanged={fetchContrato} />
+          </TabsContent>
+
+          <TabsContent value="revisao-legal">
+            <LegalReviewPanel
+              contratoId={contrato.id}
+              nivelRisco={(contrato as unknown as { nivel_risco?: string | null }).nivel_risco ?? null}
               onChanged={fetchContrato}
             />
           </TabsContent>
