@@ -493,10 +493,26 @@ const ContratoDetalhes = () => {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <AnimatedButton variant="outline" size="sm" onClick={handleExportPDF}>
-              <Download className="h-4 w-4 mr-2" />
-              PDF
-            </AnimatedButton>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <AnimatedButton variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  PDF
+                </AnimatedButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Exportar PDF</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleExportPDF}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Resumo simples
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportExecutivoPDF}>
+                  <ScrollText className="h-4 w-4 mr-2" />
+                  Relatório executivo
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <ContractQuickActions
               contratoId={contrato.id}
               contratoNumero={contrato.numero_contrato}
