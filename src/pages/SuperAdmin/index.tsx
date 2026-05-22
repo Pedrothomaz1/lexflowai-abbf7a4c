@@ -9,6 +9,8 @@ import SuperAdminsTab from "./SuperAdminsTab";
 import DashboardTab from "./DashboardTab";
 import PrecosTab from "./PrecosTab";
 import OnboardingTab from "./OnboardingTab";
+import LeadsTab from "./LeadsTab";
+
 
 export default function SuperAdminPage() {
   const { isSuperAdmin, loading } = useSuperAdmin();
