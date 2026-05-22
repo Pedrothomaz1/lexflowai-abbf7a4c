@@ -49,8 +49,11 @@ const statusColor: Record<string, string> = {
   pendente: "bg-warning/10 text-warning border-warning/30",
   aprovado: "bg-success/10 text-success border-success/30",
   rejeitado: "bg-destructive/10 text-destructive border-destructive/30",
+  devolvido: "bg-warning/15 text-warning border-warning/40",
   pulado: "bg-muted text-muted-foreground",
 };
+
+type Decisao = "aprovado" | "rejeitado" | "pulado" | "devolvido";
 
 function ContractCard({ run, contrato, slaWarning }: { run: Run; contrato: Contrato; slaWarning: boolean }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
