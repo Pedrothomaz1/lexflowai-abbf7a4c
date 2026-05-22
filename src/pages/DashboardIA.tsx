@@ -383,6 +383,56 @@ function KpiCard({
   );
 }
 
+function SkillCard({
+  icon: Icon,
+  title,
+  slug,
+  total,
+  loading,
+  stats,
+}: {
+  icon: any;
+  title: string;
+  slug: string;
+  total: number;
+  loading?: boolean;
+  stats: Array<{ label: string; value: number | string; variant: "default" | "secondary" | "destructive" | "outline" }>;
+}) {
+  return (
+    <Card className="flex flex-col">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <Icon className="h-5 w-5 text-primary" />
+          {loading ? (
+            <Skeleton className="h-7 w-10" />
+          ) : (
+            <span className="text-2xl font-bold">{total}</span>
+          )}
+        </div>
+        <CardTitle className="text-sm mt-2">{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="flex-1 flex flex-col justify-between gap-3">
+        {total === 0 && !loading ? (
+          <p className="text-xs text-muted-foreground">Nenhum contrato analisado com esta skill ainda.</p>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {stats.map((s, i) => (
+              <Badge key={i} variant={s.variant} className="text-xs font-normal">
+                {s.label}: {s.value}
+              </Badge>
+            ))}
+          </div>
+        )}
+        <Button size="sm" variant="ghost" asChild className="self-start -ml-2">
+          <Link to={`/contratos?skill=${slug}`}>
+            Ver contratos <ArrowRight className="h-3 w-3 ml-1" />
+          </Link>
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 function RiskBadge({ score }: { score: number }) {
   if (isNaN(score)) return <Badge variant="outline">—</Badge>;
   const variant = score >= 70 ? "destructive" : score >= 40 ? "default" : "secondary";
