@@ -68,9 +68,9 @@ export const useUserRole = () => {
   };
 
   const isAnalista = userRole === "analista_juridico";
-  const isConsultor = userRole === "consultoria_juridica";
+  const isConsultor = false;
   const isAdmin = userRole === "administrador";
-  const canApprove = isConsultor || isAdmin;
+  const canApprove = isAdmin;
   const canManageUsers = isAdmin;
 
   return {
