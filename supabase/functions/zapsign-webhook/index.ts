@@ -1,11 +1,27 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://esm.sh/zod@3.23.8";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+
+// Permissive schema — ZapSign envelopes evolve, mas estes campos têm tipo conhecido quando presentes.
+const PayloadSchema = z.object({
+  event_type: z.string().max(120).optional(),
+  event: z.string().max(120).optional(),
+  token: z.string().max(200).optional(),
+  open_id: z.union([z.string(), z.number()]).optional(),
+  external_id: z.string().max(200).optional(),
+  signed_file: z.string().url().max(2000).optional(),
+  signed_file_url: z.string().url().max(2000).optional(),
+  email: z.string().email().max(255).optional(),
+  signer_token: z.string().max(200).optional(),
+  doc: z.object({}).passthrough().optional(),
+  signer: z.object({}).passthrough().optional(),
+}).passthrough();
 
 /**
  * Webhook público da ZapSign.
@@ -42,7 +58,13 @@ serve(async (req) => {
     if (provided !== SECRET) return json(401, { ok: false, error: "Invalid secret" });
 
     const admin = createClient(SUPABASE_URL, SERVICE);
-    const payload = await req.json().catch(() => ({} as any));
+    const rawPayload = await req.json().catch(() => ({} as any));
+    const parsedPayload = PayloadSchema.safeParse(rawPayload);
+    if (!parsedPayload.success) {
+      console.warn("zapsign-webhook payload inválido", parsedPayload.error.flatten().fieldErrors);
+      return json(400, { ok: false, error: "Invalid payload" });
+    }
+    const payload = parsedPayload.data as any;
     console.log("zapsign-webhook payload", JSON.stringify(payload).slice(0, 800));
 
     const eventType: string = payload?.event_type || payload?.event || "evento";

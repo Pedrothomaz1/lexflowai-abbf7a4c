@@ -1,5 +1,18 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://esm.sh/zod@3.23.8";
+
+// Permissive schema — webhook recebe payloads variados (DocuSign, ClickSign, ZapSign, D4Sign, custom).
+const PayloadSchema = z.object({
+  provider: z.string().max(60).optional(),
+  event: z.string().max(120).optional(),
+  status: z.string().max(120).optional(),
+  externalId: z.union([z.string(), z.number()]).optional(),
+  id: z.union([z.string(), z.number()]).optional(),
+  signedDocumentUrl: z.string().url().max(2000).optional(),
+  data: z.object({}).passthrough().optional(),
+  document: z.object({}).passthrough().optional(),
+}).passthrough();
 
 // Allowed origins for CORS - add your production domain here
 const ALLOWED_ORIGINS = [
@@ -204,17 +217,27 @@ serve(async (req) => {
 
     // Read body as text for signature verification
     const bodyText = await req.text();
-    let payload: any;
-    
+    let rawPayload: unknown;
+
     try {
-      payload = JSON.parse(bodyText);
-    } catch (parseError) {
+      rawPayload = JSON.parse(bodyText);
+    } catch (_parseError) {
       console.error(`[${clientIP}] Invalid JSON payload`);
       return new Response(
         JSON.stringify({ error: 'Invalid JSON payload' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const parsedPayload = PayloadSchema.safeParse(rawPayload);
+    if (!parsedPayload.success) {
+      console.warn(`[${clientIP}] Payload com tipos inválidos`, parsedPayload.error.flatten().fieldErrors);
+      return new Response(
+        JSON.stringify({ error: 'Invalid payload shape', details: parsedPayload.error.flatten().fieldErrors }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const payload = parsedPayload.data as any;
 
     console.log(`[${clientIP}] Webhook received:`, JSON.stringify(payload, null, 2));
 

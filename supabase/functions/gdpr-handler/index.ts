@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://esm.sh/zod@3.23.8";
 
 // Allowed origins for CORS - add your production domain here
 const ALLOWED_ORIGINS = [
@@ -26,10 +27,10 @@ function getCorsHeaders(req: Request): Record<string, string> | null {
   };
 }
 
-interface GDPRRequest {
-  action: 'erasure' | 'export' | 'access';
-  user_id?: string;
-}
+const GDPRRequestSchema = z.object({
+  action: z.enum(['erasure', 'export', 'access']),
+  user_id: z.string().uuid().optional(),
+}).strict();
 
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
@@ -76,16 +77,16 @@ Deno.serve(async (req) => {
 
     const requestingUserId = claimsData.claims.sub as string;
 
-    // Parse request body
-    const body: GDPRRequest = await req.json();
-    const { action, user_id } = body;
-
-    if (!action) {
+    // Parse and validate request body
+    const rawBody = await req.json().catch(() => ({}));
+    const parsed = GDPRRequestSchema.safeParse(rawBody);
+    if (!parsed.success) {
       return new Response(
-        JSON.stringify({ error: 'Ação LGPD não especificada' }),
+        JSON.stringify({ error: 'Requisição inválida', details: parsed.error.flatten().fieldErrors }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    const { action, user_id } = parsed.data;
 
     // =========================================================
     // MULTI-TENANT: Resolve requesting user's organization

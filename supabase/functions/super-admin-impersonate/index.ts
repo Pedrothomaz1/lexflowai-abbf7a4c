@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
+import { z } from "https://esm.sh/zod@3.23.8";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,6 +8,12 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+
+const BodySchema = z.object({
+  target_organization_id: z.string().uuid(),
+  target_user_id: z.string().uuid().optional().nullable(),
+  motivo: z.string().trim().min(10, "Descreva o motivo (mín. 10 caracteres)").max(500, "Motivo muito longo (máx. 500)"),
+}).strict();
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -37,14 +44,14 @@ serve(async (req) => {
     const { data: isSA } = await admin.rpc("is_super_admin", { _user_id: caller.id });
     if (!isSA) return json({ ok: false, error: "Acesso negado: apenas super-admins" });
 
-    const body = await req.json().catch(() => ({}));
-    const targetOrgId: string = (body?.target_organization_id || "").trim();
-    const targetUserId: string | null = body?.target_user_id || null;
-    const motivo: string = (body?.motivo || "").trim();
-
-    if (!targetOrgId) return json({ ok: false, error: "Organização é obrigatória" });
-    if (motivo.length < 10) return json({ ok: false, error: "Descreva o motivo (mín. 10 caracteres)" });
-    if (motivo.length > 500) return json({ ok: false, error: "Motivo muito longo (máx. 500)" });
+    const rawBody = await req.json().catch(() => ({}));
+    const parsed = BodySchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return json({ ok: false, error: "Dados inválidos", details: parsed.error.flatten().fieldErrors });
+    }
+    const targetOrgId = parsed.data.target_organization_id;
+    const targetUserId = parsed.data.target_user_id ?? null;
+    const motivo = parsed.data.motivo;
 
     // Resolve target org
     const { data: org } = await admin

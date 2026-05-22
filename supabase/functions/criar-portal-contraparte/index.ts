@@ -1,13 +1,22 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://esm.sh/zod@3.23.8";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const BodySchema = z.object({
+  contratoId: z.string().uuid(),
+  contraparteEmail: z.string().trim().toLowerCase().email().max(255),
+  contraparteNome: z.string().trim().max(200).optional().nullable(),
+  escopo: z.enum(['view', 'comment', 'sign']).default('view'),
+  validadeDias: z.number().int().min(1).max(90).default(14),
+  enviarEmail: z.boolean().default(true),
+  mensagem: z.string().trim().max(2000).optional(),
+}).strict();
 
 function genToken() {
   const b = new Uint8Array(32);
@@ -24,10 +33,12 @@ serve(async (req) => {
     const { data: { user } } = await supabase.auth.getUser(auth.replace('Bearer ', ''));
     if (!user) return json({ ok: false, error: 'Unauthorized' }, 401);
 
-    const { contratoId, contraparteEmail, contraparteNome, escopo = 'view', validadeDias = 14, enviarEmail = true, mensagem } = await req.json().catch(() => ({}));
-    if (!contratoId || !UUID_REGEX.test(contratoId)) return json({ ok: false, error: 'contratoId inválido' });
-    if (!contraparteEmail || !EMAIL_REGEX.test(contraparteEmail)) return json({ ok: false, error: 'E-mail inválido' });
-    if (!['view', 'comment', 'sign'].includes(escopo)) return json({ ok: false, error: 'Escopo inválido' });
+    const rawBody = await req.json().catch(() => ({}));
+    const parsed = BodySchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return json({ ok: false, error: 'Dados inválidos', details: parsed.error.flatten().fieldErrors });
+    }
+    const { contratoId, contraparteEmail, contraparteNome, escopo, validadeDias, enviarEmail, mensagem } = parsed.data;
 
     const { data: contrato } = await supabase.from('contratos').select('id, organization_id, titulo, numero_contrato').eq('id', contratoId).maybeSingle();
     if (!contrato) return json({ ok: false, error: 'Contrato não encontrado' }, 404);

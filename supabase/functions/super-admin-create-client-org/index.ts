@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
 import { Resend } from "https://esm.sh/resend@4.0.0";
+import { z } from "https://esm.sh/zod@3.23.8";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,6 +9,17 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+
+const BodySchema = z.object({
+  nome: z.string().trim().min(1).max(200),
+  cnpj: z.string().trim().max(20).optional().nullable(),
+  owner_email: z.string().trim().toLowerCase().email().max(255),
+  owner_nome: z.string().trim().max(200).optional().default(""),
+  plano: z.enum(["free", "pro", "business", "enterprise"]).optional().default("pro"),
+  telefone: z.string().trim().max(40).optional().nullable(),
+  cidade: z.string().trim().max(120).optional().nullable(),
+  estado: z.string().trim().max(40).optional().nullable(),
+}).strict();
 
 const cleanCnpj = (v?: string | null) => (v || "").replace(/\D/g, "");
 
@@ -49,20 +61,20 @@ serve(async (req) => {
     const { data: isSA } = await admin.rpc("is_super_admin", { _user_id: user.id });
     if (!isSA) return json({ ok: false, error: "Acesso negado: apenas super-admins" });
 
-    const body = await req.json().catch(() => ({}));
-    const nome: string = (body?.nome || "").trim();
-    const cnpj: string | null = cleanCnpj(body?.cnpj) || null;
-    const ownerEmail: string = (body?.owner_email || "").trim().toLowerCase();
-    const ownerNome: string = (body?.owner_nome || "").trim();
-    const plano: string = body?.plano || "pro";
-    const telefone: string | null = body?.telefone || null;
-    const cidade: string | null = body?.cidade || null;
-    const estado: string | null = body?.estado || null;
-
-    if (!nome) return json({ ok: false, error: "Nome da empresa é obrigatório" });
-    if (!ownerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerEmail)) {
-      return json({ ok: false, error: "E-mail do dono inválido" });
+    const rawBody = await req.json().catch(() => ({}));
+    const parsed = BodySchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return json({ ok: false, error: "Dados inválidos", details: parsed.error.flatten().fieldErrors });
     }
+    const nome = parsed.data.nome;
+    const cnpj = cleanCnpj(parsed.data.cnpj) || null;
+    const ownerEmail = parsed.data.owner_email;
+    const ownerNome = parsed.data.owner_nome ?? "";
+    const plano = parsed.data.plano ?? "pro";
+    const telefone = parsed.data.telefone ?? null;
+    const cidade = parsed.data.cidade ?? null;
+    const estado = parsed.data.estado ?? null;
+
     if (cnpj && cnpj.length !== 14) return json({ ok: false, error: "CNPJ inválido" });
 
     // Check duplicate CNPJ
