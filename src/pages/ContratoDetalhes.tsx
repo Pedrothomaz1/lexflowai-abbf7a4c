@@ -596,23 +596,42 @@ const ContratoDetalhes = () => {
                 <Separator />
 
                 <div className="space-y-2">
-                  <Label className="text-muted-foreground">Análise com IA</Label>
-                  <AnimatedButton 
-                    variant="outline" 
-                    className="w-full" 
-                    onClick={handleAnalisarIA}
-                    disabled={isAnalyzing}
-                  >
-                    <Brain className="h-4 w-4 mr-2" />
-                    {isAnalyzing ? "Analisando..." : analise ? "Reanalisar" : "Analisar Contrato"}
-                  </AnimatedButton>
+                  <Label className="text-muted-foreground">Análise com IA (skills jurídicas)</Label>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <AnimatedButton variant="outline" className="w-full" disabled={isAnalyzing}>
+                        <Brain className="h-4 w-4 mr-2" />
+                        {isAnalyzing ? "Analisando..." : analise ? "Reanalisar contrato" : "Analisar contrato"}
+                      </AnimatedButton>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-64 z-50 bg-popover">
+                      <DropdownMenuLabel>Escolha a skill</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => handleAnalisarIA("full")}>
+                        <ScrollText className="h-4 w-4 mr-2" />
+                        Análise completa (recomendado)
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => handleAnalisarIA("contract-review")}>
+                        Revisão cláusula a cláusula
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleAnalisarIA("nda-triage")}>
+                        Triagem de NDA
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleAnalisarIA("risk-assessment")}>
+                        Mapa de riscos jurídicos
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleAnalisarIA("compliance")}>
+                        Compliance (LGPD, anticorrupção…)
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   {analise && (
-                    <Button 
-                      variant="ghost" 
-                      className="w-full text-xs" 
+                    <Button
+                      variant="ghost"
+                      className="w-full text-xs"
                       onClick={() => setShowAnalise(!showAnalise)}
                     >
-                      {showAnalise ? "Ocultar" : "Ver"} Análise
+                      {showAnalise ? "Ocultar" : "Ver"} análise
                     </Button>
                   )}
                   <Button
