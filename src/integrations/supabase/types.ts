@@ -3491,6 +3491,75 @@ export type Database = {
           },
         ]
       }
+      sales_leads: {
+        Row: {
+          assigned_to: string | null
+          cnpj: string | null
+          converted_org_id: string | null
+          created_at: string
+          email: string
+          empresa: string | null
+          id: string
+          mensagem: string | null
+          nome: string
+          notas: string | null
+          plano_interesse: string | null
+          status: string
+          telefone: string | null
+          updated_at: string
+          usuarios_estimados: number | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          cnpj?: string | null
+          converted_org_id?: string | null
+          created_at?: string
+          email: string
+          empresa?: string | null
+          id?: string
+          mensagem?: string | null
+          nome: string
+          notas?: string | null
+          plano_interesse?: string | null
+          status?: string
+          telefone?: string | null
+          updated_at?: string
+          usuarios_estimados?: number | null
+        }
+        Update: {
+          assigned_to?: string | null
+          cnpj?: string | null
+          converted_org_id?: string | null
+          created_at?: string
+          email?: string
+          empresa?: string | null
+          id?: string
+          mensagem?: string | null
+          nome?: string
+          notas?: string | null
+          plano_interesse?: string | null
+          status?: string
+          telefone?: string | null
+          updated_at?: string
+          usuarios_estimados?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_leads_converted_org_id_fkey"
+            columns: ["converted_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_leads_converted_org_id_fkey"
+            columns: ["converted_org_id"]
+            isOneToOne: false
+            referencedRelation: "super_admin_organizations_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       security_alerts: {
         Row: {
           assigned_to: string | null
