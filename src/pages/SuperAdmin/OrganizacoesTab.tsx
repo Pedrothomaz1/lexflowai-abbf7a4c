@@ -306,7 +306,19 @@ export default function OrganizacoesTab() {
                 </div>
                 <div className="space-y-1.5">
                   <Label>CNPJ</Label>
-                  <Input value={newOrg.cnpj} onChange={(e) => setNewOrg({ ...newOrg, cnpj: e.target.value })} placeholder="00.000.000/0000-00" />
+                  <CnpjAutoFillInput
+                    value={newOrg.cnpj}
+                    onChange={(v) => setNewOrg((p) => ({ ...p, cnpj: v }))}
+                    onDataFetched={(data) => {
+                      setNewOrg((p) => ({
+                        ...p,
+                        nome: p.nome || data.nome || p.nome,
+                        cidade: p.cidade || data.cidade || p.cidade,
+                        estado: p.estado || data.uf || p.estado,
+                        telefone: p.telefone || data.telefone || p.telefone,
+                      }));
+                    }}
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Plano</Label>
