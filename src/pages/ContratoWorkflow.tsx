@@ -15,10 +15,14 @@ import {
 } from "@dnd-kit/core";
 import {
   ArrowLeft, CheckCircle2, XCircle, Clock, GitBranch, AlertTriangle, History,
-  FileDown, FileSpreadsheet, ScrollText, GitFork,
+  FileDown, FileSpreadsheet, ScrollText, GitFork, Undo2,
 } from "lucide-react";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { handleDbError } from "@/utils/dbErrorHandler";
 import { exportWorkflowHistoryPDF, exportWorkflowHistoryXLSX } from "@/utils/workflowExport";
+import { WorkflowStageDiscussion } from "@/components/contracts/WorkflowStageDiscussion";
 
 type Stage = {
   id: string; ordem: number; nome: string;
@@ -46,8 +50,11 @@ const statusColor: Record<string, string> = {
   pendente: "bg-warning/10 text-warning border-warning/30",
   aprovado: "bg-success/10 text-success border-success/30",
   rejeitado: "bg-destructive/10 text-destructive border-destructive/30",
+  devolvido: "bg-warning/15 text-warning border-warning/40",
   pulado: "bg-muted text-muted-foreground",
 };
+
+type Decisao = "aprovado" | "rejeitado" | "pulado" | "devolvido";
 
 function ContractCard({ run, contrato, slaWarning }: { run: Run; contrato: Contrato; slaWarning: boolean }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -131,7 +138,7 @@ export default function ContratoWorkflow() {
   const [loading, setLoading] = useState(true);
   const [advancing, setAdvancing] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [pendingDecisao, setPendingDecisao] = useState<"aprovado" | "rejeitado" | "pulado">("aprovado");
+  const [pendingDecisao, setPendingDecisao] = useState<Decisao>("aprovado");
   const [pendingTargetOrdem, setPendingTargetOrdem] = useState<number | null>(null);
   const [comentario, setComentario] = useState("");
   const [userMap, setUserMap] = useState<Record<string, string>>({});
@@ -224,8 +231,12 @@ export default function ContratoWorkflow() {
     setDialogOpen(true);
   };
 
-  const avancar = async (decisao: "aprovado" | "rejeitado" | "pulado", targetOrdem?: number | null) => {
+  const avancar = async (decisao: Decisao, targetOrdem?: number | null) => {
     if (!run) return;
+    if (decisao === "devolvido" && (!comentario || comentario.trim().length < 10)) {
+      toast({ title: "Motivo obrigatório", description: "Informe ao menos 10 caracteres no motivo da devolução.", variant: "destructive" });
+      return;
+    }
     setAdvancing(true);
     try {
       const { data, error } = await supabase.functions.invoke("workflow-advance", {
@@ -233,6 +244,7 @@ export default function ContratoWorkflow() {
           run_id: run.id,
           decisao,
           comentario: comentario || null,
+          motivo: decisao === "devolvido" ? comentario : undefined,
           target_stage_ordem: targetOrdem ?? undefined,
         },
       });
@@ -351,6 +363,18 @@ export default function ContratoWorkflow() {
                 </Button>
                 <Button
                   variant="outline"
+                  onClick={() => {
+                    setPendingDecisao("devolvido");
+                    setPendingTargetOrdem(Math.max(1, (run.current_stage_ordem ?? 1) - 1));
+                    setComentario("");
+                    setDialogOpen(true);
+                  }}
+                  disabled={advancing || (run.current_stage_ordem ?? 1) <= 1}
+                >
+                  <Undo2 className="h-4 w-4 mr-1" /> Devolver
+                </Button>
+                <Button
+                  variant="outline"
                   onClick={() => { setPendingDecisao("pulado"); setPendingTargetOrdem(null); setComentario(""); setDialogOpen(true); }}
                   disabled={advancing}
                 >
@@ -423,11 +447,22 @@ export default function ContratoWorkflow() {
         </div>
       )}
 
+      {run && contratoId && (
+        <WorkflowStageDiscussion
+          contratoId={contratoId}
+          runStageId={currentRunStage?.id ?? null}
+          stageNome={stages.find((s) => s.ordem === run.current_stage_ordem)?.nome}
+          userMap={userMap}
+        />
+      )}
+
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {pendingTargetOrdem
+              {pendingDecisao === "devolvido"
+                ? "Devolver para etapa anterior"
+                : pendingTargetOrdem
                 ? `Mover para etapa ${pendingTargetOrdem}`
                 : pendingDecisao === "aprovado" ? "Aprovar etapa atual"
                 : pendingDecisao === "rejeitado" ? "Rejeitar workflow"
@@ -435,8 +470,30 @@ export default function ContratoWorkflow() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
+            {pendingDecisao === "devolvido" && (
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Devolver para</label>
+                <Select
+                  value={String(pendingTargetOrdem ?? "")}
+                  onValueChange={(v) => setPendingTargetOrdem(Number(v))}
+                >
+                  <SelectTrigger><SelectValue placeholder="Escolha a etapa" /></SelectTrigger>
+                  <SelectContent>
+                    {stages
+                      .filter((s) => s.ordem < (run?.current_stage_ordem ?? 0))
+                      .map((s) => (
+                        <SelectItem key={s.id} value={String(s.ordem)}>
+                          #{s.ordem} — {s.nome}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <Textarea
-              placeholder="Comentário (opcional)"
+              placeholder={pendingDecisao === "devolvido"
+                ? "Motivo da devolução (mínimo 10 caracteres) *"
+                : "Comentário (opcional)"}
               value={comentario}
               onChange={(e) => setComentario(e.target.value)}
               rows={3}
@@ -444,6 +501,11 @@ export default function ContratoWorkflow() {
             {pendingDecisao === "rejeitado" && (
               <p className="text-xs text-destructive">
                 Esta ação encerrará o workflow imediatamente.
+              </p>
+            )}
+            {pendingDecisao === "devolvido" && (
+              <p className="text-xs text-muted-foreground">
+                A etapa atual ficará marcada como devolvida e o workflow voltará para a etapa escolhida.
               </p>
             )}
           </div>

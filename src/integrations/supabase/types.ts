@@ -962,6 +962,7 @@ export type Database = {
           tipo: string
           updated_at: string
           user_id: string
+          workflow_run_stage_id: string | null
         }
         Insert: {
           conteudo: string
@@ -975,6 +976,7 @@ export type Database = {
           tipo?: string
           updated_at?: string
           user_id: string
+          workflow_run_stage_id?: string | null
         }
         Update: {
           conteudo?: string
@@ -988,6 +990,7 @@ export type Database = {
           tipo?: string
           updated_at?: string
           user_id?: string
+          workflow_run_stage_id?: string | null
         }
         Relationships: [
           {
@@ -1016,6 +1019,13 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "contract_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_comments_workflow_run_stage_id_fkey"
+            columns: ["workflow_run_stage_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_run_stages"
             referencedColumns: ["id"]
           },
         ]
