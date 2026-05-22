@@ -128,6 +128,7 @@ function App() {
                     <Route path="/termos" element={<TermosDeUso />} />
                     <Route path="/requisicao" element={<RequisicaoPublica />} />
                     <Route path="/reset-password" element={<ResetPassword />} />
+                    <Route path="/portal/:token" element={<PortalExterno />} />
 
                     {/* Organization status routes (no public onboarding — orgs are created by super-admin) */}
                     <Route path="/waiting-for-invite" element={<ProtectedRoute requireOrg={false}><WaitingForInvite /></ProtectedRoute>} />
