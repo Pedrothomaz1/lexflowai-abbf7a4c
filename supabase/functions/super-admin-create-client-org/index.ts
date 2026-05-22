@@ -169,6 +169,19 @@ Clique no botão abaixo para definir sua senha e acessar o sistema. A partir da�
       emailError = "RESEND_API_KEY não configurado";
     }
 
+    // Registra D+0 da sequência de onboarding (idempotente via UNIQUE org+step)
+    try {
+      await admin.from("onboarding_email_log").insert({
+        organization_id: orgId,
+        email: ownerEmail,
+        step: 0,
+        status: emailSent ? "sent" : "failed",
+        error_message: emailError,
+      });
+    } catch (e) {
+      console.warn("[super-admin-create-client-org] onboarding log skipped", e);
+    }
+
     return json({
       ok: true,
       organization_id: orgId,
