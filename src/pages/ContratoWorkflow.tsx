@@ -137,7 +137,7 @@ export default function ContratoWorkflow() {
   const [loading, setLoading] = useState(true);
   const [advancing, setAdvancing] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [pendingDecisao, setPendingDecisao] = useState<"aprovado" | "rejeitado" | "pulado">("aprovado");
+  const [pendingDecisao, setPendingDecisao] = useState<Decisao>("aprovado");
   const [pendingTargetOrdem, setPendingTargetOrdem] = useState<number | null>(null);
   const [comentario, setComentario] = useState("");
   const [userMap, setUserMap] = useState<Record<string, string>>({});
