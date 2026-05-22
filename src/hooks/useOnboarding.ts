@@ -77,8 +77,11 @@ export function useOnboarding() {
   const [profileFlags, setProfileFlags] = useState<ProfileFlags | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const userId = user?.id;
+  const organizationId = organization?.id;
+
   const refresh = useCallback(async () => {
-    if (!user || !organization) {
+    if (!userId || !organizationId) {
       setLoading(false);
       return;
     }
@@ -88,12 +91,12 @@ export function useOnboarding() {
         supabase
           .from("onboarding_progress")
           .select("step_key")
-          .eq("user_id", user.id)
-          .eq("organization_id", organization.id),
+          .eq("user_id", userId)
+          .eq("organization_id", organizationId),
         supabase
           .from("profiles")
           .select("onboarding_completed_at, onboarding_skipped, onboarding_checklist_dismissed")
-          .eq("id", user.id)
+          .eq("id", userId)
           .maybeSingle(),
       ]);
       setCompletedKeys(new Set((progress ?? []).map((p) => p.step_key as OnboardingStepKey)));
@@ -107,7 +110,7 @@ export function useOnboarding() {
     } finally {
       setLoading(false);
     }
-  }, [user, organization]);
+  }, [userId, organizationId]);
 
   useEffect(() => {
     refresh();

@@ -46,12 +46,10 @@ export default function Onboarding() {
   const [contratoNumero, setContratoNumero] = useState("");
   const [busy, setBusy] = useState(false);
 
-  // Redirect if already completed
-  useEffect(() => {
-    if (!loading && profileFlags?.onboarding_completed_at) {
-      navigate("/dashboard", { replace: true });
-    }
-  }, [loading, profileFlags, navigate]);
+  // Note: redirect when onboarding is already complete is handled by ProtectedRoute
+  // before this component mounts. We intentionally do NOT navigate from here to
+  // avoid races between profile refreshes and the in-flight wizard state.
+
 
   // Load existing name
   useEffect(() => {

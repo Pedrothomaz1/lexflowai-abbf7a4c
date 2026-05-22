@@ -1,84 +1,42 @@
-# Auditoria Go/No-Go — LexFlow
+## Problema
 
-## Veredito provisório: 🟡 **No-Go condicional**
+A tela `/onboarding` pisca e não avança porque há dois bugs interagindo:
 
-Produto está funcionalmente pronto, mas há **4 gaps mensuráveis** entre o que o `PROGRESS.md` declara e o que o banco/painel atestam. Nenhum é bloqueio profundo — todos fecham em uma sessão.
+1. **Loop de refresh em `useOnboarding`** — o `refresh` depende do objeto `organization` inteiro. O `OrganizationContext` recria essa referência a cada render, fazendo o `useCallback` mudar → `useEffect` reexecuta → `setLoading(true/false)` em loop → re-render constante.
+2. **Redirect oportunista no `Onboarding.tsx`** — um `useEffect` observa `profileFlags?.onboarding_completed_at` e chama `navigate("/dashboard")`. Combinado com (1) e com a leitura paralela do mesmo campo pelo `ProtectedRoute`, qualquer race entre cargas faz a navegação disparar no meio do fluxo.
 
----
+Resultado: enquanto o usuário preenche os campos, o componente remonta repetidamente e o redirect pode disparar antes da hora — daí o "pisca e não sai".
 
-## Gaps encontrados
+## Correções
 
-### G1 · Cobertura de testes pré-venda incompleta (alto)
-- **Spec oficial** (`docs/PRE_LAUNCH_TEST_SPEC.md`): **48 testes** em 6 frentes.
-- **Registrado em `pre_launch_test_runs`**: 17 entradas → **15 passed + 2 skipped**.
-- **Lacuna**: ~31 testes nunca rodaram nem foram marcados como N/A.
-- Frentes praticamente vazias: 3 (apenas 2 passed), 4 (1 skipped), 6 (0 entradas).
-- O `PROGRESS.md` diz "13/13 passed · 0 failed · 2 N/A" — está medindo o subconjunto automático, não a spec completa.
+### 1. Estabilizar dependências em `src/hooks/useOnboarding.ts`
 
-### G2 · Security Regression Suite nunca executada em produção (alto)
-- Tabela `security_regression_runs` criada na Sprint 2 desta sessão.
-- **0 execuções persistidas** até agora.
-- A suite Deno (26 testes) já passa localmente, mas não há histórico no painel para auditoria.
+Trocar `[user, organization]` por `[user?.id, organization?.id]` no `useCallback` do `refresh`. Strings primitivas têm igualdade referencial estável; o loop acaba.
 
-### G3 · Testes manuais críticos pendentes (médio)
-- `PROGRESS.md` cita **10 testes manuais críticos** na aba `/security` → Pré-Venda.
-- Esses são QA visual / fluxo end-to-end (login, reset, MFA, signed URL, etc.) que `vitest` não cobre.
-- Status atual: pendentes.
+### 2. Remover o redirect implícito em `src/pages/Onboarding.tsx`
 
-### G4 · Linter Supabase: 38 warnings com justificativa não congelada (baixo)
-- `mem://security/linter-hardening-decisions` documenta as decisões.
-- Não há um snapshot datado anexado ao `SECURITY_REPORT.md` provando "38 é o piso aceito hoje".
-- Sem isso, próxima auditoria externa vai re-questionar cada warning.
+Apagar o `useEffect` (linhas 50-54) que faz `navigate("/dashboard")` quando `profileFlags.onboarding_completed_at` está setado. Quem leva o usuário ao dashboard são apenas:
+- `finishNow()` (botão "Ir para o dashboard" no passo 4)
+- `handleSkip()` (botão "Pular por enquanto")
+- O `ProtectedRoute`, que já redireciona usuários com onboarding concluído ANTES de montar o componente
 
----
+Sem esse efeito, não há mais navegação no meio do fluxo.
 
-## O que **não** é gap (verificado)
+### 3. Consolidar checagem de "onboarding feito" (opcional, mas recomendado)
 
-- ✅ Backend 18/18 blocos — todas as tabelas, RPCs, triggers, edge functions existem
-- ✅ 3 crons ativos (vencimentos diário 08h, alertas 09h e 17h)
-- ✅ Bucket privado + signed URLs + RLS multi-tenant
-- ✅ 4 UIs visuais (Workflow Builder, Form Builder, Templates v2, Revisão IA)
-- ✅ Scanners de segurança (`supabase_lov`, `supabase`, `agent_security`, `connector_security_scan`): **0 findings**
-- ✅ Secrets configurados (14 itens incluindo `COMPRAS_API_KEY`, `CRON_SECRET`, `RESEND_API_KEY`)
-- ✅ Sem TODOs bloqueantes no código (apenas 2 arquivos com comentários informativos)
+Hoje `ProtectedRoute` faz um `SELECT onboarding_completed_at, onboarding_skipped` separado do `useOnboarding`. Para evitar divergência, fazer o `ProtectedRoute` reagir a mudanças após `finishNow()`:
+- Adicionar refetch do `onboardingDone` quando a rota muda (já acontece naturalmente, pois cada rota cria novo `ProtectedRoute`).
+- Nenhuma mudança extra é necessária se (1) e (2) forem feitas; cito aqui apenas para confirmar que não introduz regressão.
 
----
+## Validação
 
-## Plano de fechamento (1 sessão)
+1. Logar com usuário novo → ir para `/onboarding` direto após signup.
+2. Preencher nome no passo 1 → clicar Continuar → deve ir para passo 2 sem flicker.
+3. Preencher e-mails no passo 2 → Continuar → passo 3.
+4. Preencher contrato no passo 3 → Continuar → passo 4.
+5. Clicar "Ir para o dashboard" → deve cair em `/dashboard` uma única vez, sem voltar.
+6. Recarregar `/onboarding` depois de completo → `ProtectedRoute` redireciona para `/dashboard` (comportamento esperado).
 
-### Etapa 1 — Executar Security Regression Suite (fecha G2)
-- Abrir `/security` → aba **Regressão** → clicar **Executar suíte**.
-- Persiste em `security_regression_runs`.
-- Anexar JSON de saída em `docs/test-evidence/security-regression-go-live.json`.
+## Risco
 
-### Etapa 2 — Marcar testes automáticos restantes (fecha parte de G1)
-- Rodar `bunx vitest run` localmente; para cada teste verde da spec, marcar `passed` no painel via Pré-Venda.
-- Para testes claramente não aplicáveis ao MVP (ex.: SSO SAML se ainda não vendido), marcar `skipped` com `notes`.
-- Meta: 0 entradas `pending` para os ~31 ausentes.
-
-### Etapa 3 — Rodar os 10 manuais críticos (fecha G3)
-- Executar a checklist da aba Pré-Venda (~30-45 min).
-- Registrar evidência (screenshot) em `docs/test-evidence/<id>-<slug>.png` e clicar **Registrar**.
-
-### Etapa 4 — Congelar relatório de segurança (fecha G4)
-- Anexar ao `docs/SECURITY_REPORT.md`:
-  - Data do snapshot
-  - Output do `supabase--linter` (38 warnings)
-  - Tabela 38× com `id`, `categoria`, `justificativa` (ref. `mem://security/linter-hardening-decisions`)
-- Assinar com hash do commit.
-
----
-
-## Critério Go/No-Go final
-
-Após as 4 etapas:
-- 🟢 **Go** se: `pre_launch_test_runs` sem `pending`, ≥1 run em `security_regression_runs` com 26/26 passed, 10 manuais `passed`, `SECURITY_REPORT.md` com snapshot do linter assinado.
-- 🔴 **No-Go** se qualquer um falhar — abrir ticket de correção antes de publicar.
-
----
-
-## Decisão para o usuário
-
-Posso executar **Etapa 1 + Etapa 2** agora (são as únicas que dependem só de tooling, não de QA visual humana). As Etapas 3 e 4 exigem ação manual sua (clicar pelos fluxos) e curadoria do relatório.
-
-Sigo com Etapas 1 e 2?
+Baixo. Mudanças são localizadas em 2 arquivos, não tocam RLS nem migrations, e o fluxo de pular/completar continua intacto.
