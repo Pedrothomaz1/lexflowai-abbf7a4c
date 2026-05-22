@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { CheckCircle2, Ban, RefreshCw, Search, Building2, Plus, Copy } from "lucide-react";
 import { Label } from "@/components/ui/label";
+import { CnpjAutoFillInput } from "@/components/ui/cnpj-autofill-input";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
