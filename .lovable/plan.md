@@ -1,42 +1,62 @@
-## Problema
+## Resultado dos testes que rodei agora (read-only)
 
-A tela `/onboarding` pisca e não avança porque há dois bugs interagindo:
+### Suíte automatizada de regressão (`security-regression-runner`)
+Executada: **25 passed / 1 failed** (mesmo resultado que está em `pre_launch_test_runs`).
 
-1. **Loop de refresh em `useOnboarding`** — o `refresh` depende do objeto `organization` inteiro. O `OrganizationContext` recria essa referência a cada render, fazendo o `useCallback` mudar → `useEffect` reexecuta → `setLoading(true/false)` em loop → re-render constante.
-2. **Redirect oportunista no `Onboarding.tsx`** — um `useEffect` observa `profileFlags?.onboarding_completed_at` e chama `navigate("/dashboard")`. Combinado com (1) e com a leitura paralela do mesmo campo pelo `ProtectedRoute`, qualquer race entre cargas faz a navegação disparar no meio do fluxo.
+**Caso vermelho identificado**: `storage: admin Org A reads own file` — `detail: {}`.
 
-Resultado: enquanto o usuário preenche os campos, o componente remonta repetidamente e o redirect pode disparar antes da hora — daí o "pisca e não sai".
+**Causa raiz**: o seed cria as orgs `SECQA Org A/B` sem `status`, então elas ficam em `pendente_aprovacao` (default). A função `current_user_org()` filtra por `o.status = 'ativa'`, retornando `NULL` para os seed users. A policy do bucket `contratos-documentos` exige `foldername = current_user_org()` → o download do próprio arquivo nega com erro vazio do storage.
 
-## Correções
+**Efeito colateral grave**: vários testes "passed" estão passando **vacuamente**. Com `current_user_org()` NULL, todos os SELECTs do usuário retornam 0 linhas → "Org B sees no Org A contracts", "silent RLS on UPDATE", "non-admin cannot read audit_logs" passam **sem testar nada**. A suíte está dando falsa segurança.
 
-### 1. Estabilizar dependências em `src/hooks/useOnboarding.ts`
+### Teste 5.1 — Imutabilidade de `compliance_logs`
+Validado por inspeção direta: tabela com **RLS habilitada** + policies somente `INSERT` (`mt_compliance_logs_insert`) e `SELECT` (`mt_compliance_logs_select`). Sem policy de UPDATE/DELETE → bloqueado por default para todos os roles exceto service_role. **Aprovado**.
 
-Trocar `[user, organization]` por `[user?.id, organization?.id]` no `useCallback` do `refresh`. Strings primitivas têm igualdade referencial estável; o loop acaba.
+### Teste 4.7 — Validação Zod em edge functions POST
+Resultado: **1 de 40** edge functions com body POST usa Zod (`pre-launch-test-runner`). 39 funções fazem `await req.json()` sem schema Zod (algumas validam manualmente, outras não). Critério "100% das fns POST/PUT têm schema" **reprova** como está escrito.
 
-### 2. Remover o redirect implícito em `src/pages/Onboarding.tsx`
+---
 
-Apagar o `useEffect` (linhas 50-54) que faz `navigate("/dashboard")` quando `profileFlags.onboarding_completed_at` está setado. Quem leva o usuário ao dashboard são apenas:
-- `finishNow()` (botão "Ir para o dashboard" no passo 4)
-- `handleSkip()` (botão "Pular por enquanto")
-- O `ProtectedRoute`, que já redireciona usuários com onboarding concluído ANTES de montar o componente
+## Plano de ação
 
-Sem esse efeito, não há mais navegação no meio do fluxo.
+### 1. Corrigir o seed da suíte de regressão (destrava 10 testes + remove falsos positivos)
 
-### 3. Consolidar checagem de "onboarding feito" (opcional, mas recomendado)
+Arquivo: `supabase/functions/security-regression-runner/index.ts`, função `ensureOrg`.
 
-Hoje `ProtectedRoute` faz um `SELECT onboarding_completed_at, onboarding_skipped` separado do `useOnboarding`. Para evitar divergência, fazer o `ProtectedRoute` reagir a mudanças após `finishNow()`:
-- Adicionar refetch do `onboardingDone` quando a rota muda (já acontece naturalmente, pois cada rota cria novo `ProtectedRoute`).
-- Nenhuma mudança extra é necessária se (1) e (2) forem feitas; cito aqui apenas para confirmar que não introduz regressão.
+Mudança: ao criar a org SECQA, gravar `status: 'ativa'` e `aprovada_em: now()`. Ao reusar uma org existente em outro status, atualizar para `'ativa'`. Sem isso, `current_user_org()` continua NULL.
 
-## Validação
+Depois rodar a suíte de novo e esperar **26/26 passed**.
 
-1. Logar com usuário novo → ir para `/onboarding` direto após signup.
-2. Preencher nome no passo 1 → clicar Continuar → deve ir para passo 2 sem flicker.
-3. Preencher e-mails no passo 2 → Continuar → passo 3.
-4. Preencher contrato no passo 3 → Continuar → passo 4.
-5. Clicar "Ir para o dashboard" → deve cair em `/dashboard` uma única vez, sem voltar.
-6. Recarregar `/onboarding` depois de completo → `ProtectedRoute` redireciona para `/dashboard` (comportamento esperado).
+### 2. Atualizar `pre_launch_test_runs` após a re-execução
 
-## Risco
+Mover os 10 testes hoje `failed` (2.1, 2.2, 2.3, 2.4, 2.6, 2.7, 2.8, 2.10, 3.1, 3.2) para `passed` com a nota do novo run, e registrar na nota que os SELECTs cross-tenant agora retornam dados reais (não vacuamente).
 
-Baixo. Mudanças são localizadas em 2 arquivos, não tocam RLS nem migrations, e o fluxo de pular/completar continua intacto.
+### 3. Validar 5.1 no painel pré-venda
+
+Mudar de `skipped` para `passed` com nota "RLS habilitada; policies só INSERT/SELECT; UPDATE/DELETE bloqueados por default — verificado via `pg_policies`".
+
+### 4. Decidir 4.7 (sem refazer 40 edge functions agora)
+
+Duas opções para o teste de Zod, na ordem de menor esforço:
+
+- **a)** Marcar 4.7 como `passed` redefinindo critério: "fns sensíveis (auth, billing, super-admin, gdpr, signature-webhook) têm validação manual de tipo + tratamento de erro; cobertura Zod 100% fica como hardening pós-venda". Registrar a lista no doc.
+- **b)** Adicionar Zod incrementalmente nas 5–8 funções mais sensíveis (`registrar-aceite-lgpd`, `gdpr-handler`, `super-admin-*`, `criar-portal-contraparte`, `zapsign-webhook`, `signature-webhook`) e marcar 4.7 como `passed` parcial.
+
+Recomendo **(b)** porque webhook/gdpr/super-admin merecem schema explícito, mas dá pra fazer (a) e mover (b) para backlog pós-venda — sua decisão.
+
+### 5. Sem mudança nos demais `skipped`
+
+4.5, 5.2, 5.6, 6.1–6.6, 7.2 permanecem `skipped` com a justificativa "pós-venda" já registrada. Não cabem ao agente: dependem de pentest externo, DAST/SAST em CI próprio, drill de backup com ambiente isolado, doc jurídico sob NDA, etc.
+
+---
+
+## Detalhes técnicos
+
+- **Tabela afetada pelo seed**: `organizations` (campos `status`, `aprovada_em`).
+- **Policies relevantes do storage** (não mudam): `storage_org_select`/`update`/`delete` exigem `(storage.foldername(name))[1] = current_user_org()::text OR auth.uid()::text`.
+- **Risco da mudança 1**: nenhum — afeta apenas as orgs `SECQA Org A` e `SECQA Org B`, que são exclusivas para testes. Nenhuma org de cliente real é tocada.
+- **Sem migrations**, sem mudança de RLS, sem novo segredo.
+
+## Para virar isto em código
+
+Preciso que você mude para modo **build**. Após o switch eu aplico a mudança em `ensureOrg`, rerode a suíte, atualizo `pre_launch_test_runs` (2.1, 2.2, 2.3, 2.4, 2.6, 2.7, 2.8, 2.10, 3.1, 3.2 → `passed`; 5.1 → `passed`) e te pergunto qual caminho seguir no 4.7 (a ou b).
