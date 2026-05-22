@@ -32,6 +32,8 @@ import {
 import { exportContratoDetalhePDF } from "@/utils/pdfExport";
 import { ContractComments } from "@/components/ContractComments";
 import { ContractSignature } from "@/components/ContractSignature";
+import { ZapsignPanel } from "@/components/Assinaturas/ZapsignPanel";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion, AnimatePresence } from "framer-motion";
 import { PageSkeleton } from "@/components/ui/skeleton-loaders";
@@ -736,13 +738,10 @@ const ContratoDetalhes = () => {
 
           <TabsContent value="assinaturas">
             <PreSignatureGuard contratoId={contrato.id}>
-              <ContractSignature
-                contratoId={contrato.id}
-                contratoTitulo={contrato.titulo}
-                arquivoUrl={contrato.arquivo_url}
-              />
+              <ZapsignPanel contratoId={contrato.id} arquivoUrl={contrato.arquivo_url} />
             </PreSignatureGuard>
           </TabsContent>
+
 
           <TabsContent value="comentarios">
             <ContractComments contratoId={contrato.id} />
