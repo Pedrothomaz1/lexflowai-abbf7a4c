@@ -25,9 +25,9 @@ const ORG_A_NAME = "SECQA Org A";
 const ORG_B_NAME = "SECQA Org B";
 const SEED_TAG = "secqa_seed";
 const EMAILS = {
-  adminA: "secqa+admin-a@lexflowai.com.br",
-  analistaA: "secqa+analista-a@lexflowai.com.br",
-  adminB: "secqa+admin-b@lexflowai.com.br",
+  adminA: "secqa-admin-a@secqa.test",
+  analistaA: "secqa-analista-a@secqa.test",
+  adminB: "secqa-admin-b@secqa.test",
 } as const;
 
 interface Result { name: string; pass: boolean; detail?: string }
