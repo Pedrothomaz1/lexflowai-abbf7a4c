@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-export type UserRole = "analista_juridico" | "consultoria_juridica" | "administrador" | null;
+export type UserRole = "analista_juridico" | "administrador" | null;
 export type ModuloPadrao = "contratos" | "servicos" | "ambos";
 
 export const useUserRole = () => {
@@ -68,9 +68,9 @@ export const useUserRole = () => {
   };
 
   const isAnalista = userRole === "analista_juridico";
-  const isConsultor = userRole === "consultoria_juridica";
+  const isConsultor = false;
   const isAdmin = userRole === "administrador";
-  const canApprove = isConsultor || isAdmin;
+  const canApprove = isAdmin;
   const canManageUsers = isAdmin;
 
   return {

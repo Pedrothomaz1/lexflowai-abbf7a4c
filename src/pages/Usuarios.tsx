@@ -71,7 +71,6 @@ type UserWithRoles = Profile & {
 
 const ROLE_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
   analista_juridico: { label: "Analista Jurídico", variant: "secondary" },
-  consultoria_juridica: { label: "Consultoria Jurídica", variant: "default" },
   administrador: { label: "Administrador", variant: "outline" },
 };
 
@@ -545,8 +544,6 @@ const Usuarios = () => {
                   <p className="text-sm text-muted-foreground mt-1">
                     {key === "analista_juridico" &&
                       "Pode cadastrar fornecedores e contratos. Pode editar apenas contratos em rascunho criados por ele."}
-                    {key === "consultoria_juridica" &&
-                      "Pode aprovar contratos, cadastrar fornecedores e editar qualquer contrato."}
                     {key === "administrador" &&
                       "Possui todas as permissões do sistema, incluindo gerenciar usuários e seus perfis."}
                   </p>

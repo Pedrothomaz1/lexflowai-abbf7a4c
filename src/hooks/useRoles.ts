@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCallback } from "react";
 
-export type AppRole = "administrador" | "consultoria_juridica" | "analista_juridico";
+export type AppRole = "administrador" | "analista_juridico";
 
 export function useRoles(userId?: string) {
   const { user } = useAuth();
@@ -30,7 +30,7 @@ export function useRoles(userId?: string) {
   );
 
   const isAdmin = roles.includes("administrador");
-  const isConsultor = roles.includes("consultoria_juridica");
+  const isConsultor = false;
   const isAnalista = roles.includes("analista_juridico");
 
   return { roles, loading, hasRole, isAdmin, isConsultor, isAnalista };

@@ -92,7 +92,6 @@ Tabelas: `app_role` (enum), `user_roles`, `permissions`, `role_permissions`.
 Papéis principais:
 - `administrador` — gestão completa da org.
 - `analista_juridico` — CRUD de contratos/fornecedores/obrigações.
-- `consultoria_juridica` — leitura + pareceres.
 - (visualizador via `role_permissions`).
 
 Frontend usa hooks `useRoles` e `usePermissions`. Restrições de menu (`MainSidebar`) impedem itens admin-only para não-admins.
