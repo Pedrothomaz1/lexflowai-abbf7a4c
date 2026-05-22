@@ -22,9 +22,9 @@ export const ORG_A_NAME = "SECQA Org A";
 export const ORG_B_NAME = "SECQA Org B";
 
 export const EMAILS = {
-  adminA: "secqa+admin-a@lexflowai.com.br",
-  analistaA: "secqa+analista-a@lexflowai.com.br",
-  adminB: "secqa+admin-b@lexflowai.com.br",
+  adminA: "secqa-admin-a@secqa.test",
+  analistaA: "secqa-analista-a@secqa.test",
+  adminB: "secqa-admin-b@secqa.test",
 } as const;
 
 export type Persona = keyof typeof EMAILS;
