@@ -1,221 +1,161 @@
-## Escopo (rodada de 2 módulos, ordem #11 → #13)
+# Workflow Builder #7 — Kanban + Regras Condicionais + Edge de Avanço
 
-Implementação fiel à **master spec v2** (arquivo carregado), aproveitando o que já existe (`approval_workflows`, `contract_approvals`, `contract_obligations`, `audit_logs`, `notifications`) e adicionando só o que falta para o padrão enterprise descrito.
-
-Invariantes do bloco de continuidade respeitadas: `organization_id` em toda tabela, RLS em todas, aprovação obrigatória antes da assinatura, `.select().maybeSingle()` em UPDATEs, segredos só em edge functions, atualização do `PROGRESS.md` ao final.
+Implementação completa do módulo **Workflow Builder** com configuração por contrato, Kanban drag-and-drop, regras condicionais e edge function que orquestra avanço, registro e notificações.
 
 ---
 
-## Módulo #11 — Aprovação e checklist pré-assinatura
+## 1. Schema — Migration SQL
 
-### Gaps vs. spec
-- Sem fila dedicada do aprovador (hoje a aprovação vive só dentro de `ContratoDetalhes`).
-- `contract_approvals` é flat — não suporta **série / paralelo / passos** (a spec pede `approval_steps` + `approval_decisions` + `workflow_tasks`).
-- Não há **checklist pré-assinatura** nem **edge function de validação**.
-- Sem SLA banner na fila, sem motivo obrigatório de rejeição, sem histórico consolidado de decisões.
+Três tabelas novas multi-tenant (RLS via `current_user_org()`):
 
-### Migração (schema)
+### `workflow_definitions`
+Define um fluxo reutilizável (ex.: "Aprovação Comercial", "Compliance Jurídico").
+- `nome`, `descricao`, `tipo_contrato` (filtro de aplicabilidade, nullable = todos)
+- `is_default` (boolean) — workflow padrão da organização
+- `ativo` (boolean)
+- `organization_id`, `created_by`, timestamps
 
-```text
-approval_steps
-  id, organization_id, contrato_id, workflow_id, ordem, modo ('serie'|'paralelo'),
-  minimo_aprovacoes int, status ('pendente'|'aprovado'|'rejeitado'|'cancelado'),
-  due_at timestamptz, created_at, updated_at
+### `workflow_stages`
+Etapas (colunas do Kanban) de uma definition.
+- `definition_id` → FK
+- `nome`, `descricao`, `ordem` (int)
+- `cor` (hex para badge da coluna)
+- `tipo` ('inicio' | 'intermediario' | 'aprovacao' | 'final')
+- `responsavel_role` (app_role nullable) ou `responsavel_id` (uuid nullable)
+- `sla_dias` (int nullable)
+- `regras_condicionais` (jsonb) — array de regras com `{campo, operador, valor, proximo_stage_id}`. Campos suportados: `valor_total`, `tipo_contrato`, `area`. Operadores: `gt|gte|lt|lte|eq|in`.
+- `organization_id`
 
-approval_step_approvers
-  id, organization_id, step_id, aprovador_id, status, decided_at
+### `workflow_runs`
+Instância ativa: um contrato percorrendo um workflow.
+- `contrato_id` (FK), `definition_id` (FK)
+- `current_stage_id` (FK)
+- `status` ('em_andamento' | 'concluido' | 'cancelado')
+- `historico` (jsonb array) — cada entrada: `{stage_id, stage_nome, entrou_em, saiu_em, responsavel_id, decisao, comentario, regra_aplicada}`
+- `iniciado_em`, `concluido_em`, `organization_id`, `created_by`
 
-approval_decisions
-  id, organization_id, step_id, aprovador_id,
-  decisao ('aprovado'|'rejeitado'|'ajuste'), motivo text, created_at
+**Índices:** `(organization_id, contrato_id)`, `(organization_id, current_stage_id)`, `(definition_id, ordem)`.
 
-contract_checklist
-  id, organization_id, contrato_id, criterio text, satisfeito boolean,
-  validado_por uuid, validado_em timestamptz, observacao text
-  UNIQUE (contrato_id, criterio)
-
-workflow_tasks
-  id, organization_id, contrato_id, step_id, titulo, status, due_at,
-  assignee_id, created_at
-```
-
-- RLS multi-tenant padrão (`organization_id = current_user_org()`); UPDATE restrito ao `aprovador_id` ou `administrador`.
-- Mantém `contract_approvals` antigo (compatibilidade do dashboard) — novo fluxo grava também ali para não quebrar KPIs.
-- Auditoria automática via `audit_trigger_func`.
-
-### Edge Function
-
-- `validar-checklist-pre-assinatura` (verify_jwt=true) — input `{ contrato_id }`.
-- Verifica: documento final, campos obrigatórios, aprovações concluídas, anexos obrigatórios, contraparte (fornecedor com CNPJ verificado).
-- Sempre **HTTP 200** com `{ ok: boolean, pendencias: [...] }`.
-
-### Frontend novo
-
-```text
-src/pages/MinhasAprovacoes.tsx                  rota /aprovacoes
-src/components/Aprovacoes/
-  AprovacaoQueue.tsx          tabela com SLA + badge serie/paralelo
-  AprovacaoCard.tsx           detalhe com passos
-  AprovacaoDecisionDialog.tsx Aprovar | Rejeitar (motivo obrigatório) | Solicitar ajuste
-  ChecklistPanel.tsx          5 itens da spec, status visual
-  SlaAlertBanner.tsx          em risco / vencido
-  HistoricoDecisoes.tsx       lê approval_decisions
-src/hooks/useAprovacoes.ts    React Query + realtime nos canais
-                              approval_steps, approval_decisions, contract_approvals
-```
-
-- Sidebar: novo item **Aprovações** com badge contador.
-- `ContratoDetalhes`: CTA "Enviar para assinatura" bloqueado enquanto edge function retornar pendências.
-- Telemetria: `trackEvent('aprovacao_decidida', { decisao, contrato_id, sla_h })`.
+**RLS:** padrão multi-tenant + admin write. Triggers: `update_updated_at_column`, `audit_trigger_func` em `workflow_runs`.
 
 ---
 
-## Módulo #13 — Obrigações, renovação, reajuste e alertas
+## 2. Edge Function — `workflow-advance`
 
-### Gaps vs. spec
-- `Obrigacoes.tsx` lista bem mas não exige **evidência** na conclusão.
-- Tipos não cobrem os 6 da spec (faltam **aviso_previo**, **compliance**, **reajuste** dedicado).
-- Sem **renovação** nem **reajuste** estruturados.
-- Calendário existe (`Calendario.tsx`) mas não cruzado com obrigações.
-- Jobs de alerta hoje são plpgsql avulsos sem `pg_cron` agendado — a spec exige cron + idempotência diária.
+`POST /workflow-advance`
 
-### Migração (schema)
-
-```text
-contract_obligations  (ALTER)
-  + evidencia_url text
-  + concluido_por uuid
-  + observacao_conclusao text
-  + responsavel_juridico_id uuid
-  Tipos: pagamento | entrega | renovacao | reajuste | aviso_previo | compliance
-
-contract_reajustes  (nova)
-  id, organization_id, contrato_id, indice text, percentual numeric,
-  valor_anterior numeric, valor_novo numeric, vigencia_inicio date,
-  observacao text, created_by, created_at
-
-contract_renovacoes  (nova)
-  id, organization_id, contrato_id_origem, contrato_id_novo uuid null,
-  status ('iniciada'|'em_negociacao'|'concluida'|'cancelada'),
-  requisicao_id uuid null, created_by, created_at
+**Body:**
+```json
+{ "run_id": "uuid", "decisao": "aprovado|rejeitado|ajuste", "comentario": "string", "force_stage_id": "uuid?" }
 ```
 
-- Bucket Storage **`obligation-evidences`** (privado) com path `{organization_id}/{obligation_id}/{filename}` e RLS por prefixo.
-- RLS padrão multi-tenant nas novas tabelas.
+**Lógica:**
+1. Autenticar (JWT), validar org match e que user é responsável do `current_stage` (role ou direto).
+2. Buscar `run`, `current_stage`, contrato (valor, tipo, area).
+3. Decidir próximo stage:
+   - Se `force_stage_id` → usa direto.
+   - Senão avalia `regras_condicionais` em ordem; primeira que casar define `proximo_stage_id`.
+   - Fallback: próximo stage por `ordem` ascendente.
+   - Se for último stage → `status = concluido`, `concluido_em = now()`.
+4. Atualiza `current_stage_id`, fecha entrada anterior do histórico (`saiu_em`, `decisao`, `comentario`, `regra_aplicada`) e abre nova entrada.
+5. Atualiza `contratos.status` quando stage `tipo = 'final'` (assinado) ou `'aprovacao'` aprovado.
+6. Chama `notify_org_members` para nova etapa + responsável.
+7. Retorna `{ ok, run, proximo_stage }`. Validações de negócio retornam HTTP 200 com `{ ok:false, error }` (padrão do projeto).
 
-### pg_cron jobs (extensão pg_cron + pg_net)
-
-```text
-alertas_obrigacoes    08:00 diário  — obrigações vencendo em 7d ou vencidas
-alertas_renovacao     08:00 diário  — contratos com data_fim em 60d (normal) e 30d (crítico)
-sla_aprovacoes        a cada 1h     — approval_steps pendentes com due_at < now()+4h
-```
-
-Idempotência obrigatória em todos:
-```sql
-NOT EXISTS (
-  SELECT 1 FROM notifications
-  WHERE organization_id = ? AND tipo = ? AND referencia_id = ?
-    AND DATE(created_at) = CURRENT_DATE
-)
-```
-
-Reaproveita `notify_org_members` existente. Cron agendado via `supabase--insert` (não migration), pois carrega URL/anon-key.
-
-### Edge Functions
-
-- `iniciar-renovacao` — cria `contract_renovacoes` + `contract_requests` vinculada ao contrato origem.
-- `registrar-reajuste` — insere em `contract_reajustes`, atualiza `contratos.valor_total`, registra em `audit_logs`.
-
-### Frontend
-
-```text
-src/pages/Obrigacoes.tsx                refator (preserva DataTable atual)
-src/components/Obrigacoes/
-  ConcluirObrigacaoDialog.tsx           upload obrigatório p/ entrega/compliance
-  EvidenciaUploader.tsx                 storage util + signed URL
-  IniciarRenovacaoDialog.tsx
-  RegistrarReajusteDialog.tsx
-  ObrigacoesCalendar.tsx                view calendário (react-day-picker)
-  ObrigacaoTimeline.tsx                 audit_logs daquele record
-src/hooks/useObrigacoes.ts              React Query + realtime
-```
-
-- `lexflow-constants.ts`: adiciona `aviso_previo`, `compliance`, `reajuste`.
-- Badges: `crítico` (≤30d) e `aviso` (≤60d) para renovações.
+`verify_jwt = false` no `config.toml` + validação manual (padrão Lovable).
 
 ---
 
-## Princípios transversais aos 2 módulos
+## 3. UI — Frontend
 
-- Toda mutação: `.select().maybeSingle()` + `handleDbError`.
-- Toda nova tabela: RLS + `organization_id` + `created_by` + auditoria.
-- Edge functions: HTTP 200 mesmo em validação reprovada.
-- Realtime restrito ao `organization_id`.
-- Reaproveita: `SlaBadge`, `Can`, `RoleGate`, `EmptyState`, `toast`, `handleDbError`, `lexflow-constants`.
-- Não edita: `client.ts`, `types.ts`, `config.toml` (exceto blocos de função se necessário).
-- `PROGRESS.md` atualizado ao final, conforme bloco de continuidade da spec.
+### Rotas
+- `/workflows` — lista de definitions, criar/editar.
+- `/workflows/:id` — Workflow Builder (stages drag-and-drop, regras condicionais por stage).
+- `/contratos/:id/workflow` — Kanban do run desse contrato + histórico.
 
----
+### Componentes
 
-## Arquivos adicionados / editados
+**`WorkflowDefinitionsList.tsx`** — tabela das definitions, badge default, toggle ativo, botão "Novo workflow".
 
-```text
-supabase/migrations/
-  <ts>_aprovacao_steps_checklist.sql
-  <ts>_obrigacoes_renovacao_reajuste.sql
-  <ts>_storage_obligation_evidences.sql
-supabase/functions/
-  validar-checklist-pre-assinatura/index.ts
-  iniciar-renovacao/index.ts
-  registrar-reajuste/index.ts
-src/pages/
-  MinhasAprovacoes.tsx                  (novo, rota /aprovacoes)
-  Obrigacoes.tsx                        (refator)
-  ContratoDetalhes.tsx                  (bloqueia envio se checklist pendente)
-src/components/Aprovacoes/*             (6 arquivos)
-src/components/Obrigacoes/*             (6 arquivos)
-src/hooks/
-  useAprovacoes.ts
-  useObrigacoes.ts
-src/App.tsx                             (rota /aprovacoes)
-src/components/AppSidebar.tsx           (item Aprovações)
-PROGRESS.md                             (entrada nova)
-```
+**`WorkflowBuilder.tsx`** — editor da definition:
+- Lista vertical de stages com `@dnd-kit/sortable` para reordenar.
+- Cada stage: nome, cor, tipo, responsável (role/usuário), SLA.
+- Botão "Adicionar regra condicional" abre `ConditionalRuleEditor` (campo, operador, valor, próximo stage).
 
-Job `pg_cron` é agendado via `supabase--insert` (não migration) porque carrega URL/anon-key.
+**`ConditionalRuleEditor.tsx`** — form para construir regra (select campo → select operador → input valor → select próximo stage).
 
----
+**`ContractKanban.tsx`** — em `/contratos/:id/workflow`:
+- Colunas = stages da definition aplicada.
+- Card único do contrato na coluna `current_stage_id`.
+- Drag-and-drop entre colunas dispara modal "Avançar etapa" (decisão + comentário) → chama edge `workflow-advance` com `force_stage_id`.
+- Sidebar com histórico cronológico (`historico` jsonb): timestamp, responsável, decisão, regra aplicada.
+- Indicador SLA (vermelho se `entrou_em + sla_dias < now`).
 
-## Fora desta rodada (próximas)
+**`WorkflowKanbanGlobal.tsx`** (opcional, em `/workflows/kanban`) — visão de todos os runs ativos da org como Kanban com vários cards.
 
-- #10 Revisão colaborativa (Redline já parcial — auditar depois).
-- #12 ZapSign (depende do checklist desta rodada).
-- #14 IA aplicada / #15 Portal externo.
+### Lib
+- `@dnd-kit/core` e `@dnd-kit/sortable` (instalar).
+- Hook `useWorkflowRun(contratoId)` — busca run + definition + stages, realtime via Supabase channel em `workflow_runs`.
+- Helper `evaluateRules(stage, contrato)` — espelho client-side da lógica do edge para preview na UI.
 
-Ao final desta rodada eu pergunto se devemos seguir para o próximo grupo (provavelmente #12 → #10 → #14).
+### Design
+- Reaproveitar tokens HSL existentes (verde primary / mostarda accent).
+- Colunas com header colorido (`stage.cor`), contagem de cards, badge do responsável.
+- Cards: título do contrato, valor, fornecedor, tempo na etapa, avatar do responsável.
+- Histórico em timeline vertical (lado direito), ícones por decisão.
 
 ---
 
-## Rodada concluída — Módulos #14 (IA aplicada) e #15 (Portal externo)
+## 4. Integração
 
-### #14 — IA aplicada
-- Tabela `contract_ai_insights` (tipo: resumo_executivo | sugestao_clausulas | redline | risco_pontual) com RLS multi-tenant.
-- Edge functions: `ia-resumo-executivo` (resumo gestor-first) e `ia-sugerir-clausulas` (recomendações de cláusulas com prioridade).
-- UI `AssistenteIA` em nova aba "Assistente IA" no ContratoDetalhes — botões + histórico.
-
-### #15 — Portal externo (contraparte)
-- Tabelas `portal_externo_tokens` (token único, escopo view|comment|sign, expiração) e `portal_externo_eventos` (auditoria).
-- Edge functions: `criar-portal-contraparte` (admin gera link) e `portal-externo-publico` (verify_jwt=false; view + comment validados por token).
-- Comentários da contraparte gravados em `contract_negotiations` com `autor_lado='contraparte'` e metadados (nome, email, via).
-- Página pública `/portal/:token` (PortalExterno.tsx) com header, dados do contrato, thread e formulário de comentário.
-- Botão "Compartilhar com contraparte" na aba Negociação do ContratoDetalhes.
+- Quando um contrato é criado (`trg_novo_contrato_fn`), criar trigger adicional `trg_iniciar_workflow_fn` que:
+  - Procura `workflow_definitions` com `is_default = true` (ou matching `tipo_contrato`).
+  - Insere `workflow_runs` no primeiro stage por `ordem`.
+- Atualizar `Navigation.tsx` / sidebar para incluir item **Workflows** (admin only).
+- Atualizar memória do projeto com novo módulo.
 
 ---
 
-## Rodada de refinamento #11/#13
+## 5. Testes & QA
 
-- `lexflow-constants.ts`: novo `TIPO_OBRIGACAO_OPTIONS` com os 6 tipos da spec + comunicação/relatório/notificação.
-- `Obrigacoes.tsx`: filtro de tipo passa a consumir `TIPO_OBRIGACAO_OPTIONS`.
-- `SlaAlertBanner.tsx`: banner em `MinhasAprovacoes` com contagem de vencidos e em risco (≤4h).
-- `HistoricoDecisoes.tsx`: lê `approval_decisions` por step e exibe dentro do `AprovacaoDecisionDialog`.
+- Deno test no `workflow-advance` cobrindo: avanço linear, regra condicional matching, validação de responsável, conclusão de run.
+- Smoke manual: criar definition com 3 stages + regra `valor_total > 100000 → stage Diretoria`, abrir contrato, arrastar card, validar histórico e notificação.
+
+---
+
+## Arquivos a criar/editar
+
+**Backend**
+- `supabase/migrations/<ts>_workflow_builder.sql`
+- `supabase/functions/workflow-advance/index.ts`
+- `supabase/functions/workflow-advance/index_test.ts`
+- `supabase/config.toml` (bloco da função se necessário)
+
+**Frontend**
+- `src/pages/Workflows.tsx`
+- `src/pages/WorkflowEditor.tsx`
+- `src/pages/ContratoWorkflow.tsx`
+- `src/components/workflow/WorkflowDefinitionsList.tsx`
+- `src/components/workflow/WorkflowBuilder.tsx`
+- `src/components/workflow/ConditionalRuleEditor.tsx`
+- `src/components/workflow/ContractKanban.tsx`
+- `src/components/workflow/WorkflowHistory.tsx`
+- `src/hooks/useWorkflowRun.ts`
+- `src/hooks/useWorkflowDefinitions.ts`
+- `src/lib/workflow-rules.ts`
+- `src/App.tsx` (rotas)
+- `src/components/Navigation.tsx` ou equivalente (item menu)
+- `package.json` (`@dnd-kit/core`, `@dnd-kit/sortable`)
+
+---
+
+## Confirmação antes de implementar
+
+É bastante código (≈1.500 linhas). Posso seguir nessa ordem:
+1. Migration + RLS + trigger de bootstrap do run
+2. Edge `workflow-advance` + teste
+3. Hooks + páginas + Kanban drag-and-drop
+4. Builder + regras condicionais
+5. Histórico + SLA + realtime
+
+Aprovado para executar tudo de uma vez?

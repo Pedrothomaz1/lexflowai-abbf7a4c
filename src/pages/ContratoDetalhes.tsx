@@ -614,10 +614,20 @@ const ContratoDetalhes = () => {
                       {showAnalise ? "Ocultar" : "Ver"} Análise
                     </Button>
                   )}
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => navigate(`/contratos/${id}/workflow`)}
+                  >
+                    Workflow Kanban
+                  </Button>
                 </div>
               </AnimatedCardContent>
             </AnimatedCard>
           </StaggerItem>
+
+
+
 
           {/* Supplier Card */}
           <StaggerItem>
