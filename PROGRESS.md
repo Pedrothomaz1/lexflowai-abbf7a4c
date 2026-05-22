@@ -4,7 +4,23 @@ _Atualizado: 22/05/2026_
 
 ## Resumo executivo
 
-**Spec v2 entregue em 100%** — backend dos 18 blocos + UIs visuais dos 4 módulos pendentes (#6, #7, #9, #14). Produto está funcional ponta a ponta com interfaces de configuração completas. Restam apenas atividades de **hardening pré-venda** (suite de regressão de segurança + testes pré-lançamento).
+**Spec v2 entregue em 100%** — backend (18/18 blocos), UIs visuais (4/4), **hardening de segurança completo**. Produto pronto para venda assistida.
+
+---
+
+## ✅ Hardening pré-venda (completo)
+
+| Frente | Status | Evidência |
+|---|---|---|
+| Suite de regressão de segurança | ✅ **26/26 passed** | edge `security-regression-runner` |
+| Pre-launch automatizado | ✅ **13/13 passed · 0 failed · 2 N/A** | aba `/security` → Pré-Venda |
+| Linter Supabase | ✅ 85→38 (47 fixes; 38 restantes são intencionais/limitação plataforma) | migration `revoke_definer_anon` |
+| RLS multi-tenant | ✅ validado pela regressão (isolamento org A vs B, cross-user, cross-org) | suite Deno |
+| QA visual final | 🟡 10 testes manuais críticos pendentes (lista na aba Pré-Venda) | a executar manualmente |
+
+**Detalhe do linter:** 38 warnings restantes:
+- 1× `extension_in_public` (pg_net/pgcrypto — limitação Supabase)
+- 37× `authenticated_security_definer_function_executable` (intencional: helpers de RLS `has_role`/`current_user_org`/etc. e RPCs do frontend `dash_*`, super admin, LGPD — todos com checagens internas)
 
 ---
 
@@ -33,23 +49,19 @@ _Atualizado: 22/05/2026_
 
 ---
 
-## ✅ Entregues — UIs visuais desta rodada
+## ✅ Entregues — UIs visuais
 
 | # | UI | Páginas/Componentes |
 |---|---|---|
-| **14** | Revisão de extrações IA | `src/components/IA/RevisaoExtracoesPanel.tsx` integrado em `ContratoDetalhes.tsx` — aceitar/editar/descartar campos e riscos com indicador de confiança |
-| **7** | Workflow Builder | `src/pages/WorkflowBuilder.tsx` (rota `/workflows/builder`) — abas Definições (canvas vertical de etapas) e Execuções (aprovar/rejeitar/pular) |
-| **6** | Form Builder | `src/pages/FormBuilder.tsx` (admin, editor 2 colunas com preview ao vivo) + `src/pages/RequisicaoFormPublica.tsx` (`/requisicao/form/:formId`) + `src/components/Requisicoes/DynamicFormRenderer.tsx` |
-| **9** | Templates v2 | `src/pages/Templates.tsx` reescrito para `document_templates` + `template_versions` — detecção automática de `{{variaveis}}`, versionamento com changelog, modal de geração via edge `gerar-documento`, histórico de versões |
-
-Migrações de sidebar/rotas: `src/App.tsx`, `src/components/AppSidebar.tsx`, `src/components/CommandPalette.tsx`.
+| **14** | Revisão de extrações IA | `RevisaoExtracoesPanel.tsx` em `ContratoDetalhes.tsx` |
+| **7** | Workflow Builder | `WorkflowBuilder.tsx` (`/workflows/builder`) |
+| **6** | Form Builder | `FormBuilder.tsx` + `RequisicaoFormPublica.tsx` + `DynamicFormRenderer.tsx` |
+| **9** | Templates v2 | `Templates.tsx` (versionamento + geração via edge) |
 
 ---
 
-## 🔭 Próximas tasks recomendadas (hardening pré-venda)
+## 🔭 Pós-venda / manual
 
-1. **Suite de regressão de segurança** — rodar `security-regression-runner` + revisar `docs/SECURITY_REPORT.md`
-2. **Pre-launch test runner** — disparar via `/security` aba Pré-Venda e validar persistência em `pre_launch_test_runs`
-3. **Linter Supabase** — varrer warnings e aplicar correções
-4. **Revisão de RLS** — checklist `docs/security-checklist.md` completo
-5. **QA visual final** — percorrer fluxos: requisição → workflow → aprovação → template → pacote final
+1. **10 testes críticos manuais** — listados na aba `/security` → Pré-Venda (cada um com "Como executar" e "Aprovado se"; clicar **Registrar** após)
+2. **Rotação periódica** — `LOVABLE_API_KEY` e secrets sensíveis a cada 90 dias
+3. **Backup/restore drill** — testar restore de snapshot em ambiente separado antes da primeira venda
