@@ -1,67 +1,66 @@
-# Plano: Painel do Dono do SaaS + Onboarding por E-mail
+# Plano: Auto-preenchimento via CNPJ em todos os cadastros
 
-Você quer operar como dono de um SaaS multi-tenant: enxergar todos os clientes em um lugar, ativar/cortar acesso rápido, e dar boas-vindas automáticas pra cada cliente novo. Hoje já existe um Painel Super Admin básico (`/super-admin`) e funções de aprovar/suspender. Esta entrega completa o que falta.
+A consulta de CNPJ já funciona no cadastro de Fornecedores (`useCnpjVerification` + edge function `consultar-cnpj` usando ReceitaWS). Esta entrega leva o mesmo comportamento para os demais cadastros e para a criação inline de fornecedor dentro do fluxo de contrato.
 
 ## O que será entregue
 
-### 1. Painel Super Admin reforçado (`/super-admin`)
-Aprimorar as abas existentes (Organizações, Usuários, Métricas):
+### 1. CNPJ auto-preenche em todos os formulários
 
-- **Métricas executivas (nova versão da aba)**: cards com Total de clientes, Ativos, Em trial, Suspensos, Receita mensal estimada (MRR baseada no plano de cada org), Usuários totais, Novas nos últimos 7/30 dias, Clientes inativos (sem login há 30+ dias).
-- **Breakdown por plano**: quantos clientes em Free, Pro, Business, Enterprise — com receita estimada por faixa.
-- **Aba "Saúde dos clientes"** (nova): tabela ordenável com último login do admin, nº de contratos cadastrados nos últimos 30 dias, status (engajado / em risco / inativo). Pra você bater na porta antes do cliente cancelar.
-- **Aba Organizações melhorada**: filtros por plano e status, busca por nome/CNPJ, ações em 1 clique (aprovar, suspender, reativar, mudar plano), e botão "Reenviar convite" caso o admin não tenha aceitado ainda.
+Adicionar o mesmo padrão "digita CNPJ → busca → preenche nome/endereço/telefone/e-mail" em:
 
-### 2. Fluxo de boas-vindas automatizado por e-mail
-Quando uma organização passa para status `ativa`, o sistema dispara automaticamente:
+- **Cadastro de Franquia** (`FranquiaForm.tsx`) — hoje pede CNPJ manualmente.
+- **Criação inline de Fornecedor dentro de Contrato** (`InlineFornecedorForm`) — hoje exige digitar tudo na hora.
+- **Cadastro de Organização** (formulário de signup / `OrganizationSettings`) — o cliente novo digita o CNPJ da própria empresa e o nome/endereço vêm prontos.
+- **Cadastro de Cliente (Super Admin → Nova Organização)** — você digita o CNPJ do cliente que comprou e o sistema já preenche.
 
-- **E-mail 1 — Boas-vindas (imediato)**: confirma ativação, link de login, credenciais do primeiro admin, prazos do plano contratado.
-- **E-mail 2 — Primeiros passos (D+1)**: tutorial de 5 passos (cadastrar fornecedor, criar primeiro contrato, convidar equipe, configurar workflow, ver alertas).
-- **E-mail 3 — Check-in (D+7)**: pergunta como está sendo a experiência, link pra suporte.
+Comportamento padrão (igual ao fornecedor):
+- Usuário digita 14 dígitos → 500ms de debounce → chama edge function.
+- Mostra spinner ao lado do campo.
+- Se ReceitaWS retornar OK: preenche nome, fantasia, endereço (logradouro, número, bairro, cidade, UF, CEP), telefone, e-mail. Campos ficam editáveis caso o usuário queira ajustar.
+- Se der erro: mostra toast amigável "CNPJ não encontrado, preencha manualmente". Não trava o formulário.
+- Cache: cada CNPJ consultado fica salvo na tabela `cnpj_verifications` (já existe) por 30 dias para evitar bater de novo na ReceitaWS.
 
-Disparado por trigger de banco + cron diário (já temos `cron-lexflow-diario`), tudo via Resend (já configurado).
+### 2. Componente reutilizável `CnpjAutoFillInput`
 
-### 3. Logs de envio + reenvio manual
-- Tabela `onboarding_emails_log` com status (enviado/falhou) por organização.
-- Botão "Reenviar e-mail de boas-vindas" na aba Organizações pra você forçar reenvio se o cliente não recebeu.
+Criar um único componente em `src/components/ui/cnpj-autofill-input.tsx` que encapsula: input com máscara + busca automática + callback `onDataFetched(data)`. Os 4 formulários acima passam a usar esse componente, eliminando código duplicado.
 
-## Como vai funcionar na sua rotina (linguagem leiga)
+### 3. CPF — validação local apenas
 
-1. **Cliente paga** (você confirma manualmente o pagamento por enquanto).
-2. **Você abre `/super-admin` → Organizações** → encontra a organização (ou cria via "+ Nova Organização Cliente" que já existe) → clica **Aprovar**.
-3. **Sistema dispara automaticamente**: e-mail de boas-vindas pro admin do cliente, com link e instruções.
-4. **Nos dias seguintes**, sistema manda os e-mails de tutorial e check-in sem você fazer nada.
-5. **Toda semana**, você abre o painel **Métricas** pra ver MRR, novos clientes, quem está inativo.
-6. **Se um cliente atrasar pagamento**: 1 clique em **Suspender** corta o acesso. 1 clique em **Reativar** devolve.
+Para campos de CPF (cadastro de fornecedor pessoa física, contraparte, responsável), manter o componente atual `DocumentInput` com validação de dígito verificador. **Não** integrar API paga agora. Adicionar pequena nota no campo: "Preencha manualmente — CPF não pode ser consultado por API gratuita."
+
+Quando você quiser ativar Serpro (R$/consulta) no futuro, basta criar uma edge function `consultar-cpf` análoga e plugar no mesmo padrão.
+
+### 4. Limite de uso da ReceitaWS
+
+ReceitaWS gratuita = 3 consultas/minuto por IP. Para evitar bloqueio quando vários clientes consultarem ao mesmo tempo:
+- Edge function já trata HTTP 429 e devolve mensagem amigável.
+- Cache de 30 dias na tabela `cnpj_verifications` reduz drasticamente o nº de chamadas reais.
+- Se virar gargalo no futuro, troca para **BrasilAPI** (também gratuita, mesma resposta, sem limite agressivo) com 1 linha de mudança na edge function.
 
 ## Detalhes técnicos
 
-### Banco de dados (1 migration)
-- `onboarding_emails_log`: registra cada e-mail enviado (org_id, tipo, status, sent_at, error_msg).
-- Trigger `on_organization_activated` na tabela `organizations`: quando `status` muda para `ativa` e o e-mail de boas-vindas ainda não foi enviado, agenda o envio.
-- View `super_admin_health_view`: agrega último login por org (via `auth.users.last_sign_in_at` do admin principal) + contagem de contratos recentes.
+### Arquivos novos
+- `src/components/ui/cnpj-autofill-input.tsx` — componente reutilizável.
 
-### Edge functions (3 novas)
-- `enviar-email-boas-vindas`: envia o e-mail #1 (imediato após ativação). Chamada via trigger HTTP do banco.
-- `processar-onboarding-followup`: roda dentro do `cron-lexflow-diario` (já existe). Busca orgs com 1 dia e 7 dias de ativação e dispara e-mails #2 e #3.
-- Aproveitar `super-admin-create-client-org` já existente — sem mudanças.
+### Arquivos alterados
+- `src/components/Franquias/FranquiaForm.tsx` — substituir input de CNPJ pelo novo componente.
+- `src/components/Fornecedores/InlineFornecedorForm.tsx` — idem.
+- `src/pages/OrganizationSettings.tsx` — idem no campo de CNPJ da própria organização.
+- `src/pages/SuperAdmin/OrganizacoesTab.tsx` — no diálogo "Nova Organização Cliente".
+- (Opcional) Refatorar `FornecedorForm.tsx` para usar o mesmo componente, eliminando duplicação.
 
-### Frontend
-- Reescrever `MetricasTab.tsx` com MRR e breakdown por plano.
-- Nova aba `SaudeClientesTab.tsx`.
-- Adicionar filtros + ações extras em `OrganizacoesTab.tsx`.
-- Templates de e-mail em HTML inline dentro das edge functions (sem dependência externa).
+### Sem mudanças
+- Edge function `consultar-cnpj` — já funciona e está em produção.
+- Tabela `cnpj_verifications` — já existe e já cacheia.
+- Hook `useCnpjVerification` — vira base do novo componente.
 
-### Segurança
-- Toda RPC e edge function exige `is_super_admin(auth.uid())`.
-- `onboarding_emails_log` com RLS: só super admin lê.
-- E-mails enviados via Resend com domínio `lexflowai.com.br` (já configurado).
+### Sem mudanças de banco
+Nenhuma migration nesta entrega.
 
-## Fora de escopo desta entrega
-- Cobrança automática (Stripe/Paddle).
-- Página pública de planos (`/precos`).
-- Trial automático (hoje você ativa manualmente; trial vira evolução futura).
-- Página de status pública / SLA dashboard.
+## Fora de escopo
+- Integração de API paga de CPF (fica documentada para o futuro).
+- Migração para Supabase próprio (respondida em chat — só fazer quando houver motivo concreto).
+- Painel Super Admin reforçado e fluxo de boas-vindas por e-mail (plano anterior, fica em standby até você decidir a ordem).
 
 ## Estimativa
-~1 sessão de implementação. Entregue em 3 commits: migration, edge functions, frontend.
+~30 min de implementação. 1 commit.
