@@ -119,6 +119,22 @@ async function verifyWebhookSignature(
         return { valid: true };
       }
       
+      case 'zapsign': {
+        // ZapSign envia chave compartilhada no header. Usamos WEBHOOK_SECRET para validar.
+        const signature = req.headers.get('x-zapsign-signature')
+          || req.headers.get('x-webhook-secret')
+          || req.headers.get('authorization');
+        if (!signature) {
+          return { valid: false, error: 'Missing ZapSign signature header' };
+        }
+        const isValid = timingSafeEqual(signature, webhookSecret) ||
+                        timingSafeEqual(signature, `Bearer ${webhookSecret}`);
+        if (!isValid) {
+          return { valid: false, error: 'Invalid ZapSign signature' };
+        }
+        return { valid: true };
+      }
+
       case 'd4sign': {
         const hash = req.headers.get('x-d4sign-hash');
         if (!hash) {
@@ -241,6 +257,17 @@ serve(async (req) => {
         metadata = {
           event: payload.event,
           signers: payload.document?.signers,
+        };
+        break;
+
+      case 'zapsign':
+        externalId = payload.token || payload.open_id || payload.doc_token;
+        status = mapZapSignStatus(payload.event_type || payload.status);
+        signedDocumentUrl = payload.signed_file || payload.original_file;
+        metadata = {
+          event_type: payload.event_type,
+          signers: payload.signers,
+          name: payload.name,
         };
         break;
 
@@ -374,6 +401,22 @@ function mapClicksignStatus(status: string): string {
     'signed': 'signed',
     'closed': 'completed',
     'canceled': 'cancelled',
+  };
+  return statusMap[status?.toLowerCase()] || 'pending';
+}
+
+function mapZapSignStatus(status: string): string {
+  const statusMap: Record<string, string> = {
+    'doc_created': 'sent',
+    'doc_sent': 'sent',
+    'doc_viewed': 'viewed',
+    'doc_signed': 'signed',
+    'doc_completed': 'completed',
+    'doc_refused': 'declined',
+    'doc_deleted': 'cancelled',
+    'doc_expired': 'expired',
+    'signed': 'signed',
+    'completed': 'completed',
   };
   return statusMap[status?.toLowerCase()] || 'pending';
 }

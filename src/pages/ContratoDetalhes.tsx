@@ -56,6 +56,7 @@ import { ContractAIAnalysis } from "@/components/ContractDetails/ContractAIAnaly
 import { ContractApprovalCard } from "@/components/ContractDetails/ContractApprovalCard";
 import { FinanceNotificationModal } from "@/components/FinanceNotificationModal";
 import { PreSignatureGuard } from "@/components/Aprovacoes/PreSignatureGuard";
+import { NegotiationThread } from "@/components/Negociacao/NegotiationThread";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { handleDbError } from "@/utils/dbErrorHandler";
@@ -789,7 +790,8 @@ const ContratoDetalhes = () => {
             </AnimatedCard>
           </TabsContent>
 
-          <TabsContent value="negociacao">
+          <TabsContent value="negociacao" className="space-y-4">
+            <NegotiationThread contratoId={contrato.id} />
             <NegotiationMetrics contratoId={contrato.id} />
           </TabsContent>
         </Tabs>

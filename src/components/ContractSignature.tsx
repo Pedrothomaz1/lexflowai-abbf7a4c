@@ -62,7 +62,7 @@ export function ContractSignature({ contratoId, contratoTitulo, arquivoUrl }: Co
   const [sending, setSending] = useState(false);
 
   const [formData, setFormData] = useState({
-    provider: 'custom',
+    provider: 'zapsign',
     webhookUrl: '',
   });
 
@@ -177,14 +177,37 @@ export function ContractSignature({ contratoId, contratoTitulo, arquivoUrl }: Co
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Criar registro de assinatura
-      const { data: signature, error } = await supabase
+      // ZapSign: despacha via edge function (cria documento + signers no provedor)
+      if (formData.provider === 'zapsign') {
+        const { data, error } = await supabase.functions.invoke('enviar-zapsign', {
+          body: {
+            contrato_id: contratoId,
+            signers,
+            document_url: arquivoUrl,
+          },
+        });
+        if (error) throw error;
+        if (!data?.ok) {
+          throw new Error(data?.error || 'Falha ao enviar para ZapSign');
+        }
+        toast({
+          title: "Enviado ao ZapSign",
+          description: "Os signatários receberão o documento por email.",
+        });
+        setDialogOpen(false);
+        resetForm();
+        fetchSignatures();
+        return;
+      }
+
+      // Demais provedores: registra placeholder local; webhook atualiza external_id/status
+      const { error } = await supabase
         .from("contract_signatures")
         .insert([{
           organization_id: organization.id,
           contrato_id: contratoId,
           provider: formData.provider,
-          external_id: `temp-${Date.now()}`, // Será atualizado pelo webhook
+          external_id: `temp-${Date.now()}`,
           signers: signers,
           status: 'pending',
           document_url: arquivoUrl,
@@ -227,7 +250,7 @@ export function ContractSignature({ contratoId, contratoTitulo, arquivoUrl }: Co
 
   const resetForm = () => {
     setFormData({
-      provider: 'custom',
+      provider: 'zapsign',
       webhookUrl: '',
     });
     setSigners([{ name: '', email: '', role: 'Signatário' }]);
@@ -263,6 +286,7 @@ export function ContractSignature({ contratoId, contratoTitulo, arquivoUrl }: Co
 
   const getProviderLabel = (provider: string) => {
     const labels: Record<string, string> = {
+      zapsign: 'ZapSign',
       docusign: 'DocuSign',
       clicksign: 'Clicksign',
       d4sign: 'D4Sign',
@@ -318,6 +342,7 @@ export function ContractSignature({ contratoId, contratoTitulo, arquivoUrl }: Co
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="z-50 bg-popover">
+                          <SelectItem value="zapsign">ZapSign</SelectItem>
                           <SelectItem value="docusign">DocuSign</SelectItem>
                           <SelectItem value="clicksign">Clicksign</SelectItem>
                           <SelectItem value="d4sign">D4Sign</SelectItem>
