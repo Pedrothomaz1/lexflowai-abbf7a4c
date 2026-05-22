@@ -37,7 +37,7 @@ import {
   Edit3,
 } from "lucide-react";
 import { handleDbError } from "@/utils/dbErrorHandler";
-import { ConditionalRulesEditor } from "@/components/workflow/ConditionalRulesEditor";
+import { ConditionalRulesEditor, validateRulesForStage } from "@/components/workflow/ConditionalRulesEditor";
 
 
 
@@ -203,6 +203,23 @@ const WorkflowBuilder = () => {
     if (stages.length === 0) {
       toast({ title: "Adicione ao menos uma etapa", variant: "destructive" });
       return;
+    }
+
+    // Validação de regras condicionais (loops, valores, destinos)
+    const allRulesMap: Record<number, any[]> = {};
+    stages.forEach((s, i) => { allRulesMap[i + 1] = s.regras?.rules ?? []; });
+    for (let i = 0; i < stages.length; i++) {
+      const errs = validateRulesForStage(
+        stages[i].regras?.rules ?? [], i + 1, stages.length, allRulesMap,
+      );
+      if (errs.length > 0) {
+        toast({
+          title: `Regras inválidas na etapa ${i + 1}`,
+          description: errs[0],
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     setSaving(true);
@@ -551,6 +568,9 @@ const WorkflowBuilder = () => {
                         regras={s.regras}
                         totalEtapas={stages.length}
                         etapaAtualOrdem={idx + 1}
+                        allStagesRules={Object.fromEntries(
+                          stages.map((st, i) => [i + 1, st.regras?.rules ?? []]),
+                        )}
                         onChange={(regras) => updateStage(idx, { regras })}
                       />
                     </CardContent>

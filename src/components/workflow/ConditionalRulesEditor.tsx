@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -5,7 +6,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, GitFork } from "lucide-react";
+import { Plus, Trash2, GitFork, AlertTriangle } from "lucide-react";
 
 export type ConditionalRule = {
   campo: "valor_total" | "tipo_contrato" | "area";
@@ -30,15 +31,80 @@ const OPS_STR = [
   { v: "in", l: "está em (separe por vírgula)" },
 ];
 
+export type StagesRulesMap = Record<number, ConditionalRule[]>;
+
+/**
+ * Valida regras de uma etapa.
+ * - Valor ausente / numérico inválido
+ * - jump_to_ordem ausente, igual à própria etapa ou fora do intervalo
+ * - Regras duplicadas
+ * - Loops entre etapas (DFS sobre o grafo de saltos)
+ */
+export function validateRulesForStage(
+  rules: ConditionalRule[],
+  etapaAtualOrdem: number,
+  totalEtapas: number,
+  allStagesRules?: StagesRulesMap,
+): string[] {
+  const errs: string[] = [];
+  const seen = new Set<string>();
+  rules.forEach((r, i) => {
+    const idx = i + 1;
+    if (!r.valor || !String(r.valor).trim()) {
+      errs.push(`Regra ${idx}: informe um valor.`);
+    }
+    if (r.campo === "valor_total" && r.valor && isNaN(Number(r.valor))) {
+      errs.push(`Regra ${idx}: valor numérico inválido.`);
+    }
+    if (!r.jump_to_ordem) {
+      errs.push(`Regra ${idx}: selecione a etapa de destino.`);
+    } else {
+      if (r.jump_to_ordem === etapaAtualOrdem) {
+        errs.push(`Regra ${idx}: destino não pode ser a própria etapa.`);
+      }
+      if (r.jump_to_ordem < 1 || r.jump_to_ordem > totalEtapas) {
+        errs.push(`Regra ${idx}: etapa de destino fora do intervalo.`);
+      }
+      if (allStagesRules) {
+        const visited = new Set<number>([etapaAtualOrdem]);
+        const stack: number[] = [r.jump_to_ordem];
+        while (stack.length) {
+          const cur = stack.pop()!;
+          if (visited.has(cur)) {
+            errs.push(`Regra ${idx}: cria loop (etapa ${cur} já visitada).`);
+            break;
+          }
+          visited.add(cur);
+          for (const nr of allStagesRules[cur] ?? []) {
+            if (nr.jump_to_ordem) stack.push(nr.jump_to_ordem);
+          }
+        }
+      }
+    }
+    const key = `${r.campo}|${r.op}|${String(r.valor).trim()}`;
+    if (seen.has(key)) errs.push(`Regra ${idx}: duplicada.`);
+    seen.add(key);
+  });
+  return errs;
+}
+
 type Props = {
   regras: { rules?: ConditionalRule[] } | null | undefined;
   totalEtapas: number;
   etapaAtualOrdem: number;
+  allStagesRules?: StagesRulesMap;
   onChange: (regras: { rules: ConditionalRule[] }) => void;
 };
 
-export function ConditionalRulesEditor({ regras, totalEtapas, etapaAtualOrdem, onChange }: Props) {
+export function ConditionalRulesEditor({
+  regras, totalEtapas, etapaAtualOrdem, allStagesRules, onChange,
+}: Props) {
   const rules: ConditionalRule[] = regras?.rules ?? [];
+
+  const errors = useMemo(
+    () => validateRulesForStage(rules, etapaAtualOrdem, totalEtapas, allStagesRules),
+    [rules, etapaAtualOrdem, totalEtapas, allStagesRules],
+  );
 
   const update = (idx: number, patch: Partial<ConditionalRule>) => {
     const next = rules.map((r, i) => (i === idx ? { ...r, ...patch } : r));
@@ -137,11 +203,20 @@ export function ConditionalRulesEditor({ regras, totalEtapas, etapaAtualOrdem, o
         );
       })}
 
-      {rules.length > 0 && (
+      {errors.length > 0 && (
+        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-2 space-y-1">
+          {errors.map((e, i) => (
+            <p key={i} className="text-[11px] text-destructive flex items-center gap-1">
+              <AlertTriangle className="h-3 w-3" /> {e}
+            </p>
+          ))}
+        </div>
+      )}
+
+      {rules.length > 0 && errors.length === 0 && (
         <p className="text-[11px] text-muted-foreground flex items-center gap-1">
           <Badge variant="outline" className="text-[10px]">i</Badge>
           A primeira regra que casar define o próximo estágio.
-          Convertendo valores antes de avaliar.
         </p>
       )}
     </div>

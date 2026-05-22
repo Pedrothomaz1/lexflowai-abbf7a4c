@@ -161,6 +161,7 @@ Deno.serve(async (req) => {
       ordem: proxStage.ordem,
       status: "pendente",
       due_at: due,
+      regra_aplicada: regraAplicada,
     });
     if (insErr) return json(200, { ok: false, error: insErr.message });
 
