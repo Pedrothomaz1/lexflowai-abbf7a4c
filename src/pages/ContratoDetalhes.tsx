@@ -39,6 +39,7 @@ import {
   ScrollText,
 } from "lucide-react";
 import { exportContratoDetalhePDF } from "@/utils/pdfExport";
+import { exportContratoExecutivoPDF } from "@/utils/pdfExecutiveReport";
 import { ContractComments } from "@/components/ContractComments";
 import { ContractSignature } from "@/components/ContractSignature";
 import { ZapsignPanel } from "@/components/Assinaturas/ZapsignPanel";
