@@ -43,6 +43,81 @@ export default function DashboardIA() {
     },
   });
 
+  const { data: skillAnalyses = [], isLoading: loadingSkills } = useQuery({
+    queryKey: ["dashboard-ia-skills"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("contract_analysis")
+        .select("contrato_id, skill_aplicada, payload_estruturado, created_at")
+        .not("skill_aplicada", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(1000);
+      if (error) throw error;
+      return (data ?? []) as Array<{ contrato_id: string; skill_aplicada: string; payload_estruturado: any; created_at: string }>;
+    },
+  });
+
+  // Latest analysis per (contrato, skill)
+  const skillStats = useMemo(() => {
+    const latest = new Map<string, { skill: string; payload: any }>();
+    skillAnalyses.forEach((a) => {
+      const key = `${a.contrato_id}::${a.skill_aplicada}`;
+      if (!latest.has(key)) latest.set(key, { skill: a.skill_aplicada, payload: a.payload_estruturado });
+    });
+
+    const bySkill: Record<string, any[]> = {
+      "contract-review": [],
+      "nda-triage": [],
+      "risk-assessment": [],
+      compliance: [],
+    };
+    latest.forEach((v) => {
+      if (bySkill[v.skill]) bySkill[v.skill].push(v.payload);
+    });
+
+    // contract-review: count clause statuses
+    const review = { total: bySkill["contract-review"].length, verde: 0, amarelo: 0, vermelho: 0 };
+    bySkill["contract-review"].forEach((p) => {
+      (p?.clausulas ?? []).forEach((c: any) => {
+        if (c?.status === "verde" || c?.status === "ok") review.verde++;
+        else if (c?.status === "amarelo" || c?.status === "atencao") review.amarelo++;
+        else if (c?.status === "vermelho" || c?.status === "critico") review.vermelho++;
+      });
+    });
+
+    // nda-triage: aprovar / revisar / rejeitar
+    const nda = { total: bySkill["nda-triage"].length, aprovar: 0, revisar: 0, rejeitar: 0 };
+    bySkill["nda-triage"].forEach((p) => {
+      const c = p?.classificacao ?? p?.recomendacao;
+      if (c === "aprovar") nda.aprovar++;
+      else if (c === "revisar") nda.revisar++;
+      else if (c === "rejeitar") nda.rejeitar++;
+    });
+
+    // risk-assessment: critical risks + exposure sum
+    const risk = { total: bySkill["risk-assessment"].length, criticos: 0, exposicao: 0 };
+    bySkill["risk-assessment"].forEach((p) => {
+      (p?.riscos ?? []).forEach((r: any) => {
+        if (r?.severidade === "critico" || r?.nivel === "critico") risk.criticos++;
+        const exp = Number(r?.exposicao_estimada ?? r?.exposicao ?? 0);
+        if (!isNaN(exp)) risk.exposicao += exp;
+      });
+    });
+
+    // compliance: frameworks with open gaps
+    const compMap = new Map<string, number>();
+    let compTotal = bySkill["compliance"].length;
+    bySkill["compliance"].forEach((p) => {
+      (p?.frameworks ?? []).forEach((f: any) => {
+        const hasGap = (f?.gaps?.length ?? 0) > 0 || f?.status === "nao_conforme" || f?.status === "gap";
+        if (hasGap && f?.nome) compMap.set(f.nome, (compMap.get(f.nome) ?? 0) + 1);
+      });
+    });
+    const compTopGaps = Array.from(compMap.entries()).sort((a, b) => b[1] - a[1]).slice(0, 2);
+
+    return { review, nda, risk, compliance: { total: compTotal, topGaps: compTopGaps } };
+  }, [skillAnalyses]);
+
   const stats = useMemo(() => {
     const resumos = insights.filter((i) => i.tipo === "resumo_executivo");
     const sugestoesInsights = insights.filter((i) => i.tipo === "sugestao_clausulas");
