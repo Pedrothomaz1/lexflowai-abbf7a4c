@@ -1,10 +1,17 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://esm.sh/zod@3.23.8";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+const BodySchema = z.object({
+  versao_termos: z.string().trim().min(1).max(20).optional(),
+  versao_privacidade: z.string().trim().min(1).max(20).optional(),
+  organization_id: z.string().uuid().optional(),
+}).strict();
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -40,8 +47,15 @@ Deno.serve(async (req) => {
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    const body = await req.json().catch(() => ({}));
-    const { versao_termos, versao_privacidade, organization_id } = body || {};
+    const rawBody = await req.json().catch(() => ({}));
+    const parsed = BodySchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return new Response(
+        JSON.stringify({ error: "Invalid body", details: parsed.error.flatten().fieldErrors }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const { versao_termos, versao_privacidade, organization_id } = parsed.data;
 
     // Always derive user_id from verified JWT — ignore any client-supplied user_id
     const user_id = authenticatedUserId;
