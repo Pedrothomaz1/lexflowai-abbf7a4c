@@ -95,7 +95,12 @@ function detectMimeType(path: string): string {
 }
 
 function toBase64(bytes: Uint8Array): string {
-  return btoa(String.fromCharCode(...bytes));
+  let binary = '';
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
 }
 
 function hasGoodText(text: string): boolean {
@@ -125,7 +130,13 @@ async function callExtractionAI(params: {
     ? `${extractionPrompt}\n\nTexto do contrato:\n${params.input.text.slice(0, 30000)}`
     : [
         { type: 'text', text: extractionPrompt },
-        { type: 'input_file', input_file: { data: params.input.base64, mime_type: params.input.mimeType } },
+        {
+          type: 'file',
+          file: {
+            filename: params.input.mimeType === 'application/pdf' ? 'contrato.pdf' : 'contrato.txt',
+            file_data: `data:${params.input.mimeType};base64,${params.input.base64}`,
+          },
+        },
       ];
 
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
