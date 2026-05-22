@@ -4478,6 +4478,7 @@ export type Database = {
           id: string
           ordem: number
           organization_id: string
+          regra_aplicada: boolean
           stage_id: string
           status: string
           workflow_run_id: string
@@ -4492,6 +4493,7 @@ export type Database = {
           id?: string
           ordem: number
           organization_id: string
+          regra_aplicada?: boolean
           stage_id: string
           status?: string
           workflow_run_id: string
@@ -4506,6 +4508,7 @@ export type Database = {
           id?: string
           ordem?: number
           organization_id?: string
+          regra_aplicada?: boolean
           stage_id?: string
           status?: string
           workflow_run_id?: string
