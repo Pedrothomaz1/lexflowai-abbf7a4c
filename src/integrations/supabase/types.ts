@@ -2878,6 +2878,36 @@ export type Database = {
           },
         ]
       }
+      onboarding_progress: {
+        Row: {
+          completed_at: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          organization_id: string
+          step_key: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          organization_id: string
+          step_key: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          organization_id?: string
+          step_key?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       onboarding_settings: {
         Row: {
           enabled: boolean
@@ -3327,6 +3357,9 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          onboarding_checklist_dismissed: boolean
+          onboarding_completed_at: string | null
+          onboarding_skipped: boolean
           phone: string | null
           updated_at: string
         }
@@ -3339,6 +3372,9 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          onboarding_checklist_dismissed?: boolean
+          onboarding_completed_at?: string | null
+          onboarding_skipped?: boolean
           phone?: string | null
           updated_at?: string
         }
@@ -3351,6 +3387,9 @@ export type Database = {
           email?: string
           full_name?: string
           id?: string
+          onboarding_checklist_dismissed?: boolean
+          onboarding_completed_at?: string | null
+          onboarding_skipped?: boolean
           phone?: string | null
           updated_at?: string
         }
