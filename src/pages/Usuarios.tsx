@@ -71,7 +71,6 @@ type UserWithRoles = Profile & {
 
 const ROLE_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
   analista_juridico: { label: "Analista Jurídico", variant: "secondary" },
-  consultoria_juridica: { label: "Consultoria Jurídica", variant: "default" },
   administrador: { label: "Administrador", variant: "outline" },
 };
 
