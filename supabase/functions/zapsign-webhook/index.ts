@@ -152,14 +152,52 @@ serve(async (req) => {
       payload,
     }]);
 
-    // Quando concluído, sincroniza contrato
+    // Quando concluído, baixa PDF assinado, calcula hash SHA-256, salva no bucket privado
+    // e congela o contrato (imutável). Idempotente: se já está congelado, não refaz.
     if (updates.status === "concluido") {
+      const { data: contratoAtual } = await admin
+        .from("contratos")
+        .select("id, organization_id, pacote_final_congelado_at")
+        .eq("id", envelope.contrato_id)
+        .maybeSingle();
+
+      let pacote_final_url: string | null = null;
+      let pacote_final_hash: string | null = null;
+
+      if (contratoAtual && !contratoAtual.pacote_final_congelado_at && signedUrl) {
+        try {
+          const resp = await fetch(signedUrl as string);
+          if (resp.ok) {
+            const buf = new Uint8Array(await resp.arrayBuffer());
+            const digest = await crypto.subtle.digest("SHA-256", buf);
+            pacote_final_hash = Array.from(new Uint8Array(digest))
+              .map((b) => b.toString(16).padStart(2, "0"))
+              .join("");
+            const path = `${contratoAtual.organization_id}/${contratoAtual.id}/pacote-final-${Date.now()}.pdf`;
+            const { error: upErr } = await admin.storage
+              .from("final-packages")
+              .upload(path, buf, { contentType: "application/pdf", upsert: false });
+            if (!upErr) pacote_final_url = path;
+            else console.error("final-packages upload error", upErr);
+          } else {
+            console.error("Falha ao baixar PDF assinado", resp.status);
+          }
+        } catch (e) {
+          console.error("Erro ao processar pacote final", e);
+        }
+      }
+
       await admin
         .from("contratos")
         .update({
           status: "vigente",
           data_assinatura: new Date().toISOString().slice(0, 10),
           arquivo_url: signedUrl || envelope.original_file_url,
+          ...(pacote_final_url ? {
+            pacote_final_url,
+            pacote_final_hash,
+            pacote_final_congelado_at: new Date().toISOString(),
+          } : {}),
         })
         .eq("id", envelope.contrato_id)
         .select()
