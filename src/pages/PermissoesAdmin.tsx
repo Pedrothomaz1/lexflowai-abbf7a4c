@@ -37,11 +37,10 @@ type RolePermission = {
   permission_id: string;
 };
 
-const ROLES = ["administrador", "consultoria_juridica", "analista_juridico"] as const;
+const ROLES = ["administrador", "analista_juridico"] as const;
 
 const ROLE_LABELS: Record<string, string> = {
   administrador: "Administrador",
-  consultoria_juridica: "Consultoria Jurídica",
   analista_juridico: "Analista Jurídico",
 };
 
