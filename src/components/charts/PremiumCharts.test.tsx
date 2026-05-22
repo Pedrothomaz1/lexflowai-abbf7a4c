@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render } from "@testing-library/react";
+import { renderWithProviders } from "@/test/utils/test-helpers";
 import {
   PremiumTooltip,
   Sparkline,
@@ -24,26 +24,31 @@ const mockSparklineData = [10, 20, 15, 25, 30, 28, 35];
 describe("PremiumCharts Components", () => {
   describe("Sparkline", () => {
     it("renderiza sem erros", () => {
-      const { container } = render(<Sparkline data={mockSparklineData} />);
-      expect(container).toBeInTheDocument();
+ 
+const { container } = render(<Sparkline data={mockSparklineData} />);
+expect(container).toBeInTheDocument();
+main
     });
 
     it("renderiza com cor personalizada", () => {
-      const { container } = render(
+      const { container } = renderWithProviders(
         <Sparkline data={mockSparklineData} color="#ff0000" />
       );
-      expect(container).toBeInTheDocument();
+
+expect(container).toBeInTheDocument();
+
+ main
     });
 
     it("renderiza com dimensões personalizadas", () => {
-      const { container } = render(
+      const { container } = renderWithProviders(
         <Sparkline data={mockSparklineData} width={200} height={60} />
       );
       expect(container).toBeInTheDocument();
     });
 
     it("lida com array vazio sem crash", () => {
-      const { container } = render(<Sparkline data={[]} />);
+      const { container } = renderWithProviders(<Sparkline data={[]} />);
       expect(container).toBeInTheDocument();
     });
   });

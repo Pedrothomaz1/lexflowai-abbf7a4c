@@ -86,20 +86,39 @@ interface Profile {
   full_name: string;
 }
 
-const categoriaConfig: Record<string, { label: string; color: string }> = {
-  seguranca: { label: "Segurança", color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" },
-  manutencao: { label: "Manutenção", color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400" },
-  higiene: { label: "Higiene", color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" },
-  infraestrutura: { label: "Infraestrutura", color: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400" },
-  veiculos: { label: "Veículos", color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400" },
-  outros: { label: "Outros", color: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400" },
-};
+// Use CSS variable-based semantic colors from Master Brand Palette (index.css)
+// Automatically respects light/dark mode and brand color consistency
+const categoriaConfig = Object.entries(CATEGORIA_COLORS).reduce(
+  (acc, [key, value]) => ({
+    ...acc,
+    [key]: { label: value.label, color: value.className },
+  }),
+  {} as Record<string, { label: string; color: string }>
+);
 
+// Status colors using CSS variables for semantic tokens
+// Automatically respects Master Brand Palette theming
 const statusConfig: Record<string, { label: string; color: string; icon: typeof CheckCircle2 }> = {
-  dentro_prazo: { label: "No prazo", color: "bg-success/10 text-success border-success/20", icon: CheckCircle2 },
-  alerta: { label: "Em alerta", color: "bg-warning/10 text-warning border-warning/20", icon: AlertTriangle },
-  vencido: { label: "Vencido", color: "bg-destructive/10 text-destructive border-destructive/20", icon: XCircle },
-  em_execucao: { label: "Em execução", color: "bg-primary/10 text-primary border-primary/20", icon: RefreshCcw },
+  dentro_prazo: {
+    label: "No prazo",
+    color: "bg-[hsl(var(--success)/0.1)] text-[hsl(var(--success))] border-[hsl(var(--success)/0.2)]",
+    icon: CheckCircle2
+  },
+  alerta: {
+    label: "Em alerta",
+    color: "bg-[hsl(var(--warning)/0.1)] text-[hsl(var(--warning))] border-[hsl(var(--warning)/0.2)]",
+    icon: AlertTriangle
+  },
+  vencido: {
+    label: "Vencido",
+    color: "bg-[hsl(var(--destructive)/0.1)] text-[hsl(var(--destructive))] border-[hsl(var(--destructive)/0.2)]",
+    icon: XCircle
+  },
+  em_execucao: {
+    label: "Em execução",
+    color: "bg-[hsl(var(--primary)/0.1)] text-[hsl(var(--primary))] border-[hsl(var(--primary)/0.2)]",
+    icon: RefreshCcw
+  },
 };
 
 export default function Servicos() {
@@ -453,16 +472,11 @@ export default function Servicos() {
       header: "Compras",
       render: (value: Servico["ultima_solicitacao"]) => {
         if (!value) return <span className="text-muted-foreground text-sm">-</span>;
-        const statusColors: Record<string, string> = {
-          pendente: "bg-yellow-100 text-yellow-800",
-          enviado: "bg-blue-100 text-blue-800",
-          confirmado: "bg-green-100 text-green-800",
-          erro: "bg-red-100 text-red-800",
-        };
+        const statusColor = PURCHASE_STATUS_COLORS[value.status_envio] || PURCHASE_STATUS_COLORS.erro;
         return (
           <div className="flex items-center gap-2">
             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-            <Badge className={statusColors[value.status_envio] || "bg-gray-100"}>{value.status_envio}</Badge>
+            <Badge className={`${statusColor.bg} ${statusColor.text}`}>{value.status_envio}</Badge>
             {value.codigo_solicitacao && (
               <span className="text-xs text-muted-foreground">#{value.codigo_solicitacao}</span>
             )}
@@ -530,7 +544,7 @@ export default function Servicos() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="modulo-servicos space-y-6">
       <PageHeader
         title="Serviços Periódicos"
         description="Gerencie serviços com vencimento como extintores, manutenções e certificados."

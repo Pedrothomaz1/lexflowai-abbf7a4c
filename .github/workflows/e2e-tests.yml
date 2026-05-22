@@ -1,0 +1,107 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM UTC
+
+jobs:
+  e2e-tests:
+    name: Playwright E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+      fail-fast: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Build application
+        run: npm run build
+        env:
+          CI: true
+
+      - name: Run E2E tests
+        run: npx playwright test
+        env:
+          CI: true
+          BASE_URL: http://localhost:5173
+          HEADED: false
+
+      - name: Upload Playwright Report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: playwright-report-${{ matrix.node-version }}
+          path: playwright-report/
+          retention-days: 30
+
+      - name: Upload test videos
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-videos-${{ matrix.node-version }}
+          path: test-results/
+          retention-days: 7
+
+      - name: Publish test results
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: 'test-results/junit.xml'
+          check_name: 'E2E Test Results'
+
+      - name: Comment PR with test results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const junitPath = 'test-results/junit.xml';
+
+            if (fs.existsSync(junitPath)) {
+              const junit = fs.readFileSync(junitPath, 'utf8');
+              const matches = junit.match(/tests="(\d+)" failures="(\d+)" skipped="(\d+)"/);
+
+              if (matches) {
+                const [, total, failures, skipped] = matches;
+                const passed = parseInt(total) - parseInt(failures) - parseInt(skipped);
+
+                const comment = `## 🎭 E2E Test Results (${{ matrix.node-version }})
+
+                | Metric | Count |
+                |--------|-------|
+                | ✅ Passed | ${passed} |
+                | ❌ Failed | ${failures} |
+                | ⏭️ Skipped | ${skipped} |
+                | 📊 Total | ${total} |
+
+                [📊 View detailed report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
+
+                github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: comment
+                });
+              }
+            }
