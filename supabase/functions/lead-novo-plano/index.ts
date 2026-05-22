@@ -60,6 +60,24 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
+    // Rate limit: 5 submissões / 10min por IP
+    const ip = (req.headers.get("x-forwarded-for")?.split(",")[0].trim()) || "unknown";
+    const since = new Date(Date.now() - 600_000).toISOString();
+    const { count: rlCount } = await supabase
+      .from("rate_limits")
+      .select("id", { count: "exact", head: true })
+      .eq("ip_address", ip)
+      .eq("endpoint_key", "lead-novo-plano")
+      .gte("window_start", since);
+    if ((rlCount ?? 0) >= 5) {
+      return json({ ok: false, error: "Muitas tentativas. Tente novamente em alguns minutos." });
+    }
+    await supabase.from("rate_limits").insert({
+      ip_address: ip, endpoint_key: "lead-novo-plano", count: 1, window_start: new Date().toISOString(),
+    });
+
+
+
     const { data: lead, error } = await supabase
       .from("sales_leads")
       .insert({
