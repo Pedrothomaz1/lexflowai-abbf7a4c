@@ -245,113 +245,37 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY não configurada");
     }
 
-    // Obter URL pública do arquivo
-    const { data: urlData } = await supabase
+    const { data: fileBlob, error: downloadError } = await supabase
       .storage
       .from('contratos-documentos')
-      .createSignedUrl(fileUrl, 60); // URL válida por 60 segundos
+      .download(fileUrl);
 
-    if (!urlData?.signedUrl) {
-      console.error('Erro ao gerar URL do arquivo');
+    if (downloadError || !fileBlob) {
+      console.error('Erro ao baixar arquivo do storage:', downloadError);
       return new Response(
         JSON.stringify({ error: 'Erro ao acessar arquivo do storage' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('URL gerada para análise');
+    const fileBytes = new Uint8Array(await fileBlob.arrayBuffer());
+    const mimeType = fileBlob.type || detectMimeType(fileUrl);
+    const nativeText = await extractNativeText(fileBytes, mimeType);
+    const input = hasGoodText(nativeText)
+      ? { kind: 'text' as const, text: nativeText }
+      : { kind: 'file' as const, base64: toBase64(fileBytes), mimeType };
 
-    // Chamar Lovable AI para analisar o documento
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: `Você é um assistente jurídico. Analise este contrato e extraia os campos abaixo. Use estritamente o formato do schema da função. Se um campo não for identificável com segurança, retorne string vazia.
+    console.log(`Método de extração: ${input.kind === 'text' ? 'texto nativo' : 'arquivo multimodal/OCR'}; caracteres nativos=${nativeText.length}`);
 
-Campos:
-- data_inicio, data_fim (YYYY-MM-DD; procure por "vigência", "prazo", "início", "término")
-- titulo: título curto descritivo (ex.: "Prestação de Serviços de TI - Acme")
-- descricao: objeto/escopo em 1-2 frases
-- tipo: um de [prestacao_servicos, fornecimento, locacao, confidencialidade, parceria, outro]
-- valor_total: número como string, somente dígitos e ponto decimal, sem moeda/símbolo
-- moeda: BRL, USD ou EUR
-- fornecedor_nome: razão social/nome da parte contratada/fornecedora (sem CNPJ).`
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: urlData.signedUrl
-                }
-              }
-            ]
-          }
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "extract_contract_dates",
-              description: "Extrai campos principais de um contrato",
-              parameters: {
-                type: "object",
-                properties: {
-                  data_inicio: { type: "string", description: "YYYY-MM-DD" },
-                  data_fim: { type: "string", description: "YYYY-MM-DD" },
-                  titulo: { type: "string" },
-                  descricao: { type: "string" },
-                  tipo: { type: "string", enum: ["prestacao_servicos","fornecimento","locacao","confidencialidade","parceria","outro"] },
-                  valor_total: { type: "string", description: "Número como string, ex.: 12000.50" },
-                  moeda: { type: "string", enum: ["BRL","USD","EUR"] },
-                  fornecedor_nome: { type: "string" }
-                },
-                required: ["data_inicio", "data_fim"],
-                additionalProperties: false
-              }
-            }
-          }
-        ],
-        tool_choice: { type: "function", function: { name: "extract_contract_dates" } }
-      }),
+    const { payload: extractedData, usage } = await callExtractionAI({
+      apiKey: LOVABLE_API_KEY,
+      input,
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Erro na API Lovable:', response.status, errorText);
-      
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Limite de requisições excedido. Tente novamente mais tarde." }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Créditos insuficientes. Adicione fundos ao seu workspace Lovable AI." }),
-          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      throw new Error('Erro na API de IA');
-    }
-
-    const aiResponse = await response.json();
-    console.log('Resposta da IA:', JSON.stringify(aiResponse));
-
     // Capturar tokens utilizados
-    const tokensUsados = aiResponse.usage?.total_tokens || 0;
-    const promptTokens = aiResponse.usage?.prompt_tokens || 0;
-    const completionTokens = aiResponse.usage?.completion_tokens || 0;
+    const tokensUsados = usage.total;
+    const promptTokens = usage.prompt;
+    const completionTokens = usage.completion;
 
     console.log(`Tokens utilizados: ${tokensUsados} (prompt: ${promptTokens}, completion: ${completionTokens})`);
 
