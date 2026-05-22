@@ -446,6 +446,15 @@ export default function ContratoWorkflow() {
         </div>
       )}
 
+      {run && contratoId && (
+        <WorkflowStageDiscussion
+          contratoId={contratoId}
+          runStageId={currentRunStage?.id ?? null}
+          stageNome={stages.find((s) => s.ordem === run.current_stage_ordem)?.nome}
+          userMap={userMap}
+        />
+      )}
+
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
