@@ -362,6 +362,18 @@ export default function ContratoWorkflow() {
                 </Button>
                 <Button
                   variant="outline"
+                  onClick={() => {
+                    setPendingDecisao("devolvido");
+                    setPendingTargetOrdem(Math.max(1, (run.current_stage_ordem ?? 1) - 1));
+                    setComentario("");
+                    setDialogOpen(true);
+                  }}
+                  disabled={advancing || (run.current_stage_ordem ?? 1) <= 1}
+                >
+                  <Undo2 className="h-4 w-4 mr-1" /> Devolver
+                </Button>
+                <Button
+                  variant="outline"
                   onClick={() => { setPendingDecisao("pulado"); setPendingTargetOrdem(null); setComentario(""); setDialogOpen(true); }}
                   disabled={advancing}
                 >
