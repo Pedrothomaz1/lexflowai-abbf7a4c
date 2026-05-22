@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sparkles, FileText, Lightbulb, AlertTriangle, TrendingUp, ArrowRight } from "lucide-react";
+import { Sparkles, FileText, Lightbulb, AlertTriangle, TrendingUp, ArrowRight, FileSearch, ShieldAlert, ScrollText } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -42,6 +42,81 @@ export default function DashboardIA() {
       return data ?? [];
     },
   });
+
+  const { data: skillAnalyses = [], isLoading: loadingSkills } = useQuery({
+    queryKey: ["dashboard-ia-skills"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("contract_analysis")
+        .select("contrato_id, skill_aplicada, payload_estruturado, created_at")
+        .not("skill_aplicada", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(1000);
+      if (error) throw error;
+      return (data ?? []) as Array<{ contrato_id: string; skill_aplicada: string; payload_estruturado: any; created_at: string }>;
+    },
+  });
+
+  // Latest analysis per (contrato, skill)
+  const skillStats = useMemo(() => {
+    const latest = new Map<string, { skill: string; payload: any }>();
+    skillAnalyses.forEach((a) => {
+      const key = `${a.contrato_id}::${a.skill_aplicada}`;
+      if (!latest.has(key)) latest.set(key, { skill: a.skill_aplicada, payload: a.payload_estruturado });
+    });
+
+    const bySkill: Record<string, any[]> = {
+      "contract-review": [],
+      "nda-triage": [],
+      "risk-assessment": [],
+      compliance: [],
+    };
+    latest.forEach((v) => {
+      if (bySkill[v.skill]) bySkill[v.skill].push(v.payload);
+    });
+
+    // contract-review: count clause statuses
+    const review = { total: bySkill["contract-review"].length, verde: 0, amarelo: 0, vermelho: 0 };
+    bySkill["contract-review"].forEach((p) => {
+      (p?.clausulas ?? []).forEach((c: any) => {
+        if (c?.status === "verde" || c?.status === "ok") review.verde++;
+        else if (c?.status === "amarelo" || c?.status === "atencao") review.amarelo++;
+        else if (c?.status === "vermelho" || c?.status === "critico") review.vermelho++;
+      });
+    });
+
+    // nda-triage: aprovar / revisar / rejeitar
+    const nda = { total: bySkill["nda-triage"].length, aprovar: 0, revisar: 0, rejeitar: 0 };
+    bySkill["nda-triage"].forEach((p) => {
+      const c = p?.classificacao ?? p?.recomendacao;
+      if (c === "aprovar") nda.aprovar++;
+      else if (c === "revisar") nda.revisar++;
+      else if (c === "rejeitar") nda.rejeitar++;
+    });
+
+    // risk-assessment: critical risks + exposure sum
+    const risk = { total: bySkill["risk-assessment"].length, criticos: 0, exposicao: 0 };
+    bySkill["risk-assessment"].forEach((p) => {
+      (p?.riscos ?? []).forEach((r: any) => {
+        if (r?.severidade === "critico" || r?.nivel === "critico") risk.criticos++;
+        const exp = Number(r?.exposicao_estimada ?? r?.exposicao ?? 0);
+        if (!isNaN(exp)) risk.exposicao += exp;
+      });
+    });
+
+    // compliance: frameworks with open gaps
+    const compMap = new Map<string, number>();
+    let compTotal = bySkill["compliance"].length;
+    bySkill["compliance"].forEach((p) => {
+      (p?.frameworks ?? []).forEach((f: any) => {
+        const hasGap = (f?.gaps?.length ?? 0) > 0 || f?.status === "nao_conforme" || f?.status === "gap";
+        if (hasGap && f?.nome) compMap.set(f.nome, (compMap.get(f.nome) ?? 0) + 1);
+      });
+    });
+    const compTopGaps = Array.from(compMap.entries()).sort((a, b) => b[1] - a[1]).slice(0, 2);
+
+    return { review, nda, risk, compliance: { total: compTotal, topGaps: compTopGaps } };
+  }, [skillAnalyses]);
 
   const stats = useMemo(() => {
     const resumos = insights.filter((i) => i.tipo === "resumo_executivo");
@@ -93,6 +168,72 @@ export default function DashboardIA() {
         <KpiCard icon={Lightbulb} label="Sugestões geradas" value={stats.sugestoesFlat.length} loading={isLoading} />
         <KpiCard icon={AlertTriangle} label="Sugestões prioridade alta" value={stats.altas.length} loading={isLoading} variant="warning" />
       </div>
+
+      {/* Skill Cards */}
+      <div>
+        <h2 className="text-lg font-semibold mb-3">Análises por skill especialista</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <SkillCard
+            icon={FileSearch}
+            title="Revisão cláusula-a-cláusula"
+            slug="contract-review"
+            total={skillStats.review.total}
+            loading={loadingSkills}
+            stats={[
+              { label: "OK", value: skillStats.review.verde, variant: "secondary" },
+              { label: "Atenção", value: skillStats.review.amarelo, variant: "default" },
+              { label: "Crítico", value: skillStats.review.vermelho, variant: "destructive" },
+            ]}
+          />
+          <SkillCard
+            icon={ScrollText}
+            title="Triagem de NDA"
+            slug="nda-triage"
+            total={skillStats.nda.total}
+            loading={loadingSkills}
+            stats={[
+              { label: "Aprovar", value: skillStats.nda.aprovar, variant: "secondary" },
+              { label: "Revisar", value: skillStats.nda.revisar, variant: "default" },
+              { label: "Rejeitar", value: skillStats.nda.rejeitar, variant: "destructive" },
+            ]}
+          />
+          <SkillCard
+            icon={ShieldAlert}
+            title="Mapa de riscos"
+            slug="risk-assessment"
+            total={skillStats.risk.total}
+            loading={loadingSkills}
+            stats={[
+              { label: "Críticos", value: skillStats.risk.criticos, variant: "destructive" },
+              {
+                label: "Exposição",
+                value: skillStats.risk.exposicao > 0
+                  ? `R$ ${Math.round(skillStats.risk.exposicao).toLocaleString("pt-BR")}`
+                  : "—",
+                variant: "outline",
+              },
+            ]}
+          />
+          <SkillCard
+            icon={TrendingUp}
+            title="Compliance"
+            slug="compliance"
+            total={skillStats.compliance.total}
+            loading={loadingSkills}
+            stats={
+              skillStats.compliance.topGaps.length === 0
+                ? [{ label: "Sem gaps", value: "—", variant: "secondary" }]
+                : skillStats.compliance.topGaps.map(([nome, n]) => ({
+                    label: nome,
+                    value: `${n} gap${n > 1 ? "s" : ""}`,
+                    variant: "destructive" as const,
+                  }))
+            }
+          />
+        </div>
+      </div>
+
+
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top riscos */}
@@ -237,6 +378,56 @@ function KpiCard({
           </div>
           <Icon className={`h-5 w-5 ${variant === "warning" ? "text-destructive" : "text-primary"}`} />
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SkillCard({
+  icon: Icon,
+  title,
+  slug,
+  total,
+  loading,
+  stats,
+}: {
+  icon: any;
+  title: string;
+  slug: string;
+  total: number;
+  loading?: boolean;
+  stats: Array<{ label: string; value: number | string; variant: "default" | "secondary" | "destructive" | "outline" }>;
+}) {
+  return (
+    <Card className="flex flex-col">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <Icon className="h-5 w-5 text-primary" />
+          {loading ? (
+            <Skeleton className="h-7 w-10" />
+          ) : (
+            <span className="text-2xl font-bold">{total}</span>
+          )}
+        </div>
+        <CardTitle className="text-sm mt-2">{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="flex-1 flex flex-col justify-between gap-3">
+        {total === 0 && !loading ? (
+          <p className="text-xs text-muted-foreground">Nenhum contrato analisado com esta skill ainda.</p>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {stats.map((s, i) => (
+              <Badge key={i} variant={s.variant} className="text-xs font-normal">
+                {s.label}: {s.value}
+              </Badge>
+            ))}
+          </div>
+        )}
+        <Button size="sm" variant="ghost" asChild className="self-start -ml-2">
+          <Link to={`/contratos?skill=${slug}`}>
+            Ver contratos <ArrowRight className="h-3 w-3 ml-1" />
+          </Link>
+        </Button>
       </CardContent>
     </Card>
   );
