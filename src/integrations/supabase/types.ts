@@ -4198,6 +4198,217 @@ export type Database = {
           },
         ]
       }
+      workflow_definitions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          current_version: number
+          descricao: string | null
+          escopo_area: string | null
+          escopo_tipo: Database["public"]["Enums"]["contract_type"] | null
+          escopo_valor_max: number | null
+          escopo_valor_min: number | null
+          id: string
+          is_active: boolean
+          nome: string
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          current_version?: number
+          descricao?: string | null
+          escopo_area?: string | null
+          escopo_tipo?: Database["public"]["Enums"]["contract_type"] | null
+          escopo_valor_max?: number | null
+          escopo_valor_min?: number | null
+          id?: string
+          is_active?: boolean
+          nome: string
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          current_version?: number
+          descricao?: string | null
+          escopo_area?: string | null
+          escopo_tipo?: Database["public"]["Enums"]["contract_type"] | null
+          escopo_valor_max?: number | null
+          escopo_valor_min?: number | null
+          id?: string
+          is_active?: boolean
+          nome?: string
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      workflow_run_stages: {
+        Row: {
+          comentario: string | null
+          created_at: string
+          decisao: string | null
+          due_at: string | null
+          executado_em: string | null
+          executado_por: string | null
+          id: string
+          ordem: number
+          organization_id: string
+          stage_id: string
+          status: string
+          workflow_run_id: string
+        }
+        Insert: {
+          comentario?: string | null
+          created_at?: string
+          decisao?: string | null
+          due_at?: string | null
+          executado_em?: string | null
+          executado_por?: string | null
+          id?: string
+          ordem: number
+          organization_id: string
+          stage_id: string
+          status?: string
+          workflow_run_id: string
+        }
+        Update: {
+          comentario?: string | null
+          created_at?: string
+          decisao?: string | null
+          due_at?: string | null
+          executado_em?: string | null
+          executado_por?: string | null
+          id?: string
+          ordem?: number
+          organization_id?: string
+          stage_id?: string
+          status?: string
+          workflow_run_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_run_stages_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_run_stages_workflow_run_id_fkey"
+            columns: ["workflow_run_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_runs: {
+        Row: {
+          concluido_em: string | null
+          contrato_id: string | null
+          created_at: string
+          created_by: string | null
+          current_stage_ordem: number
+          id: string
+          iniciado_em: string
+          organization_id: string
+          requisicao_id: string | null
+          status: string
+          updated_at: string
+          workflow_definition_id: string
+        }
+        Insert: {
+          concluido_em?: string | null
+          contrato_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_stage_ordem?: number
+          id?: string
+          iniciado_em?: string
+          organization_id: string
+          requisicao_id?: string | null
+          status?: string
+          updated_at?: string
+          workflow_definition_id: string
+        }
+        Update: {
+          concluido_em?: string | null
+          contrato_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_stage_ordem?: number
+          id?: string
+          iniciado_em?: string
+          organization_id?: string
+          requisicao_id?: string | null
+          status?: string
+          updated_at?: string
+          workflow_definition_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_runs_workflow_definition_id_fkey"
+            columns: ["workflow_definition_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_stages: {
+        Row: {
+          aprovador_role: string | null
+          aprovador_user_id: string | null
+          created_at: string
+          id: string
+          nome: string
+          ordem: number
+          organization_id: string
+          regras: Json
+          sla_horas: number | null
+          tipo_acao: string
+          workflow_definition_id: string
+        }
+        Insert: {
+          aprovador_role?: string | null
+          aprovador_user_id?: string | null
+          created_at?: string
+          id?: string
+          nome: string
+          ordem: number
+          organization_id: string
+          regras?: Json
+          sla_horas?: number | null
+          tipo_acao?: string
+          workflow_definition_id: string
+        }
+        Update: {
+          aprovador_role?: string | null
+          aprovador_user_id?: string | null
+          created_at?: string
+          id?: string
+          nome?: string
+          ordem?: number
+          organization_id?: string
+          regras?: Json
+          sla_horas?: number | null
+          tipo_acao?: string
+          workflow_definition_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_stages_workflow_definition_id_fkey"
+            columns: ["workflow_definition_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_tasks: {
         Row: {
           assignee_id: string | null
