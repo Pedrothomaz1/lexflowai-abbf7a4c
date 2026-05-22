@@ -129,7 +129,14 @@ Deno.serve(async (req) => {
       organizationId = crypto.randomUUID();
       const slug = `${slugify(nome)}-${organizationId.slice(0, 6)}`;
 
-      const { error: orgError } = await admin.from("organizations").insert({
+      // Se o criador é super-admin, a organização já entra ativa (não há ninguém acima para aprovar).
+      const { data: isSuper } = await admin
+        .from("super_admins")
+        .select("user_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      const orgPayload: Record<string, unknown> = {
         id: organizationId,
         nome,
         slug,
@@ -139,7 +146,14 @@ Deno.serve(async (req) => {
         estado: body.estado || null,
         plano,
         created_by: user.id,
-      });
+      };
+      if (isSuper) {
+        orgPayload.status = "ativa";
+        orgPayload.aprovada_em = new Date().toISOString();
+        orgPayload.aprovada_por = user.id;
+      }
+
+      const { error: orgError } = await admin.from("organizations").insert(orgPayload);
 
       if (orgError) {
         console.error("[create-organization-onboarding] organization insert error", orgError);
