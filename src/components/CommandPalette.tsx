@@ -85,7 +85,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           .select("id, numero_requisicao, titulo")
           .or(`titulo.ilike.${q},numero_requisicao.ilike.${q}`)
           .limit(5),
-        supabase.from("contract_templates").select("id, nome").ilike("nome", q).limit(5),
+        supabase.from("document_templates").select("id, nome").ilike("nome", q).limit(5),
       ]);
 
       if (cancelled) return;
