@@ -438,6 +438,115 @@ export type Database = {
         }
         Relationships: []
       }
+      compliance_checklists: {
+        Row: {
+          aplicavel_tipo: Database["public"]["Enums"]["contract_type"] | null
+          created_at: string
+          created_by: string | null
+          descricao: string | null
+          id: string
+          is_active: boolean
+          nome: string
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          aplicavel_tipo?: Database["public"]["Enums"]["contract_type"] | null
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          id?: string
+          is_active?: boolean
+          nome: string
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          aplicavel_tipo?: Database["public"]["Enums"]["contract_type"] | null
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          id?: string
+          is_active?: boolean
+          nome?: string
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_checklists_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_checklists_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "super_admin_organizations_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compliance_items: {
+        Row: {
+          checklist_id: string
+          codigo: string
+          created_at: string
+          descricao: string | null
+          id: string
+          obrigatorio: boolean
+          ordem: number
+          organization_id: string
+          titulo: string
+        }
+        Insert: {
+          checklist_id: string
+          codigo: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          obrigatorio?: boolean
+          ordem?: number
+          organization_id: string
+          titulo: string
+        }
+        Update: {
+          checklist_id?: string
+          codigo?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          obrigatorio?: boolean
+          ordem?: number
+          organization_id?: string
+          titulo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_items_checklist_id_fkey"
+            columns: ["checklist_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_checklists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "super_admin_organizations_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       compliance_logs: {
         Row: {
           base_legal: string | null
@@ -737,36 +846,45 @@ export type Database = {
           contrato_id: string | null
           created_at: string
           id: string
+          is_original: boolean
           mime_type: string | null
           nome_arquivo: string
           organization_id: string
+          sha256: string | null
           tamanho_bytes: number | null
           tipo_documento: string | null
           uploaded_by: string | null
+          versao: number
         }
         Insert: {
           arquivo_url: string
           contrato_id?: string | null
           created_at?: string
           id?: string
+          is_original?: boolean
           mime_type?: string | null
           nome_arquivo: string
           organization_id: string
+          sha256?: string | null
           tamanho_bytes?: number | null
           tipo_documento?: string | null
           uploaded_by?: string | null
+          versao?: number
         }
         Update: {
           arquivo_url?: string
           contrato_id?: string | null
           created_at?: string
           id?: string
+          is_original?: boolean
           mime_type?: string | null
           nome_arquivo?: string
           organization_id?: string
+          sha256?: string | null
           tamanho_bytes?: number | null
           tipo_documento?: string | null
           uploaded_by?: string | null
+          versao?: number
         }
         Relationships: [
           {
@@ -898,6 +1016,77 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "contract_comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_compliance_status: {
+        Row: {
+          contrato_id: string
+          created_at: string
+          evidencia_url: string | null
+          id: string
+          item_id: string
+          justificativa: string | null
+          organization_id: string
+          status: string
+          updated_at: string
+          verificado_em: string | null
+          verificado_por: string | null
+        }
+        Insert: {
+          contrato_id: string
+          created_at?: string
+          evidencia_url?: string | null
+          id?: string
+          item_id: string
+          justificativa?: string | null
+          organization_id: string
+          status?: string
+          updated_at?: string
+          verificado_em?: string | null
+          verificado_por?: string | null
+        }
+        Update: {
+          contrato_id?: string
+          created_at?: string
+          evidencia_url?: string | null
+          id?: string
+          item_id?: string
+          justificativa?: string | null
+          organization_id?: string
+          status?: string
+          updated_at?: string
+          verificado_em?: string | null
+          verificado_por?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_compliance_status_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_compliance_status_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_compliance_status_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_compliance_status_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "super_admin_organizations_view"
             referencedColumns: ["id"]
           },
         ]
@@ -1585,90 +1774,174 @@ export type Database = {
         Row: {
           arquivo_hash: string | null
           arquivo_url: string | null
+          centro_custo: string | null
+          condicao_pagamento: string | null
           created_at: string
           created_by: string | null
+          dados_bancarios: Json | null
+          dados_pessoais_envolvidos: boolean
           data_assinatura: string | null
           data_fim: string | null
           data_inicio: string | null
           data_renovacao: string | null
+          departamento_responsavel: string | null
           descricao: string | null
+          dia_vencimento: number | null
+          dias_aviso_nao_renovacao: number | null
+          due_diligence_concluida_em: string | null
+          due_diligence_observacoes: string | null
+          due_diligence_status: Database["public"]["Enums"]["due_diligence_enum"]
+          email_financeiro_notificado_em: string | null
+          forma_pagamento: string | null
           fornecedor_id: string | null
           id: string
+          indice_reajuste: string | null
+          intake_status: Database["public"]["Enums"]["intake_status_enum"]
+          intermediario_envolvido: boolean
+          juros_mora_pct: number | null
           metadata: Json | null
           moeda: string | null
+          multa_atraso_pct: number | null
+          nivel_confidencialidade:
+            | Database["public"]["Enums"]["confidencialidade_enum"]
+            | null
+          nivel_risco: Database["public"]["Enums"]["nivel_risco_enum"] | null
+          nivel_risco_manual: boolean
           numero_contrato: string
+          numero_parcelas: number | null
           observacoes: string | null
           organization_id: string
           pacote_final_congelado_at: string | null
           pacote_final_hash: string | null
           pacote_final_url: string | null
+          periodicidade_reajuste: string | null
           renovacao_automatica: boolean | null
+          sanction_check_em: string | null
+          sanction_check_status: Database["public"]["Enums"]["sanction_check_enum"]
           status: Database["public"]["Enums"]["contract_status"]
           tags: string[] | null
+          terceirizacao: boolean
           tipo: Database["public"]["Enums"]["contract_type"]
           titulo: string
           unidade_id: string | null
           updated_at: string
+          valor_parcela: number | null
           valor_total: number | null
           versao: number
         }
         Insert: {
           arquivo_hash?: string | null
           arquivo_url?: string | null
+          centro_custo?: string | null
+          condicao_pagamento?: string | null
           created_at?: string
           created_by?: string | null
+          dados_bancarios?: Json | null
+          dados_pessoais_envolvidos?: boolean
           data_assinatura?: string | null
           data_fim?: string | null
           data_inicio?: string | null
           data_renovacao?: string | null
+          departamento_responsavel?: string | null
           descricao?: string | null
+          dia_vencimento?: number | null
+          dias_aviso_nao_renovacao?: number | null
+          due_diligence_concluida_em?: string | null
+          due_diligence_observacoes?: string | null
+          due_diligence_status?: Database["public"]["Enums"]["due_diligence_enum"]
+          email_financeiro_notificado_em?: string | null
+          forma_pagamento?: string | null
           fornecedor_id?: string | null
           id?: string
+          indice_reajuste?: string | null
+          intake_status?: Database["public"]["Enums"]["intake_status_enum"]
+          intermediario_envolvido?: boolean
+          juros_mora_pct?: number | null
           metadata?: Json | null
           moeda?: string | null
+          multa_atraso_pct?: number | null
+          nivel_confidencialidade?:
+            | Database["public"]["Enums"]["confidencialidade_enum"]
+            | null
+          nivel_risco?: Database["public"]["Enums"]["nivel_risco_enum"] | null
+          nivel_risco_manual?: boolean
           numero_contrato: string
+          numero_parcelas?: number | null
           observacoes?: string | null
           organization_id: string
           pacote_final_congelado_at?: string | null
           pacote_final_hash?: string | null
           pacote_final_url?: string | null
+          periodicidade_reajuste?: string | null
           renovacao_automatica?: boolean | null
+          sanction_check_em?: string | null
+          sanction_check_status?: Database["public"]["Enums"]["sanction_check_enum"]
           status?: Database["public"]["Enums"]["contract_status"]
           tags?: string[] | null
+          terceirizacao?: boolean
           tipo?: Database["public"]["Enums"]["contract_type"]
           titulo: string
           unidade_id?: string | null
           updated_at?: string
+          valor_parcela?: number | null
           valor_total?: number | null
           versao?: number
         }
         Update: {
           arquivo_hash?: string | null
           arquivo_url?: string | null
+          centro_custo?: string | null
+          condicao_pagamento?: string | null
           created_at?: string
           created_by?: string | null
+          dados_bancarios?: Json | null
+          dados_pessoais_envolvidos?: boolean
           data_assinatura?: string | null
           data_fim?: string | null
           data_inicio?: string | null
           data_renovacao?: string | null
+          departamento_responsavel?: string | null
           descricao?: string | null
+          dia_vencimento?: number | null
+          dias_aviso_nao_renovacao?: number | null
+          due_diligence_concluida_em?: string | null
+          due_diligence_observacoes?: string | null
+          due_diligence_status?: Database["public"]["Enums"]["due_diligence_enum"]
+          email_financeiro_notificado_em?: string | null
+          forma_pagamento?: string | null
           fornecedor_id?: string | null
           id?: string
+          indice_reajuste?: string | null
+          intake_status?: Database["public"]["Enums"]["intake_status_enum"]
+          intermediario_envolvido?: boolean
+          juros_mora_pct?: number | null
           metadata?: Json | null
           moeda?: string | null
+          multa_atraso_pct?: number | null
+          nivel_confidencialidade?:
+            | Database["public"]["Enums"]["confidencialidade_enum"]
+            | null
+          nivel_risco?: Database["public"]["Enums"]["nivel_risco_enum"] | null
+          nivel_risco_manual?: boolean
           numero_contrato?: string
+          numero_parcelas?: number | null
           observacoes?: string | null
           organization_id?: string
           pacote_final_congelado_at?: string | null
           pacote_final_hash?: string | null
           pacote_final_url?: string | null
+          periodicidade_reajuste?: string | null
           renovacao_automatica?: boolean | null
+          sanction_check_em?: string | null
+          sanction_check_status?: Database["public"]["Enums"]["sanction_check_enum"]
           status?: Database["public"]["Enums"]["contract_status"]
           tags?: string[] | null
+          terceirizacao?: boolean
           tipo?: Database["public"]["Enums"]["contract_type"]
           titulo?: string
           unidade_id?: string | null
           updated_at?: string
+          valor_parcela?: number | null
           valor_total?: number | null
           versao?: number
         }
@@ -2488,6 +2761,61 @@ export type Database = {
           },
         ]
       }
+      intake_legal_reviews: {
+        Row: {
+          contrato_id: string
+          created_at: string
+          decisao: string
+          id: string
+          nivel_risco_avaliado: Database["public"]["Enums"]["nivel_risco_enum"]
+          organization_id: string
+          parecer: string
+          revisor_id: string
+        }
+        Insert: {
+          contrato_id: string
+          created_at?: string
+          decisao: string
+          id?: string
+          nivel_risco_avaliado: Database["public"]["Enums"]["nivel_risco_enum"]
+          organization_id: string
+          parecer: string
+          revisor_id: string
+        }
+        Update: {
+          contrato_id?: string
+          created_at?: string
+          decisao?: string
+          id?: string
+          nivel_risco_avaliado?: Database["public"]["Enums"]["nivel_risco_enum"]
+          organization_id?: string
+          parecer?: string
+          revisor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intake_legal_reviews_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intake_legal_reviews_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intake_legal_reviews_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "super_admin_organizations_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       integracao_config: {
         Row: {
           created_at: string | null
@@ -3043,6 +3371,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           email_contato: string | null
+          email_financeiro: string | null
           endereco: string | null
           estado: string | null
           id: string
@@ -3076,6 +3405,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           email_contato?: string | null
+          email_financeiro?: string | null
           endereco?: string | null
           estado?: string | null
           id?: string
@@ -3109,6 +3439,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           email_contato?: string | null
+          email_financeiro?: string | null
           endereco?: string | null
           estado?: string | null
           id?: string
@@ -5451,6 +5782,11 @@ export type Database = {
     }
     Enums: {
       app_role: "analista_juridico" | "consultoria_juridica" | "administrador"
+      confidencialidade_enum:
+        | "publico"
+        | "interno"
+        | "confidencial"
+        | "restrito"
       contract_status:
         | "rascunho"
         | "em_aprovacao"
@@ -5466,6 +5802,12 @@ export type Database = {
         | "confidencialidade"
         | "parceria"
         | "outro"
+      due_diligence_enum:
+        | "nao_iniciada"
+        | "em_andamento"
+        | "aprovada"
+        | "reprovada"
+        | "dispensada"
       extended_role:
         | "system_admin"
         | "financeiro_senior"
@@ -5481,8 +5823,15 @@ export type Database = {
         | "analista_juridico"
         | "consultoria_juridica"
         | "administrador"
+      intake_status_enum:
+        | "rascunho"
+        | "em_preenchimento"
+        | "revisao_legal"
+        | "liberado"
+      nivel_risco_enum: "baixo" | "medio" | "alto" | "critico"
       notification_frequency: "immediate" | "daily" | "weekly"
       org_status: "pendente_aprovacao" | "ativa" | "suspensa" | "cancelada"
+      sanction_check_enum: "nao_verificado" | "limpo" | "alerta" | "bloqueado"
       signature_envelope_status:
         | "rascunho"
         | "enviado"
@@ -5625,6 +5974,12 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["analista_juridico", "consultoria_juridica", "administrador"],
+      confidencialidade_enum: [
+        "publico",
+        "interno",
+        "confidencial",
+        "restrito",
+      ],
       contract_status: [
         "rascunho",
         "em_aprovacao",
@@ -5642,6 +5997,13 @@ export const Constants = {
         "parceria",
         "outro",
       ],
+      due_diligence_enum: [
+        "nao_iniciada",
+        "em_andamento",
+        "aprovada",
+        "reprovada",
+        "dispensada",
+      ],
       extended_role: [
         "system_admin",
         "financeiro_senior",
@@ -5658,8 +6020,16 @@ export const Constants = {
         "consultoria_juridica",
         "administrador",
       ],
+      intake_status_enum: [
+        "rascunho",
+        "em_preenchimento",
+        "revisao_legal",
+        "liberado",
+      ],
+      nivel_risco_enum: ["baixo", "medio", "alto", "critico"],
       notification_frequency: ["immediate", "daily", "weekly"],
       org_status: ["pendente_aprovacao", "ativa", "suspensa", "cancelada"],
+      sanction_check_enum: ["nao_verificado", "limpo", "alerta", "bloqueado"],
       signature_envelope_status: [
         "rascunho",
         "enviado",
