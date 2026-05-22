@@ -471,21 +471,20 @@ const Contratos = () => {
               <Download className="h-4 w-4 mr-1.5" />
               Exportar
             </Button>
-            <ContratoFormDialog
+            <Button size="sm" className="btn-cta" onClick={() => setDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-1.5" />
+              Novo Contrato
+            </Button>
+            <NovoContratoWizard
               open={dialogOpen}
               onOpenChange={(open) => { setDialogOpen(open); if (!open) setUploadedFiles([]); }}
-              formData={formData}
-              onFormDataChange={setFormData}
-              uploadedFiles={uploadedFiles}
-              onFileSelect={handleFileSelect}
-              onRemoveFile={removeFile}
               fornecedores={fornecedores}
-              onSubmit={handleSubmit}
-              submitting={submitting}
               onFornecedorCreated={(newFornecedor) => {
                 setFornecedores(prev => [...prev, newFornecedor].sort((a, b) => a.nome.localeCompare(b.nome)));
               }}
+              onCreated={fetchContratos}
             />
+
           </div>
         }
       />
