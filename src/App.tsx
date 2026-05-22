@@ -46,6 +46,8 @@ const TwoFactorSettings = React.lazy(() => import("./pages/TwoFactorSettings"));
 const SecurityDashboard = React.lazy(() => import("./pages/SecurityDashboard"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 const RequisicaoPublica = React.lazy(() => import("./pages/RequisicaoPublica"));
+const RequisicaoFormPublica = React.lazy(() => import("./pages/RequisicaoFormPublica"));
+const FormBuilder = React.lazy(() => import("./pages/FormBuilder"));
 const Requisicoes = React.lazy(() => import("./pages/Requisicoes"));
 const MinhasAprovacoes = React.lazy(() => import("./pages/MinhasAprovacoes"));
 const Franquias = React.lazy(() => import("./pages/Franquias"));
@@ -130,6 +132,7 @@ function App() {
                     <Route path="/privacidade" element={<Privacidade />} />
                     <Route path="/termos" element={<TermosDeUso />} />
                     <Route path="/requisicao" element={<RequisicaoPublica />} />
+                    <Route path="/requisicao/form/:formId" element={<RequisicaoFormPublica />} />
                     <Route path="/reset-password" element={<ResetPassword />} />
                     <Route path="/portal/:token" element={<PortalExterno />} />
 
@@ -160,6 +163,7 @@ function App() {
                     <Route path="/obrigacoes" element={<ProtectedRoute><DashboardLayout><Obrigacoes /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/workflows" element={<ProtectedRoute><DashboardLayout><WorkflowAprovacoes /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/workflows/builder" element={<ProtectedRoute><DashboardLayout><WorkflowBuilder /></DashboardLayout></ProtectedRoute>} />
+                    <Route path="/forms/builder" element={<ProtectedRoute><DashboardLayout><FormBuilder /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/aprovacoes" element={<ProtectedRoute><DashboardLayout><MinhasAprovacoes /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/servicos" element={<ProtectedRoute><DashboardLayout><Servicos /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/unidades" element={<ProtectedRoute><DashboardLayout><Unidades /></DashboardLayout></ProtectedRoute>} />
