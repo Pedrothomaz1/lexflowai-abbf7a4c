@@ -354,6 +354,50 @@ export type Database = {
           },
         ]
       }
+      contract_ai_insights: {
+        Row: {
+          conteudo: Json
+          contrato_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          model: string | null
+          organization_id: string
+          tipo: string
+          tokens_usados: number | null
+        }
+        Insert: {
+          conteudo: Json
+          contrato_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          model?: string | null
+          organization_id: string
+          tipo: string
+          tokens_usados?: number | null
+        }
+        Update: {
+          conteudo?: Json
+          contrato_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          model?: string | null
+          organization_id?: string
+          tipo?: string
+          tokens_usados?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_ai_insights_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_alerts: {
         Row: {
           contrato_id: string | null
@@ -2742,6 +2786,106 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      portal_externo_eventos: {
+        Row: {
+          acao: string
+          contrato_id: string
+          created_at: string
+          id: string
+          ip: string | null
+          metadata: Json | null
+          organization_id: string
+          token_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          acao: string
+          contrato_id: string
+          created_at?: string
+          id?: string
+          ip?: string | null
+          metadata?: Json | null
+          organization_id: string
+          token_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          acao?: string
+          contrato_id?: string
+          created_at?: string
+          id?: string
+          ip?: string | null
+          metadata?: Json | null
+          organization_id?: string
+          token_id?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_externo_eventos_token_id_fkey"
+            columns: ["token_id"]
+            isOneToOne: false
+            referencedRelation: "portal_externo_tokens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portal_externo_tokens: {
+        Row: {
+          access_count: number
+          contraparte_email: string
+          contraparte_nome: string | null
+          contrato_id: string
+          created_at: string
+          created_by: string | null
+          escopo: string
+          expires_at: string
+          id: string
+          last_access_at: string | null
+          organization_id: string
+          revoked_at: string | null
+          token: string
+        }
+        Insert: {
+          access_count?: number
+          contraparte_email: string
+          contraparte_nome?: string | null
+          contrato_id: string
+          created_at?: string
+          created_by?: string | null
+          escopo?: string
+          expires_at: string
+          id?: string
+          last_access_at?: string | null
+          organization_id: string
+          revoked_at?: string | null
+          token: string
+        }
+        Update: {
+          access_count?: number
+          contraparte_email?: string
+          contraparte_nome?: string | null
+          contrato_id?: string
+          created_at?: string
+          created_by?: string | null
+          escopo?: string
+          expires_at?: string
+          id?: string
+          last_access_at?: string | null
+          organization_id?: string
+          revoked_at?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_externo_tokens_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pre_launch_test_runs: {
         Row: {
