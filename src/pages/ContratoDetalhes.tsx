@@ -39,6 +39,7 @@ import {
   ScrollText,
 } from "lucide-react";
 import { exportContratoDetalhePDF } from "@/utils/pdfExport";
+import { exportContratoExecutivoPDF } from "@/utils/pdfExecutiveReport";
 import { ContractComments } from "@/components/ContractComments";
 import { ContractSignature } from "@/components/ContractSignature";
 import { ZapsignPanel } from "@/components/Assinaturas/ZapsignPanel";
@@ -416,6 +417,21 @@ const ContratoDetalhes = () => {
     }
   };
 
+  const handleExportExecutivoPDF = async () => {
+    if (!contrato) return;
+    try {
+      toast({ title: "Gerando relatório executivo…" });
+      await exportContratoExecutivoPDF({ contrato, aprovacoes });
+    } catch (err: any) {
+      console.error(err);
+      toast({
+        variant: "destructive",
+        title: "Erro ao gerar relatório",
+        description: err?.message ?? "Tente novamente.",
+      });
+    }
+  };
+
   const getTipoLabel = (tipo: string) => {
     const labels: Record<string, string> = {
       prestacao_servicos: 'Prestação de Serviços',
@@ -477,10 +493,26 @@ const ContratoDetalhes = () => {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <AnimatedButton variant="outline" size="sm" onClick={handleExportPDF}>
-              <Download className="h-4 w-4 mr-2" />
-              PDF
-            </AnimatedButton>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <AnimatedButton variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  PDF
+                </AnimatedButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Exportar PDF</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleExportPDF}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Resumo simples
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportExecutivoPDF}>
+                  <ScrollText className="h-4 w-4 mr-2" />
+                  Relatório executivo
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <ContractQuickActions
               contratoId={contrato.id}
               contratoNumero={contrato.numero_contrato}
