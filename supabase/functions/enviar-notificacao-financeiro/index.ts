@@ -61,21 +61,25 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    const token = authHeader.replace("Bearer ", "");
+    const isInternalTrigger = token === supabaseKey;
+
     const supabase = createClient(supabaseUrl, supabaseKey, {
-      global: { headers: { Authorization: authHeader } },
+      global: { headers: { Authorization: isInternalTrigger ? `Bearer ${supabaseKey}` : authHeader } },
     });
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claims, error: claimsError } = await supabase.auth.getClaims(token);
-    
-    if (claimsError || !claims?.claims) {
-      return new Response(
-        JSON.stringify({ success: false, error: "Token inválido" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    let userId: string | null = null;
+    if (!isInternalTrigger) {
+      const { data: claims, error: claimsError } = await supabase.auth.getClaims(token);
+      if (claimsError || !claims?.claims) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Token inválido" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      userId = claims.claims.sub as string;
     }
 
-    const userId = claims.claims.sub as string;
     const body: NotificacaoRequest = await req.json();
     const { tipo, contratoId, servicoId, emailFinanceiro, emailsAdicionais, observacoes, parcelasAdicionais } = body;
 
