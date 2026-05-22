@@ -74,11 +74,15 @@ serve(async (req) => {
       const { data: inserted, error } = await supabase.from('contract_negotiations').insert({
         organization_id: t.organization_id,
         contrato_id: t.contrato_id,
-        lado: 'contraparte',
-        autor_nome: t.contraparte_nome || t.contraparte_email,
-        autor_email: t.contraparte_email,
+        autor_lado: 'contraparte',
         tipo: 'comentario',
         conteudo,
+        metadata: {
+          autor_nome: t.contraparte_nome || t.contraparte_email,
+          autor_email: t.contraparte_email,
+          via: 'portal_externo',
+          token_id: t.id,
+        },
       }).select().maybeSingle();
       if (error) throw error;
 
