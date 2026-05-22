@@ -21,11 +21,11 @@ import {
 import { DocumentInput } from "@/components/ui/document-input";
 import { validateCPF, validateCNPJ, cleanDocument } from "@/utils/documentValidation";
 import { FornecedorCategorias, saveFornecedorCategorias } from "./FornecedorCategorias";
-import { Loader2, Search } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { handleDbError } from "@/utils/dbErrorHandler";
 import { useCnpjVerification } from "@/hooks/useCnpjVerification";
-import { CnpjStatusBadge, isCnpjProblem } from "@/components/cnpj/CnpjStatusBadge";
-import { CnpjDetailsDialog } from "@/components/cnpj/CnpjDetailsDialog";
+import { isCnpjProblem } from "@/components/cnpj/CnpjStatusBadge";
+import { CnpjAutoFillInput } from "@/components/ui/cnpj-autofill-input";
 
 const ESTADOS_BR = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
@@ -81,8 +81,7 @@ export function FornecedorForm({ onSuccess, onCancel }: FornecedorFormProps) {
   const [activeTab, setActiveTab] = useState("basico");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [documentValid, setDocumentValid] = useState(false);
-  const { verify, loading: verifyingCnpj, result: cnpjResult, setResult: setCnpjResult } = useCnpjVerification();
-  const [showCnpjDetails, setShowCnpjDetails] = useState(false);
+  const { verify, result: cnpjResult } = useCnpjVerification();
 
   const [formData, setFormData] = useState<FornecedorFormData>({
     nome: "",
@@ -312,77 +311,21 @@ export function FornecedorForm({ onSuccess, onCancel }: FornecedorFormProps) {
             {formData.tipo_pessoa === "juridica" ? (
               <div className="space-y-2">
                 <Label>CNPJ *</Label>
-                <DocumentInput
-                  documentType="cnpj"
+                <CnpjAutoFillInput
                   value={formData.cnpj}
-                  onChange={(value, isValid) => {
-                    handleChange("cnpj", value);
-                    setDocumentValid(isValid);
-                    setCnpjResult(null);
+                  onChange={(val) => {
+                    handleChange("cnpj", val);
+                    setDocumentValid(true);
                   }}
-                  required
-                />
-                {documentValid && (
-                  <div className="flex items-center justify-between gap-2">
-                    {cnpjResult ? (
-                      <button
-                        type="button"
-                        onClick={() => setShowCnpjDetails(true)}
-                        className="hover:opacity-80 transition-opacity"
-                        title="Ver detalhes da Receita Federal"
-                      >
-                        <CnpjStatusBadge status={cnpjResult.status} />
-                      </button>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">
-                        Verifique o CNPJ na Receita Federal antes de salvar
-                      </span>
-                    )}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-xs"
-                      disabled={verifyingCnpj}
-                      onClick={async () => {
-                        const r = await verify(formData.cnpj, { force: true });
-                        if (!r) return;
-                        setShowCnpjDetails(true);
-                        if (!formData.nome && r.nome) handleChange("nome", r.nome);
-                        if (!formData.email && r.email) handleChange("email", r.email);
-                        if (!formData.telefone && r.telefone) handleChange("telefone", r.telefone);
-                        if (r.endereco) {
-                          if (!formData.endereco && r.endereco.logradouro)
-                            handleChange("endereco", `${r.endereco.logradouro}${r.endereco.numero ? ", " + r.endereco.numero : ""}`);
-                          if (!formData.cidade && r.endereco.municipio) handleChange("cidade", r.endereco.municipio);
-                          if (!formData.estado && r.endereco.uf) handleChange("estado", r.endereco.uf);
-                          if (!formData.cep && r.endereco.cep) handleChange("cep", r.endereco.cep);
-                        }
-                      }}
-                    >
-                      {verifyingCnpj ? (
-                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                      ) : (
-                        <Search className="h-3 w-3 mr-1" />
-                      )}
-                      Verificar
-                    </Button>
-                  </div>
-                )}
-                {cnpjResult?.verificado_em && (
-                  <p className="text-xs text-muted-foreground">
-                    Última verificação: {new Date(cnpjResult.verificado_em).toLocaleString("pt-BR")}
-                    {" • "}
-                    <button type="button" className="underline" onClick={() => setShowCnpjDetails(true)}>
-                      ver detalhes
-                    </button>
-                  </p>
-                )}
-                <CnpjDetailsDialog
-                  open={showCnpjDetails}
-                  onOpenChange={setShowCnpjDetails}
-                  result={cnpjResult}
-                  cnpj={formData.cnpj}
+                  onDataFetched={(data) => {
+                    if (!formData.nome && data.nome) handleChange("nome", data.nome);
+                    if (!formData.email && data.email) handleChange("email", data.email);
+                    if (!formData.telefone && data.telefone) handleChange("telefone", data.telefone);
+                    if (!formData.endereco && data.endereco) handleChange("endereco", data.endereco);
+                    if (!formData.cidade && data.cidade) handleChange("cidade", data.cidade);
+                    if (!formData.estado && data.uf) handleChange("estado", data.uf);
+                    if (!formData.cep && data.cep) handleChange("cep", data.cep);
+                  }}
                 />
               </div>
             ) : (

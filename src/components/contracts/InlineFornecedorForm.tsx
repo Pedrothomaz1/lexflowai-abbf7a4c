@@ -11,13 +11,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DocumentInput } from "@/components/ui/document-input";
+import { CnpjAutoFillInput } from "@/components/ui/cnpj-autofill-input";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, X, UserPlus, Search } from "lucide-react";
+import { Loader2, X, UserPlus } from "lucide-react";
 import { useCnpjVerification } from "@/hooks/useCnpjVerification";
-import { CnpjStatusBadge, isCnpjProblem } from "@/components/cnpj/CnpjStatusBadge";
-import { CnpjDetailsDialog } from "@/components/cnpj/CnpjDetailsDialog";
+import { isCnpjProblem } from "@/components/cnpj/CnpjStatusBadge";
 
 type Fornecedor = {
   id: string;
@@ -41,8 +41,7 @@ export function InlineFornecedorForm({ onCreated, onCancel }: InlineFornecedorFo
   const [documento, setDocumento] = useState("");
   const [docValid, setDocValid] = useState(false);
   const [email, setEmail] = useState("");
-  const { verify, loading: verifying, result: cnpjResult, setResult } = useCnpjVerification();
-  const [showDetails, setShowDetails] = useState(false);
+  const { verify, result: cnpjResult } = useCnpjVerification();
 
   const handleSubmit = async () => {
     if (!nome.trim()) {
@@ -147,51 +146,24 @@ export function InlineFornecedorForm({ onCreated, onCancel }: InlineFornecedorFo
 
         <div className="space-y-1.5">
           <Label className="text-xs">{tipoPessoa === "pj" ? "CNPJ" : "CPF"}</Label>
-          <DocumentInput
-            documentType={tipoPessoa === "pj" ? "cnpj" : "cpf"}
-            value={documento}
-            onChange={(val, valid) => { setDocumento(val); setDocValid(valid); setResult(null); }}
-            showValidation={documento.length > 0}
-            className="h-9"
-          />
-          {tipoPessoa === "pj" && docValid && (
-            <div className="flex items-center justify-between gap-2 pt-1">
-              {cnpjResult ? (
-                <button type="button" onClick={() => setShowDetails(true)} className="hover:opacity-80">
-                  <CnpjStatusBadge status={cnpjResult.status} />
-                </button>
-              ) : (
-                <span className="text-xs text-muted-foreground">Verifique na Receita Federal</span>
-              )}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs"
-                disabled={verifying}
-                onClick={async () => {
-                  const r = await verify(documento, { force: true });
-                  if (!r) return;
-                  setShowDetails(true);
-                  if (!nome.trim() && r.nome) setNome(r.nome);
-                  if (!email && r.email) setEmail(r.email);
-                }}
-              >
-                {verifying ? (
-                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                ) : (
-                  <Search className="h-3 w-3 mr-1" />
-                )}
-                Verificar
-              </Button>
-            </div>
+          {tipoPessoa === "pj" ? (
+            <CnpjAutoFillInput
+              value={documento}
+              onChange={(val) => { setDocumento(val); setDocValid(true); }}
+              onDataFetched={(data) => {
+                if (!nome.trim() && data.nome) setNome(data.nome);
+                if (!email && data.email) setEmail(data.email);
+              }}
+            />
+          ) : (
+            <DocumentInput
+              documentType="cpf"
+              value={documento}
+              onChange={(val, valid) => { setDocumento(val); setDocValid(valid); }}
+              showValidation={documento.length > 0}
+              className="h-9"
+            />
           )}
-          <CnpjDetailsDialog
-            open={showDetails}
-            onOpenChange={setShowDetails}
-            result={cnpjResult}
-            cnpj={documento}
-          />
         </div>
 
         <div className="col-span-2 space-y-1.5">
