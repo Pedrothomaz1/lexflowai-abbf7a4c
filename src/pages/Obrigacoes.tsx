@@ -41,6 +41,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { handleDbError } from "@/utils/dbErrorHandler";
+import { ObrigacaoRowActions } from "@/components/Obrigacoes/ObrigacaoRowActions";
 
 type Obligation = {
   id: string;
@@ -340,14 +341,13 @@ const Obrigacoes = () => {
       key: "id",
       header: "",
       render: (_, row) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => row.contrato_id && navigate(`/contratos/${row.contrato_id}`)}
-          disabled={!row.contrato_id}
-        >
-          <Eye className="h-4 w-4" />
-        </Button>
+        <ObrigacaoRowActions
+          obrigacaoId={row.id}
+          obrigacaoTitulo={row.titulo}
+          contratoId={row.contrato_id}
+          contratoTitulo={row.contratos?.titulo}
+          onRefresh={fetchObligations}
+        />
       ),
     },
   ];
