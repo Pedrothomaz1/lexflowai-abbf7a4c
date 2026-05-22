@@ -41,7 +41,7 @@ serve(async (req) => {
 
       const { data: negs } = await supabase
         .from('contract_negotiations')
-        .select('id, lado, autor_nome, tipo, conteudo, created_at')
+        .select('id, autor_lado, tipo, conteudo, metadata, created_at')
         .eq('contrato_id', t.contrato_id)
         .order('created_at', { ascending: true });
 
