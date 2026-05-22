@@ -4962,6 +4962,10 @@ export type Database = {
           titulo: string
         }[]
       }
+      evaluate_stage_rules: {
+        Args: { _contrato_id: string; _stage_id: string }
+        Returns: number
+      }
       gdpr_delete_user: { Args: { user_uuid: string }; Returns: Json }
       get_user_organization_status: { Args: never; Returns: Json }
       has_any_role: {
