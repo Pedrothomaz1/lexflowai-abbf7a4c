@@ -128,7 +128,16 @@ serve(async (req) => {
             content: [
               {
                 type: "text",
-                text: "Analise este documento de contrato e extraia a data de início (vigência inicial) e a data de término (vigência final) do contrato. Procure por termos como 'vigência', 'prazo', 'início', 'término', 'validade', etc. Retorne as datas no formato YYYY-MM-DD."
+                text: `Você é um assistente jurídico. Analise este contrato e extraia os campos abaixo. Use estritamente o formato do schema da função. Se um campo não for identificável com segurança, retorne string vazia.
+
+Campos:
+- data_inicio, data_fim (YYYY-MM-DD; procure por "vigência", "prazo", "início", "término")
+- titulo: título curto descritivo (ex.: "Prestação de Serviços de TI - Acme")
+- descricao: objeto/escopo em 1-2 frases
+- tipo: um de [prestacao_servicos, fornecimento, locacao, confidencialidade, parceria, outro]
+- valor_total: número como string, somente dígitos e ponto decimal, sem moeda/símbolo
+- moeda: BRL, USD ou EUR
+- fornecedor_nome: razão social/nome da parte contratada/fornecedora (sem CNPJ).`
               },
               {
                 type: "image_url",
@@ -144,18 +153,18 @@ serve(async (req) => {
             type: "function",
             function: {
               name: "extract_contract_dates",
-              description: "Extrai as datas de início e término de um contrato",
+              description: "Extrai campos principais de um contrato",
               parameters: {
                 type: "object",
                 properties: {
-                  data_inicio: {
-                    type: "string",
-                    description: "Data de início da vigência do contrato no formato YYYY-MM-DD"
-                  },
-                  data_fim: {
-                    type: "string",
-                    description: "Data de término da vigência do contrato no formato YYYY-MM-DD"
-                  }
+                  data_inicio: { type: "string", description: "YYYY-MM-DD" },
+                  data_fim: { type: "string", description: "YYYY-MM-DD" },
+                  titulo: { type: "string" },
+                  descricao: { type: "string" },
+                  tipo: { type: "string", enum: ["prestacao_servicos","fornecimento","locacao","confidencialidade","parceria","outro"] },
+                  valor_total: { type: "string", description: "Número como string, ex.: 12000.50" },
+                  moeda: { type: "string", enum: ["BRL","USD","EUR"] },
+                  fornecedor_nome: { type: "string" }
                 },
                 required: ["data_inicio", "data_fim"],
                 additionalProperties: false
