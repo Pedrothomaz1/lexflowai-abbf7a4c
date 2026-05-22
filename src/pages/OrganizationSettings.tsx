@@ -173,6 +173,21 @@ const OrganizationSettings = () => {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="email_financeiro">E-mail do Financeiro</Label>
+                <Input
+                  id="email_financeiro"
+                  type="email"
+                  value={formData.email_financeiro}
+                  onChange={handleChange("email_financeiro")}
+                  placeholder="financeiro@empresa.com"
+                  disabled={loading}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Destinatário das notificações automáticas pós-assinatura.
+                </p>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="telefone">Telefone</Label>
                 <Input
                   id="telefone"
