@@ -10,6 +10,7 @@ import DashboardTab from "./DashboardTab";
 import PrecosTab from "./PrecosTab";
 import OnboardingTab from "./OnboardingTab";
 import LeadsTab from "./LeadsTab";
+import AuditoriaTab from "./AuditoriaTab";
 
 
 export default function SuperAdminPage() {
@@ -63,6 +64,7 @@ export default function SuperAdminPage() {
             <TabsTrigger value="usuarios">Usuários</TabsTrigger>
             <TabsTrigger value="super-admins">Super Admins</TabsTrigger>
             <TabsTrigger value="metricas">Métricas</TabsTrigger>
+            <TabsTrigger value="auditoria">Auditoria</TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard" className="mt-6">
@@ -89,6 +91,9 @@ export default function SuperAdminPage() {
           </TabsContent>
           <TabsContent value="metricas" className="mt-6">
             <MetricasTab />
+          </TabsContent>
+          <TabsContent value="auditoria" className="mt-6">
+            <AuditoriaTab />
           </TabsContent>
         </Tabs>
       </div>
