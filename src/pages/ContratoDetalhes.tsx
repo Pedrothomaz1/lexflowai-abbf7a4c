@@ -732,8 +732,15 @@ const ContratoDetalhes = () => {
           </TabsContent>
 
           <TabsContent value="financeiro">
-            <BlocoFinanceiroPanel contratoId={contrato.id} onSaved={fetchContrato} />
+            <BlocoFinanceiroPanel
+              contratoId={contrato.id}
+              intakeStatus={(contrato as unknown as { intake_status?: string | null }).intake_status ?? null}
+              contratoStatus={contrato.status}
+              emailFinanceiroNotificadoEm={(contrato as unknown as { email_financeiro_notificado_em?: string | null }).email_financeiro_notificado_em ?? null}
+              onSaved={fetchContrato}
+            />
           </TabsContent>
+
 
           <TabsContent value="compliance">
             <ComplianceChecklistPanel contratoId={contrato.id} onChanged={fetchContrato} />
