@@ -196,14 +196,15 @@ async function runChecks(): Promise<Result[]> {
     if (!error && data) throw new Error("RLS allowed admin DELETE on role_permissions");
   });
 
-  // ---- notifications: user can only insert own user_id ----
-  await wrap("notifications: user can insert own (user_id = auth.uid)", async () => {
+  // ---- notifications: client INSERT bloqueado (criadas só via trigger server-side) ----
+  await wrap("notifications: client self-insert blocked (server-side only)", async () => {
     const { error } = await sAnalista.client.from("notifications").insert({
       organization_id: orgA, user_id: sAnalista.userId, tipo: "geral",
       titulo: `secqa-self-${Date.now()}`, mensagem: "x",
     });
-    if (error) throw new Error(`self-insert rejected: ${error.message}`);
+    if (!error) throw new Error("RLS allowed client-side notification insert (deve ser server-only)");
   });
+
   await wrap("notifications: cross-user INSERT blocked (same org)", async () => {
     const { error } = await sAnalista.client.from("notifications").insert({
       organization_id: orgA, user_id: adminA, tipo: "geral",
