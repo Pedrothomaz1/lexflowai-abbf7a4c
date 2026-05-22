@@ -73,6 +73,7 @@ import { AssistenteIA } from "@/components/IA/AssistenteIA";
 import { RevisaoExtracoesPanel } from "@/components/IA/RevisaoExtracoesPanel";
 import { PortalContraparteDialog } from "@/components/Portal/PortalContraparteDialog";
 import { PortalLinksPanel } from "@/components/Portal/PortalLinksPanel";
+import { IntakeGatesPanel } from "@/components/contracts/IntakeGatesPanel";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { handleDbError } from "@/utils/dbErrorHandler";
@@ -703,8 +704,9 @@ const ContratoDetalhes = () => {
 
       {/* Tabs Section */}
       <FadeIn delay={0.3}>
-        <Tabs defaultValue="aprovacoes" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-8 lg:w-[960px]">
+        <Tabs defaultValue="intake" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-9 lg:w-[1080px]">
+            <TabsTrigger value="intake">Intake</TabsTrigger>
             <TabsTrigger value="aprovacoes">Aprovações</TabsTrigger>
             <TabsTrigger value="assinaturas">Assinaturas</TabsTrigger>
             <TabsTrigger value="comentarios">Comentários</TabsTrigger>
@@ -714,6 +716,15 @@ const ContratoDetalhes = () => {
             <TabsTrigger value="revisao-ia">Revisão IA</TabsTrigger>
             <TabsTrigger value="ia">Assistente IA</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="intake">
+            <IntakeGatesPanel
+              contratoId={contrato.id}
+              intakeStatus={(contrato as unknown as { intake_status?: string | null }).intake_status ?? null}
+              onChanged={fetchContrato}
+            />
+          </TabsContent>
+
 
           <TabsContent value="aprovacoes">
             <AnimatedCard>
