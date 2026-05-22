@@ -21,11 +21,11 @@ import {
 import { DocumentInput } from "@/components/ui/document-input";
 import { validateCPF, validateCNPJ, cleanDocument } from "@/utils/documentValidation";
 import { FornecedorCategorias, saveFornecedorCategorias } from "./FornecedorCategorias";
-import { Loader2, Search } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { handleDbError } from "@/utils/dbErrorHandler";
 import { useCnpjVerification } from "@/hooks/useCnpjVerification";
-import { CnpjStatusBadge, isCnpjProblem } from "@/components/cnpj/CnpjStatusBadge";
-import { CnpjDetailsDialog } from "@/components/cnpj/CnpjDetailsDialog";
+import { isCnpjProblem } from "@/components/cnpj/CnpjStatusBadge";
+import { CnpjAutoFillInput } from "@/components/ui/cnpj-autofill-input";
 
 const ESTADOS_BR = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
