@@ -27,6 +27,7 @@ import { ServicosStats } from "@/components/Servicos/ServicosStats";
 import { ServicosFilters } from "@/components/Servicos/ServicosFilters";
 import { ServicoFormDialog } from "@/components/Servicos/ServicoFormDialog";
 import { handleDbError } from "@/utils/dbErrorHandler";
+import { CATEGORIA_COLORS, PURCHASE_STATUS_COLORS, type CategoriaKey } from "@/constants/categoria-colors";
 
 interface Servico {
   id: string;

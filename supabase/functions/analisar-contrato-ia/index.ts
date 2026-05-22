@@ -320,24 +320,29 @@ serve(async (req) => {
 
     const { data: contrato, error: contratoError } = await supabase
       .from("contratos")
-      .select("id, created_by, organization_id, tipo_contrato")
+      .select("id, created_by, organization_id, tipo")
       .eq("id", contratoId)
-      .single();
+      .maybeSingle();
     if (contratoError || !contrato) {
+      console.error("Contrato lookup error:", contratoError);
       return new Response(JSON.stringify({ success: false, error: "Contract not found" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const { data: userRole } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId)
-      .maybeSingle();
-    const canAnalyze =
-      contrato.created_by === userId ||
-      ["consultoria_juridica", "administrador"].includes(userRole?.role ?? "");
+    // Autorização: precisa pertencer à organização do contrato (criador OU membro ativo)
+    let canAnalyze = contrato.created_by === userId;
+    if (!canAnalyze) {
+      const { data: membership } = await supabase
+        .from("organization_members")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("organization_id", contrato.organization_id)
+        .eq("is_active", true)
+        .maybeSingle();
+      canAnalyze = !!membership;
+    }
     if (!canAnalyze) {
       return new Response(JSON.stringify({ success: false, error: "Forbidden" }), {
         status: 403,
@@ -355,7 +360,7 @@ serve(async (req) => {
       skillReq === "full"
         ? ["contract-review", "risk-assessment", "compliance"]
         : skillReq === "auto"
-          ? [detectAuto(contrato.tipo_contrato)]
+          ? [detectAuto(contrato.tipo)]
           : [skillReq as Exclude<SkillId, "auto" | "full">];
 
     console.log(`Analyzing ${contratoId} skills=${resolved.join(",")}`);
