@@ -769,6 +769,79 @@ export type Database = {
           },
         ]
       }
+      contract_negotiations: {
+        Row: {
+          arquivo_url: string | null
+          autor_lado: string
+          conteudo: string | null
+          contrato_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          metadata: Json | null
+          organization_id: string
+          parent_id: string | null
+          status: string
+          tipo: string
+          updated_at: string
+          versao_id: string | null
+        }
+        Insert: {
+          arquivo_url?: string | null
+          autor_lado?: string
+          conteudo?: string | null
+          contrato_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          metadata?: Json | null
+          organization_id: string
+          parent_id?: string | null
+          status?: string
+          tipo: string
+          updated_at?: string
+          versao_id?: string | null
+        }
+        Update: {
+          arquivo_url?: string | null
+          autor_lado?: string
+          conteudo?: string | null
+          contrato_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          metadata?: Json | null
+          organization_id?: string
+          parent_id?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+          versao_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_negotiations_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_negotiations_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "contract_negotiations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_negotiations_versao_id_fkey"
+            columns: ["versao_id"]
+            isOneToOne: false
+            referencedRelation: "contract_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_obligations: {
         Row: {
           concluido_em: string | null
