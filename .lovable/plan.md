@@ -194,3 +194,19 @@ Job `pg_cron` é agendado via `supabase--insert` (não migration) porque carrega
 - #14 IA aplicada / #15 Portal externo.
 
 Ao final desta rodada eu pergunto se devemos seguir para o próximo grupo (provavelmente #12 → #10 → #14).
+
+---
+
+## Rodada concluída — Módulos #14 (IA aplicada) e #15 (Portal externo)
+
+### #14 — IA aplicada
+- Tabela `contract_ai_insights` (tipo: resumo_executivo | sugestao_clausulas | redline | risco_pontual) com RLS multi-tenant.
+- Edge functions: `ia-resumo-executivo` (resumo gestor-first) e `ia-sugerir-clausulas` (recomendações de cláusulas com prioridade).
+- UI `AssistenteIA` em nova aba "Assistente IA" no ContratoDetalhes — botões + histórico.
+
+### #15 — Portal externo (contraparte)
+- Tabelas `portal_externo_tokens` (token único, escopo view|comment|sign, expiração) e `portal_externo_eventos` (auditoria).
+- Edge functions: `criar-portal-contraparte` (admin gera link) e `portal-externo-publico` (verify_jwt=false; view + comment validados por token).
+- Comentários da contraparte gravados em `contract_negotiations` com `autor_lado='contraparte'` e metadados (nome, email, via).
+- Página pública `/portal/:token` (PortalExterno.tsx) com header, dados do contrato, thread e formulário de comentário.
+- Botão "Compartilhar com contraparte" na aba Negociação do ContratoDetalhes.
