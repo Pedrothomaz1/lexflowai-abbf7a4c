@@ -99,4 +99,9 @@ verify_jwt = true
 [functions.zapsign-webhook]
 verify_jwt = false
 
+[functions.lead-novo-plano]
+verify_jwt = false
+
+
+
 
