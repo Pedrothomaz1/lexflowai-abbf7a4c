@@ -254,21 +254,24 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Log usage - SCOPED BY ORGANIZATION
-    await supabase.from("uso_sistema").insert({
-      tipo: "email", recurso: "notificacao_financeiro", user_id: userId,
-      contrato_id: tipo === "contrato" ? contratoId : null,
-      servico_id: tipo === "servico" ? servicoId : null,
-      metadata: { destinatarios: recipients.length, email_id: emailResult?.id, organization_id: organizationId },
-    });
+    if (userId) {
+      await supabase.from("uso_sistema").insert({
+        tipo: "email", recurso: "notificacao_financeiro", user_id: userId,
+        contrato_id: tipo === "contrato" ? contratoId : null,
+        servico_id: tipo === "servico" ? servicoId : null,
+        metadata: { destinatarios: recipients.length, email_id: emailResult?.id, organization_id: organizationId },
+      });
+    }
 
     // Audit log - SCOPED BY ORGANIZATION
     await supabase.from("audit_logs").insert({
       organization_id: organizationId, acao: 'FINANCE_NOTIFICATION_SENT',
       entidade: tipo === "contrato" ? 'contratos' : 'servicos_periodicos',
       entidade_id: tipo === "contrato" ? contratoId : servicoId,
-      user_id: userId, metadata: { recipients: recipients.length },
+      user_id: userId, metadata: { recipients: recipients.length, auto: isInternalTrigger },
       event_category: 'financial', risk_level: 'low',
     });
+
 
     return new Response(JSON.stringify({ success: true, emailId: emailResult?.id }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
