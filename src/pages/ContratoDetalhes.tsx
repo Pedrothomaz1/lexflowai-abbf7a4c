@@ -736,7 +736,12 @@ const ContratoDetalhes = () => {
             </AnimatedCard>
           </TabsContent>
 
-          <TabsContent value="assinaturas">
+          <TabsContent value="assinaturas" className="space-y-4">
+            <PacoteFinalCard
+              pacoteFinalUrl={(contrato as any).pacote_final_url ?? null}
+              pacoteFinalHash={(contrato as any).pacote_final_hash ?? null}
+              congeladoEm={(contrato as any).pacote_final_congelado_at ?? null}
+            />
             <PreSignatureGuard contratoId={contrato.id}>
               <ZapsignPanel contratoId={contrato.id} arquivoUrl={contrato.arquivo_url} />
             </PreSignatureGuard>
