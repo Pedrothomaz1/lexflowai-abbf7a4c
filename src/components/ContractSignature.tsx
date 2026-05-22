@@ -250,7 +250,7 @@ export function ContractSignature({ contratoId, contratoTitulo, arquivoUrl }: Co
 
   const resetForm = () => {
     setFormData({
-      provider: 'custom',
+      provider: 'zapsign',
       webhookUrl: '',
     });
     setSigners([{ name: '', email: '', role: 'Signatário' }]);
