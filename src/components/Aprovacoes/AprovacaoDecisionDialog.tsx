@@ -10,6 +10,7 @@ import { useRegistrarDecisao } from "@/hooks/useAprovacoes";
 import { toast } from "@/hooks/use-toast";
 import { handleDbError } from "@/utils/dbErrorHandler";
 import { CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { HistoricoDecisoes } from "./HistoricoDecisoes";
 
 interface Props {
   open: boolean;
