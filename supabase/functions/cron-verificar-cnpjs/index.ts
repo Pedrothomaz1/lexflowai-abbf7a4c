@@ -1,4 +1,87 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { Resend } from "https://esm.sh/resend@4.0.0";
+
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+const APP_URL = Deno.env.get("APP_URL") || "https://lexflowai.com.br";
+const FROM_EMAIL = Deno.env.get("FROM_EMAIL") || "LexFlow <alertas@lexflowai.com.br>";
+const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
+
+async function notifyAdminsByEmail(
+  admin: ReturnType<typeof createClient>,
+  orgId: string,
+  fornecedorNome: string,
+  newStatus: string,
+  contratos: Array<{ numero_contrato: string; titulo: string }>,
+) {
+  if (!resend) {
+    console.warn("RESEND_API_KEY ausente — pulando email");
+    return;
+  }
+  try {
+    const { data: members } = await admin
+      .from("organization_members")
+      .select("user_id")
+      .eq("organization_id", orgId)
+      .eq("is_active", true)
+      .in("role_in_org", ["admin", "super_admin", "owner"]);
+
+    const userIds = (members ?? []).map((m: any) => m.user_id);
+    if (userIds.length === 0) return;
+
+    const { data: prefs } = await admin
+      .from("notification_preferences")
+      .select("user_id, email_enabled")
+      .in("user_id", userIds);
+    const enabledIds = new Set(
+      (prefs ?? []).filter((p: any) => p.email_enabled !== false).map((p: any) => p.user_id),
+    );
+    // Default ON when no preference row exists
+    const finalIds = userIds.filter((id) => !prefs?.some((p: any) => p.user_id === id) || enabledIds.has(id));
+
+    const { data: profiles } = await admin
+      .from("profiles")
+      .select("email, full_name")
+      .in("id", finalIds);
+    const emails = (profiles ?? []).map((p: any) => p.email).filter(Boolean);
+    if (emails.length === 0) return;
+
+    const contratosHtml = contratos.length
+      ? `<p style="margin:16px 0 8px;color:#52525b;font-size:14px;">Contratos ativos afetados:</p>
+         <ul style="color:#18181b;font-size:14px;">${contratos
+           .map((c) => `<li>${c.numero_contrato} — ${c.titulo}</li>`)
+           .join("")}</ul>`
+      : "";
+
+    const html = `<!DOCTYPE html><html lang="pt-BR"><body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;">
+      <div style="max-width:600px;margin:0 auto;background:#fff;">
+        <div style="background:#DC2626;padding:24px;text-align:center;">
+          <h1 style="color:#fff;margin:0;font-size:22px;">⚠️ CNPJ ${newStatus.toUpperCase()} na Receita Federal</h1>
+        </div>
+        <div style="padding:28px 24px;">
+          <h2 style="color:#18181b;margin:0 0 12px;font-size:18px;">${fornecedorNome}</h2>
+          <p style="color:#52525b;font-size:15px;line-height:1.6;margin:0 0 16px;">
+            Detectamos que o CNPJ deste fornecedor mudou para <strong>${newStatus}</strong> na Receita Federal.
+            Recomendamos revisar os contratos vinculados.
+          </p>
+          ${contratosHtml}
+          <div style="text-align:center;margin-top:24px;">
+            <a href="${APP_URL}/fornecedores" style="background:#1a3c2a;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;display:inline-block;">Abrir LexFlow</a>
+          </div>
+          <p style="color:#a1a1aa;font-size:12px;margin-top:32px;text-align:center;">Verificação automática diária de CNPJ — LexFlow</p>
+        </div>
+      </div></body></html>`;
+
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: emails,
+      subject: `⚠️ CNPJ ${newStatus} — ${fornecedorNome}`,
+      html,
+    });
+    console.log(`Email CNPJ ${newStatus} enviado para ${emails.length} admin(s) da org ${orgId}`);
+  } catch (e) {
+    console.error("Falha enviando email CNPJ inativo:", e);
+  }
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
