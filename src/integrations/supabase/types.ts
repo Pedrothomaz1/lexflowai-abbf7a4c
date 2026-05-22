@@ -3816,6 +3816,45 @@ export type Database = {
           },
         ]
       }
+      security_regression_runs: {
+        Row: {
+          created_at: string
+          duration_ms: number
+          failed: number
+          finished_at: string
+          id: string
+          passed: number
+          results: Json
+          started_at: string
+          total: number
+          triggered_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          duration_ms: number
+          failed: number
+          finished_at: string
+          id?: string
+          passed: number
+          results?: Json
+          started_at: string
+          total: number
+          triggered_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number
+          failed?: number
+          finished_at?: string
+          id?: string
+          passed?: number
+          results?: Json
+          started_at?: string
+          total?: number
+          triggered_by?: string | null
+        }
+        Relationships: []
+      }
       servico_historico: {
         Row: {
           anexos: Json | null
