@@ -42,7 +42,7 @@ interface IntegracaoConfig {
 
 const Settings = () => {
   const { toast } = useToast();
-  const { userRole, isAnalista, isConsultor, isAdmin } = useUserRole();
+  const { userRole, isAnalista, isAdmin } = useUserRole();
   const { organization } = useOrganization();
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
