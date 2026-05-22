@@ -259,7 +259,8 @@ serve(async (req) => {
     }
 
     const fileBytes = new Uint8Array(await fileBlob.arrayBuffer());
-    const mimeType = fileBlob.type || detectMimeType(fileUrl);
+    const detectedMimeType = detectMimeType(fileUrl);
+    const mimeType = !fileBlob.type || fileBlob.type === 'application/octet-stream' ? detectedMimeType : fileBlob.type;
     const nativeText = await extractNativeText(fileBytes, mimeType);
     const input = hasGoodText(nativeText)
       ? { kind: 'text' as const, text: nativeText }
