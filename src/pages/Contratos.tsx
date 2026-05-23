@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { ContractImport } from "@/components/ContractImport/ContractImport";
 import { KanbanBoard } from "@/components/contracts/KanbanBoard";
 import { CalendarView, CalendarObligation } from "@/components/contracts/CalendarView";
-import { ContratoFormDialog } from "@/components/contracts/ContratoFormDialog";
+import { NovoContratoWizard } from "@/components/contracts/NovoContratoWizard";
 import { helpTexts } from "@/lib/help-texts";
 import { HelpTooltip } from "@/components/ui/help-tooltip";
 
@@ -447,20 +447,23 @@ const Contratos = () => {
               <Download className="h-4 w-4 mr-1.5" />
               Exportar
             </Button>
-            <ContratoFormDialog
-              open={dialogOpen}
-              onOpenChange={(open) => { setDialogOpen(open); if (!open) setUploadedFiles([]); }}
-              formData={formData}
-              onFormDataChange={setFormData}
-              uploadedFiles={uploadedFiles}
-              onFileSelect={handleFileSelect}
-              onRemoveFile={removeFile}
-              fornecedores={fornecedores}
-              onSubmit={handleSubmit}
-              submitting={submitting}
-            />
+            <Button size="sm" className="btn-cta" onClick={() => setDialogOpen(true)}>
+              <Upload className="h-4 w-4 mr-1.5" />
+              Novo Contrato
+            </Button>
           </div>
         }
+      />
+
+      <NovoContratoWizard
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        fornecedores={fornecedores}
+        initialFormData={formData}
+        onSuccess={() => {
+          fetchContratos();
+          generateNextContractNumber();
+        }}
       />
 
       <BuscaAvancada 
