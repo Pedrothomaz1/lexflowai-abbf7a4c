@@ -131,6 +131,7 @@ function App() {
                   <Routes>
                     {/* Public routes */}
                     <Route path="/" element={<Index />} />
+                    <Route path="/index" element={<Index />} />
                     <Route path="/planos" element={<Planos />} />
 
                     <Route path="/auth" element={<Auth />} />

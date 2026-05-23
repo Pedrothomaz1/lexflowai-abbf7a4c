@@ -33,8 +33,8 @@ export function IntakeGatesPanel({ contratoId, intakeStatus, onChanged }: Props)
     setLoading(true);
     try {
       const [g1, g2] = await Promise.all([
-        supabase.rpc("check_gate1_completo" as never, { p_contrato_id: contratoId } as never),
-        supabase.rpc("check_gate2_completo" as never, { p_contrato_id: contratoId } as never),
+        supabase.rpc("check_gate1_completo" as never, { _contrato_id: contratoId } as never),
+        supabase.rpc("check_gate2_completo" as never, { _contrato_id: contratoId } as never),
       ]);
       if (g1.error) throw g1.error;
       if (g2.error) throw g2.error;
@@ -60,7 +60,7 @@ export function IntakeGatesPanel({ contratoId, intakeStatus, onChanged }: Props)
     try {
       const { data, error } = await supabase.rpc(
         "release_intake_to_approval" as never,
-        { p_contrato_id: contratoId } as never,
+        { _contrato_id: contratoId } as never,
       );
       if (error) throw error;
       const result = data as { success?: boolean; error?: string; faltantes?: string[] } | null;
