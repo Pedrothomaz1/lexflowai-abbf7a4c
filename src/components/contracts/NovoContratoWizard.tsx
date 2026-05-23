@@ -50,6 +50,21 @@ const EMPTY_FORM = {
   fornecedor_id: "",
 };
 
+function sanitizeStorageFileName(fileName: string) {
+  const parts = fileName.split(".");
+  const ext = parts.length > 1 ? `.${parts.pop()?.toLowerCase().replace(/[^a-z0-9]/g, "")}` : "";
+  const base = parts.join(".") || "contrato";
+  const safeBase = base
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^[-.]+|[-.]+$/g, "")
+    .slice(0, 80);
+
+  return `${safeBase || "contrato"}${ext || ""}`;
+}
+
 export function NovoContratoWizard({
   open,
   onOpenChange,
@@ -137,7 +152,8 @@ export function NovoContratoWizard({
         setExtractionNote("Sem organização ativa. Você pode revisar manualmente os campos.");
         return;
       }
-      const tempPath = `${organization.id}/rascunhos/${crypto.randomUUID()}-${file.name}`;
+      const safeFileName = sanitizeStorageFileName(file.name);
+      const tempPath = `${organization.id}/rascunhos/${crypto.randomUUID()}-${safeFileName}`;
       const { error: upErr } = await supabase.storage
         .from("contratos-documentos")
         .upload(tempPath, file);
@@ -238,7 +254,7 @@ export function NovoContratoWizard({
         const tempPath = (file as any).__tempPath as string | undefined;
         let finalPath = tempPath;
         if (!finalPath) {
-          finalPath = `${organization.id}/${user.id}/${Date.now()}-${file.name}`;
+          finalPath = `${organization.id}/${user.id}/${Date.now()}-${sanitizeStorageFileName(file.name)}`;
           const { error: upErr } = await supabase.storage.from("contratos-documentos").upload(finalPath, file);
           if (upErr) {
             console.error(upErr);
