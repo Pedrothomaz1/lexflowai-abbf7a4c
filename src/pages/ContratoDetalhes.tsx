@@ -119,8 +119,9 @@ const ContratoDetalhes = () => {
   const { organization } = useOrganization();
   const [contrato, setContrato] = useState<Contrato | null>(null);
   const [aprovacoes, setAprovacoes] = useState<Aprovacao[]>([]);
+  const [mainDocument, setMainDocument] = useState<{ file_path: string; file_name: string } | null>(null);
+  const [openingDoc, setOpeningDoc] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
   const [novaAprovacao, setNovaAprovacao] = useState({
     status: "aprovado",
     comentario: "",
@@ -146,10 +147,42 @@ const ContratoDetalhes = () => {
         fetchContrato();
         fetchAprovacoes();
         fetchAnalise();
+        fetchMainDocument();
       }
     };
     initData();
   }, [id]);
+
+  const fetchMainDocument = async () => {
+    if (!id) return;
+    const { data } = await supabase
+      .from("contract_documents")
+      .select("file_path, file_name")
+      .eq("contrato_id", id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (data) setMainDocument(data);
+    else setMainDocument(null);
+  };
+
+  const handleOpenMainDocument = async () => {
+    const path = mainDocument?.file_path || contrato?.arquivo_url;
+    if (!path) return;
+    setOpeningDoc(true);
+    try {
+      const { data, error } = await supabase.storage
+        .from("contratos-documentos")
+        .createSignedUrl(path, 300);
+      if (error || !data?.signedUrl) throw error || new Error("URL inválida");
+      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Não foi possível abrir o documento", description: e?.message });
+    } finally {
+      setOpeningDoc(false);
+    }
+  };
+
 
   // Verificar se usuário atual já aprovou
   useEffect(() => {
@@ -277,64 +310,6 @@ const ContratoDetalhes = () => {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || !e.target.files[0] || !contrato) return;
-
-    const file = e.target.files[0];
-    setUploading(true);
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setUploading(false);
-      return;
-    }
-
-    // Get organization for storage RLS isolation
-    const { data: orgMember } = await supabase
-      .from('organization_members')
-      .select('organization_id')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .single();
-
-    const fileExt = file.name.split(".").pop();
-    // Use organization.id as first folder for RLS isolation
-    const filePath = orgMember?.organization_id
-      ? `${orgMember.organization_id}/${user.id}/${contrato.id}-${Date.now()}.${fileExt}`
-      : `${user.id}/${contrato.id}-${Date.now()}.${fileExt}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("contratos-documentos")
-      .upload(filePath, file);
-
-    if (uploadError) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao fazer upload",
-        description: uploadError.message,
-      });
-    } else {
-      const { error: updateError } = await supabase
-        .from("contratos")
-        .update({ arquivo_url: filePath })
-        .eq("id", contrato.id);
-
-      if (updateError) {
-        toast({
-          variant: "destructive",
-          title: "Erro ao atualizar contrato",
-          description: updateError.message,
-        });
-      } else {
-        toast({
-          title: "Documento enviado com sucesso!",
-        });
-        fetchContrato();
-      }
-    }
-
-    setUploading(false);
-  };
 
   const handleAddAprovacao = async () => {
     if (!contrato) return;
@@ -614,26 +589,20 @@ const ContratoDetalhes = () => {
 
                 <div className="space-y-2">
                   <Label className="text-muted-foreground">Documento Principal</Label>
-                  {contrato.arquivo_url ? (
-                    <AnimatedButton variant="outline" className="w-full" asChild>
-                      <a href={contrato.arquivo_url} target="_blank" rel="noopener noreferrer">
-                        <FileText className="h-4 w-4 mr-2" />
-                        Ver Documento
-                      </a>
+                  {mainDocument || contrato.arquivo_url ? (
+                    <AnimatedButton
+                      variant="outline"
+                      className="w-full"
+                      onClick={handleOpenMainDocument}
+                      disabled={openingDoc}
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      {openingDoc ? "Abrindo..." : "Ver Documento"}
                     </AnimatedButton>
                   ) : (
-                    <div>
-                      <Input
-                        type="file"
-                        accept=".pdf,.doc,.docx"
-                        onChange={handleFileUpload}
-                        disabled={uploading}
-                        className="cursor-pointer"
-                      />
-                      {uploading && (
-                        <p className="text-xs text-muted-foreground mt-2">Enviando...</p>
-                      )}
-                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Nenhum documento anexado. Adicione na aba de anexos.
+                    </p>
                   )}
                 </div>
 
