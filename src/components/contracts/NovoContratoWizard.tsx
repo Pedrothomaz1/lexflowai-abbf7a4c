@@ -294,8 +294,13 @@ export function NovoContratoWizard({
       toast.success("Contrato criado com sucesso!");
       onSuccess();
       handleClose();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro ao criar contrato");
+    } catch (err: any) {
+      const msg = err?.message || "";
+      if (err?.code === "23505" || /duplicate key|contratos_numero_contrato_key/i.test(msg)) {
+        toast.error(`Número do contrato "${formData.numero_contrato}" já existe. Use outro número.`);
+      } else {
+        toast.error(msg || "Erro ao criar contrato");
+      }
     } finally {
       setSubmitting(false);
     }
