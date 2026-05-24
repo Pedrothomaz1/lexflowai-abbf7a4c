@@ -589,26 +589,20 @@ const ContratoDetalhes = () => {
 
                 <div className="space-y-2">
                   <Label className="text-muted-foreground">Documento Principal</Label>
-                  {contrato.arquivo_url ? (
-                    <AnimatedButton variant="outline" className="w-full" asChild>
-                      <a href={contrato.arquivo_url} target="_blank" rel="noopener noreferrer">
-                        <FileText className="h-4 w-4 mr-2" />
-                        Ver Documento
-                      </a>
+                  {mainDocument || contrato.arquivo_url ? (
+                    <AnimatedButton
+                      variant="outline"
+                      className="w-full"
+                      onClick={handleOpenMainDocument}
+                      disabled={openingDoc}
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      {openingDoc ? "Abrindo..." : "Ver Documento"}
                     </AnimatedButton>
                   ) : (
-                    <div>
-                      <Input
-                        type="file"
-                        accept=".pdf,.doc,.docx"
-                        onChange={handleFileUpload}
-                        disabled={uploading}
-                        className="cursor-pointer"
-                      />
-                      {uploading && (
-                        <p className="text-xs text-muted-foreground mt-2">Enviando...</p>
-                      )}
-                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Nenhum documento anexado. Adicione na aba de anexos.
+                    </p>
                   )}
                 </div>
 
