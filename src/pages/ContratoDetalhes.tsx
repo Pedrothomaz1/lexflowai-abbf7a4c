@@ -98,6 +98,9 @@ type Contrato = {
   observacoes: string | null;
   versao: number;
   tags: string[] | null;
+  analise_status?: string | null;
+  analise_error?: string | null;
+  analise_iniciada_em?: string | null;
   created_at: string;
   updated_at: string;
 };
