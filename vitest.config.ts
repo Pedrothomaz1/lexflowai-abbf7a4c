@@ -13,7 +13,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'text-summary', 'json', 'json-summary', 'html', 'lcov'],
       reportOnFailure: true,
-      excludeNodeModules: true,
+      
       exclude: [
         'node_modules/',
         'dist/',
