@@ -295,15 +295,6 @@ const ContratoDetalhes = () => {
         Observações: ${contrato.observacoes || ""}
       `;
 
-      const { data, error } = await supabase.functions.invoke("analisar-contrato-ia", {
-        body: { contratoId: contrato.id, conteudo, skill, async: true },
-      });
-
-      if (error) throw error;
-      if (!data?.success) {
-        throw new Error(data.error || "Erro na análise");
-      }
-
       toast({
         title: "Análise iniciada",
         description: "Você pode continuar na tela; o resultado será carregado automaticamente.",
@@ -312,9 +303,42 @@ const ContratoDetalhes = () => {
       const startedAt = Date.now();
       const timeoutMs = 180000;
       let latestAnalysis: any = null;
+      let invokeFinished = false;
+      let invokeError: any = null;
+
+      const invokePromise = supabase.functions
+        .invoke("analisar-contrato-ia", {
+          body: { contratoId: contrato.id, conteudo, skill },
+        })
+        .then(({ data, error }) => {
+          invokeFinished = true;
+          if (error) {
+            invokeError = error;
+            return null;
+          }
+          if (!data?.success) {
+            invokeError = new Error(data?.error || "Erro na análise");
+            return null;
+          }
+          return data.analise ?? null;
+        })
+        .catch((error) => {
+          invokeFinished = true;
+          invokeError = error;
+          return null;
+        });
 
       while (Date.now() - startedAt < timeoutMs) {
-        await new Promise((resolve) => window.setTimeout(resolve, 5000));
+        const directResult = await Promise.race([
+          invokePromise,
+          new Promise<null>((resolve) => window.setTimeout(() => resolve(null), 5000)),
+        ]);
+
+        if (directResult && directResult.id !== previousAnalysis?.id) {
+          latestAnalysis = directResult;
+          break;
+        }
+
         const { data: polledAnalysis } = await supabase
           .from("contract_analysis")
           .select("*")
@@ -327,6 +351,8 @@ const ContratoDetalhes = () => {
           latestAnalysis = polledAnalysis;
           break;
         }
+
+        if (invokeFinished && invokeError && Date.now() - startedAt > 30000) break;
       }
 
       if (latestAnalysis) {
@@ -336,6 +362,8 @@ const ContratoDetalhes = () => {
         });
         setAnalise(latestAnalysis);
         setShowAnalise(true);
+      } else if (invokeError) {
+        throw invokeError;
       } else {
         toast({
           title: "Análise em processamento",
