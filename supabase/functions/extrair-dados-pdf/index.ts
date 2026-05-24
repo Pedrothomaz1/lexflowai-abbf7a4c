@@ -86,7 +86,7 @@ serve(async (req) => {
 
     console.log(`Extracting data from file: ${fileUrl}`);
 
-    // Validate file extension — Gemini supports PDF + images only.
+    // Validate file extension — Gemini supports PDF + images directly; DOCX is extracted to text.
     const ext = fileUrl.split('.').pop()?.toLowerCase() || '';
     const mimeMap: Record<string, string> = {
       pdf: 'application/pdf',
@@ -96,18 +96,19 @@ serve(async (req) => {
       webp: 'image/webp',
       gif: 'image/gif',
     };
+    const isDocx = ext === 'docx';
     const mimeType = mimeMap[ext];
-    if (!mimeType) {
+    if (!mimeType && !isDocx) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: `Formato .${ext} não suportado para extração automática. Converta para PDF e tente novamente.`,
+          error: `Formato .${ext} não suportado. Envie PDF, DOCX ou imagem.`,
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Generate signed URL and download file as base64 data URL
+    // Generate signed URL and download file
     const { data: urlData } = await supabase
       .storage
       .from('contratos-documentos')
@@ -126,13 +127,37 @@ serve(async (req) => {
       throw new Error(`Failed to download file: ${fileResp.status}`);
     }
     const fileBuf = new Uint8Array(await fileResp.arrayBuffer());
-    // Base64 encode in chunks to avoid stack overflow
-    let binary = '';
-    const chunkSize = 0x8000;
-    for (let i = 0; i < fileBuf.length; i += chunkSize) {
-      binary += String.fromCharCode(...fileBuf.subarray(i, i + chunkSize));
+
+    let userContent: any;
+    if (isDocx) {
+      // Extract text from DOCX
+      const mammoth = await import('npm:mammoth@1.8.0');
+      const { value: docText } = await mammoth.extractRawText({ buffer: fileBuf });
+      const trimmed = (docText || '').slice(0, 120000);
+      if (!trimmed.trim()) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Não foi possível extrair texto do DOCX.' }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      userContent = [{
+        type: 'text',
+        text: `Analise este contrato (texto extraído de DOCX) e extraia as informações estruturadas. Conteúdo:\n\n${trimmed}`
+      }];
+    } else {
+      // Base64 encode in chunks to avoid stack overflow
+      let binary = '';
+      const chunkSize = 0x8000;
+      for (let i = 0; i < fileBuf.length; i += chunkSize) {
+        binary += String.fromCharCode(...fileBuf.subarray(i, i + chunkSize));
+      }
+      const dataUrl = `data:${mimeType};base64,${btoa(binary)}`;
+      userContent = [
+        { type: 'text', text: 'Analise este documento de contrato e extraia as informações estruturadas. Seja preciso e extraia apenas o que está claramente presente no documento.' },
+        { type: 'image_url', image_url: { url: dataUrl } }
+      ];
     }
-    const dataUrl = `data:${mimeType};base64,${btoa(binary)}`;
+
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -151,18 +176,10 @@ serve(async (req) => {
         messages: [
           {
             role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: `Analise este documento de contrato e extraia as seguintes informações estruturadas. Seja preciso e extraia apenas o que está claramente presente no documento.`
-              },
-              {
-                type: 'image_url',
-                image_url: { url: dataUrl }
-              }
-            ]
+            content: userContent
           }
         ],
+
         tools: [
           {
             type: 'function',
