@@ -291,7 +291,27 @@ const ContratoDetalhes = () => {
         body: { contratoId: contrato.id, conteudo, skill },
       });
 
-      if (error) throw error;
+      if (error) {
+        const { data: latestAnalysis } = await supabase
+          .from("contract_analysis")
+          .select("*")
+          .eq("contrato_id", contrato.id)
+          .order("analisado_em", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (latestAnalysis) {
+          toast({
+            title: "Análise concluída",
+            description: "O resultado foi salvo e carregado abaixo.",
+          });
+          setAnalise(latestAnalysis);
+          setShowAnalise(true);
+          return;
+        }
+
+        throw error;
+      }
 
       if (data.success) {
         toast({
@@ -306,7 +326,9 @@ const ContratoDetalhes = () => {
     } catch (error: any) {
       toast({
         title: "Erro na análise",
-        description: handleDbError(error).message,
+        description: error?.message === "Failed to send a request to the Edge Function"
+          ? "A análise demorou mais que o limite da conexão. Tente novamente; se já tiver concluído, o resultado aparecerá automaticamente."
+          : handleDbError(error).message,
         variant: "destructive",
       });
     } finally {

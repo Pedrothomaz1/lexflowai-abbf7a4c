@@ -420,8 +420,14 @@ serve(async (req) => {
     let promptTokens = 0;
     let completionTokens = 0;
 
-    for (const sk of resolved) {
-      const r = await runSkill(sk, sanitizado, apiKey);
+    const skillResults = await Promise.all(
+      resolved.map(async (sk) => ({
+        skill: sk,
+        result: await runSkill(sk, sanitizado, apiKey),
+      })),
+    );
+
+    for (const { skill: sk, result: r } of skillResults) {
       results[sk] = r.payload;
       totalTokens += r.tokens;
       promptTokens += r.promptTokens;
