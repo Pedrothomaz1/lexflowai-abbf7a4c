@@ -11,6 +11,7 @@ const corsHeaders = {
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_CONTENT_LENGTH = 120000;
+const ASYNC_RESPONSE_DELAY_MS = 250;
 
 type SkillId =
   | "contract-review"
@@ -266,6 +267,188 @@ async function runSkill(
     promptTokens: data.usage?.prompt_tokens ?? 0,
     completionTokens: data.usage?.completion_tokens ?? 0,
   };
+}
+
+const jsonResponse = (body: Record<string, unknown>, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+
+async function processAnalysis(params: {
+  supabase: ReturnType<typeof createClient>;
+  contratoId: string;
+  contrato: { organization_id: string; tipo: string | null };
+  conteudo: string;
+  skillReq: SkillId;
+  userId: string;
+  apiKey: string;
+}) {
+  const { supabase, contratoId, contrato, conteudo, skillReq, userId, apiKey } = params;
+
+  // Tentar enriquecer com o texto do documento anexado (preferir o original)
+  let docText = "";
+  try {
+    const { data: docs } = await supabase
+      .from("contract_attachments")
+      .select("arquivo_url, nome_arquivo, is_original, created_at")
+      .eq("contrato_id", contratoId)
+      .order("is_original", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(1);
+    const doc = docs?.[0];
+    if (doc?.arquivo_url) {
+      const filePath = doc.arquivo_url as string;
+      const ext = (filePath.split(".").pop() || "").toLowerCase();
+      const { data: signed } = await supabase.storage
+        .from("contratos-documentos")
+        .createSignedUrl(filePath, 120);
+      if (signed?.signedUrl) {
+        const resp = await fetch(signed.signedUrl);
+        if (resp.ok) {
+          const buf = new Uint8Array(await resp.arrayBuffer());
+          if (ext === "docx") {
+            const mammoth = await import("npm:mammoth@1.8.0");
+            const { value } = await mammoth.extractRawText({ buffer: buf });
+            docText = (value || "").slice(0, MAX_CONTENT_LENGTH);
+          } else if (ext === "pdf" || ext === "txt") {
+            if (ext === "pdf") {
+              try {
+                const pdfParse = (await import("npm:pdf-parse@1.1.1")).default;
+                const parsed = await pdfParse(buf);
+                docText = (parsed.text || "").slice(0, MAX_CONTENT_LENGTH);
+              } catch (e) {
+                console.error("pdf-parse falhou:", e);
+              }
+            } else {
+              docText = new TextDecoder().decode(buf).slice(0, MAX_CONTENT_LENGTH);
+            }
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Falha ao extrair texto do documento:", e);
+  }
+
+  const conteudoCompleto = docText
+    ? `${conteudo}\n\n=== TEXTO INTEGRAL DO CONTRATO ===\n${docText}`
+    : conteudo;
+  const sanitizado = sanitize(conteudoCompleto);
+
+  // Resolver skills a rodar
+  const resolved: Exclude<SkillId, "auto" | "full">[] =
+    skillReq === "full"
+      ? ["contract-review", "risk-assessment", "compliance"]
+      : skillReq === "auto"
+        ? [detectAuto(contrato.tipo)]
+        : [skillReq as Exclude<SkillId, "auto" | "full">];
+
+  console.log(`Analyzing ${contratoId} skills=${resolved.join(",")}`);
+
+  const results: Record<string, any> = {};
+  let totalTokens = 0;
+  let promptTokens = 0;
+  let completionTokens = 0;
+
+  const skillResults = await Promise.all(
+    resolved.map(async (sk) => ({
+      skill: sk,
+      result: await runSkill(sk, sanitizado, apiKey),
+    })),
+  );
+
+  for (const { skill: sk, result: r } of skillResults) {
+    results[sk] = r.payload;
+    totalTokens += r.tokens;
+    promptTokens += r.promptTokens;
+    completionTokens += r.completionTokens;
+  }
+
+  // Skill primária para colunas legadas (compatibilidade com UI atual)
+  const primary = resolved[0];
+  const primaryPayload = results[primary] ?? {};
+
+  // Score: usa contract-review se houver, senão risk-assessment, senão null
+  const score =
+    results["contract-review"]?.score_risco ??
+    results["risk-assessment"]?.score_geral ??
+    primaryPayload.score_risco ??
+    primaryPayload.score_geral ??
+    null;
+
+  // Compat com colunas legadas
+  const riscos =
+    results["risk-assessment"]?.riscos?.map((r: any) => ({
+      tipo: r.categoria,
+      descricao: r.descricao,
+      gravidade: r.classificacao,
+    })) ??
+    results["contract-review"]?.clausulas
+      ?.filter((c: any) => c.status === "risco" || c.status === "atencao")
+      .map((c: any) => ({
+        tipo: c.categoria,
+        descricao: c.problema ?? c.titulo,
+        gravidade: c.status === "risco" ? "alta" : "media",
+      })) ??
+    [];
+
+  const clausulas =
+    results["contract-review"]?.clausulas?.map((c: any) => ({
+      titulo: c.titulo,
+      descricao: c.problema ?? c.texto_original ?? "",
+      atencao: c.redline_sugerido,
+    })) ?? [];
+
+  const sugestoes =
+    results["contract-review"]?.clausulas
+      ?.filter((c: any) => c.redline_sugerido)
+      .map((c: any) => `${c.titulo}: ${c.redline_sugerido}`) ??
+    results["compliance"]?.acoes_necessarias?.map((a: any) => a.acao) ??
+    [];
+
+  const skillAplicada = skillReq === "full" ? "full" : primary;
+
+  const { data: saved, error: insertErr } = await supabase
+    .from("contract_analysis")
+    .insert({
+      contrato_id: contratoId,
+      organization_id: contrato.organization_id,
+      riscos_identificados: riscos,
+      clausulas_importantes: clausulas,
+      sugestoes_melhoria: sugestoes,
+      score_risco: score,
+      analisado_por: userId,
+      skill_aplicada: skillAplicada,
+      payload_estruturado: results,
+    })
+    .select()
+    .single();
+
+  if (insertErr) {
+    console.error("Erro ao salvar análise:", insertErr);
+    throw insertErr;
+  }
+
+  if (totalTokens > 0) {
+    await supabase.from("uso_sistema").insert({
+      tipo: "ai_tokens",
+      recurso: "analisar-contrato-ia",
+      quantidade: totalTokens,
+      custo_unitario: 0.00001,
+      custo_total: totalTokens * 0.00001,
+      user_id: userId,
+      contrato_id: contratoId,
+      metadata: {
+        skill: skillAplicada,
+        skills_executadas: resolved,
+        prompt_tokens: promptTokens,
+        completion_tokens: completionTokens,
+      },
+    });
+  }
+
+  return { saved, skillAplicada, results };
 }
 
 serve(async (req) => {
