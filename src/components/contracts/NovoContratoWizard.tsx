@@ -153,11 +153,32 @@ export function NovoContratoWizard({
       const ext = file.name.split(".").pop();
       const path = `${organization.id}/${user.id}/${Date.now()}.${ext}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from("contratos-documentos")
-        .upload(path, file);
-
-      if (uploadError) throw uploadError;
+      // Upload direto via fetch para evitar o timeout global de 10s do client supabase
+      const { data: uploadSession } = await supabase.auth.getSession();
+      const uploadToken = uploadSession.session?.access_token;
+      const uploadUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/contratos-documentos/${path}`;
+      const uploadController = new AbortController();
+      const uploadTimeout = setTimeout(() => uploadController.abort(), 120_000);
+      let uploadResp: Response;
+      try {
+        uploadResp = await fetch(uploadUrl, {
+          method: "POST",
+          headers: {
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${uploadToken}`,
+            "Content-Type": file.type || "application/octet-stream",
+            "x-upsert": "false",
+          },
+          body: file,
+          signal: uploadController.signal,
+        });
+      } finally {
+        clearTimeout(uploadTimeout);
+      }
+      if (!uploadResp.ok) {
+        const txt = await uploadResp.text().catch(() => "");
+        throw new Error(`Upload falhou (${uploadResp.status}): ${txt.slice(0, 200)}`);
+      }
 
       setUploadedPath(path);
       setUploading(false);
