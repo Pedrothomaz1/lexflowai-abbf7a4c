@@ -156,14 +156,18 @@ const ContratoDetalhes = () => {
   const fetchMainDocument = async () => {
     if (!id) return;
     const { data } = await supabase
-      .from("contract_documents")
-      .select("file_path, file_name")
+      .from("contract_attachments")
+      .select("nome_arquivo, arquivo_url, is_original, created_at")
       .eq("contrato_id", id)
+      .order("is_original", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (data) setMainDocument(data);
-    else setMainDocument(null);
+    if (data?.arquivo_url) {
+      setMainDocument({ file_path: data.arquivo_url, file_name: data.nome_arquivo });
+    } else {
+      setMainDocument(null);
+    }
   };
 
   const handleOpenMainDocument = async () => {
