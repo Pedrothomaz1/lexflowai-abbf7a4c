@@ -554,6 +554,17 @@ serve(async (req) => {
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) throw new Error("LOVABLE_API_KEY não configurada");
 
+    // Marca status processing antes de iniciar (cobre F5/refresh e desabilita botão)
+    await supabase
+      .from("contratos")
+      .update({
+        analise_status: "processing",
+        analise_error: null,
+        analise_iniciada_em: new Date().toISOString(),
+      })
+      .eq("id", contratoId);
+
+
     const analysisPromise = processAnalysis({
       supabase,
       contratoId,
