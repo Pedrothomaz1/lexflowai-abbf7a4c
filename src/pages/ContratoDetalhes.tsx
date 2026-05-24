@@ -147,10 +147,42 @@ const ContratoDetalhes = () => {
         fetchContrato();
         fetchAprovacoes();
         fetchAnalise();
+        fetchMainDocument();
       }
     };
     initData();
   }, [id]);
+
+  const fetchMainDocument = async () => {
+    if (!id) return;
+    const { data } = await supabase
+      .from("contract_documents")
+      .select("file_path, file_name")
+      .eq("contrato_id", id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (data) setMainDocument(data);
+    else setMainDocument(null);
+  };
+
+  const handleOpenMainDocument = async () => {
+    const path = mainDocument?.file_path || contrato?.arquivo_url;
+    if (!path) return;
+    setOpeningDoc(true);
+    try {
+      const { data, error } = await supabase.storage
+        .from("contratos-documentos")
+        .createSignedUrl(path, 300);
+      if (error || !data?.signedUrl) throw error || new Error("URL inválida");
+      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Não foi possível abrir o documento", description: e?.message });
+    } finally {
+      setOpeningDoc(false);
+    }
+  };
+
 
   // Verificar se usuário atual já aprovou
   useEffect(() => {
