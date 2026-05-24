@@ -329,10 +329,12 @@ const ContratoDetalhes = () => {
         });
 
       while (Date.now() - startedAt < timeoutMs) {
-        const directResult = await Promise.race([
-          invokePromise,
-          new Promise<null>((resolve) => window.setTimeout(() => resolve(null), 5000)),
-        ]);
+        const directResult = !invokeFinished
+          ? await Promise.race([
+              invokePromise,
+              new Promise<null>((resolve) => window.setTimeout(() => resolve(null), 5000)),
+            ])
+          : (await new Promise<null>((resolve) => window.setTimeout(() => resolve(null), 5000)));
 
         if (directResult && directResult.id !== previousAnalysis?.id) {
           latestAnalysis = directResult;
