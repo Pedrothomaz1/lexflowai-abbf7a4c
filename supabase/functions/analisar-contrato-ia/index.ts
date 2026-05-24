@@ -353,21 +353,23 @@ serve(async (req) => {
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) throw new Error("LOVABLE_API_KEY não configurada");
 
-    // Tentar enriquecer com o texto do documento anexado mais recente
+    // Tentar enriquecer com o texto do documento anexado (preferir o original)
     let docText = "";
     try {
       const { data: docs } = await supabase
-        .from("contract_documents")
-        .select("file_path, file_name")
+        .from("contract_attachments")
+        .select("arquivo_url, nome_arquivo, is_original, created_at")
         .eq("contrato_id", contratoId)
+        .order("is_original", { ascending: false })
         .order("created_at", { ascending: false })
         .limit(1);
       const doc = docs?.[0];
-      if (doc?.file_path) {
-        const ext = (doc.file_path.split(".").pop() || "").toLowerCase();
+      if (doc?.arquivo_url) {
+        const filePath = doc.arquivo_url as string;
+        const ext = (filePath.split(".").pop() || "").toLowerCase();
         const { data: signed } = await supabase.storage
           .from("contratos-documentos")
-          .createSignedUrl(doc.file_path, 120);
+          .createSignedUrl(filePath, 120);
         if (signed?.signedUrl) {
           const resp = await fetch(signed.signedUrl);
           if (resp.ok) {
@@ -377,7 +379,6 @@ serve(async (req) => {
               const { value } = await mammoth.extractRawText({ buffer: buf });
               docText = (value || "").slice(0, MAX_CONTENT_LENGTH);
             } else if (ext === "pdf" || ext === "txt") {
-              // Para PDF: extrair texto via pdf-parse
               if (ext === "pdf") {
                 try {
                   const pdfParse = (await import("npm:pdf-parse@1.1.1")).default;
@@ -396,6 +397,7 @@ serve(async (req) => {
     } catch (e) {
       console.error("Falha ao extrair texto do documento:", e);
     }
+
 
     const conteudoCompleto = docText
       ? `${conteudo}\n\n=== TEXTO INTEGRAL DO CONTRATO ===\n${docText}`
