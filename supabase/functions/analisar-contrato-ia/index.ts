@@ -211,8 +211,20 @@ const PROMPTS: Record<Exclude<SkillId, "auto" | "full">, { system: string; tool:
 };
 
 function modelFor(_skill: Exclude<SkillId, "auto" | "full">): string {
-  // Usamos flash em todas as skills para garantir conclusão dentro do limite do edge runtime.
-  return "google/gemini-2.5-flash";
+  // gemini-2.5-flash: custo-eficiente e rápido para o edge runtime.
+  return "gemini-2.5-flash";
+}
+
+// Remove campos do JSON Schema não suportados pelo Gemini
+function cleanSchemaForGemini(schema: any): any {
+  if (!schema || typeof schema !== "object") return schema;
+  if (Array.isArray(schema)) return schema.map(cleanSchemaForGemini);
+  const out: any = {};
+  for (const [k, v] of Object.entries(schema)) {
+    if (k === "additionalProperties" || k === "$schema") continue;
+    out[k] = cleanSchemaForGemini(v);
+  }
+  return out;
 }
 
 async function runSkill(
@@ -223,50 +235,63 @@ async function runSkill(
   const { system, tool } = PROMPTS[skill];
   const model = modelFor(skill);
 
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const functionDeclaration = {
+    name: tool.function.name,
+    description: tool.function.description,
+    parameters: cleanSchemaForGemini(tool.function.parameters),
+  };
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+  const res = await fetch(url, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: `Analise o contrato a seguir e chame a função obrigatoriamente.\n\n${conteudo}` },
+      systemInstruction: { parts: [{ text: system }] },
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: `Analise o contrato a seguir e chame a função obrigatoriamente.\n\n${conteudo}` }],
+        },
       ],
-      tools: [tool],
-      tool_choice: { type: "function", function: { name: tool.function.name } },
-      temperature: 0.3,
+      tools: [{ functionDeclarations: [functionDeclaration] }],
+      toolConfig: {
+        functionCallingConfig: {
+          mode: "ANY",
+          allowedFunctionNames: [tool.function.name],
+        },
+      },
+      generationConfig: { temperature: 0.3 },
     }),
   });
 
   if (!res.ok) {
     const t = await res.text();
-    console.error(`AI gateway error [${skill}]`, res.status, t);
-    if (res.status === 429) throw new Error("Limite de requisições excedido. Tente novamente em instantes.");
-    if (res.status === 402) throw new Error("Créditos insuficientes. Adicione créditos ao workspace.");
-    throw new Error(`Erro ao chamar IA (${skill}): ${res.status}`);
+    console.error(`Gemini API error [${skill}]`, res.status, t);
+    if (res.status === 429) throw new Error("Limite de requisições do Gemini excedido. Tente novamente em instantes.");
+    if (res.status === 401 || res.status === 403) throw new Error("GEMINI_API_KEY inválida ou sem permissão. Verifique a chave no Google AI Studio.");
+    if (res.status === 400) throw new Error(`Requisição inválida ao Gemini: ${t.slice(0, 200)}`);
+    throw new Error(`Erro ao chamar Gemini (${skill}): ${res.status}`);
   }
 
   const data = await res.json();
-  const call = data.choices?.[0]?.message?.tool_calls?.[0];
+  const parts = data.candidates?.[0]?.content?.parts ?? [];
   let payload: any = {};
-  if (call?.function?.arguments) {
-    try {
-      payload = JSON.parse(call.function.arguments);
-    } catch (e) {
-      console.error("Falha parse tool args", e);
-    }
-  } else if (data.choices?.[0]?.message?.content) {
-    payload = { texto_bruto: data.choices[0].message.content };
+  const fnPart = parts.find((p: any) => p.functionCall);
+  if (fnPart?.functionCall?.args) {
+    payload = fnPart.functionCall.args;
+  } else {
+    const textPart = parts.find((p: any) => typeof p.text === "string");
+    if (textPart) payload = { texto_bruto: textPart.text };
+    else console.warn(`Gemini sem functionCall nem texto [${skill}]`, JSON.stringify(data).slice(0, 500));
   }
 
+  const usage = data.usageMetadata ?? {};
   return {
     payload,
-    tokens: data.usage?.total_tokens ?? 0,
-    promptTokens: data.usage?.prompt_tokens ?? 0,
-    completionTokens: data.usage?.completion_tokens ?? 0,
+    tokens: usage.totalTokenCount ?? 0,
+    promptTokens: usage.promptTokenCount ?? 0,
+    completionTokens: usage.candidatesTokenCount ?? 0,
   };
 }
 
