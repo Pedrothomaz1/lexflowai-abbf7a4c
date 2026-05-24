@@ -44,9 +44,9 @@ const Auth = () => {
   // Function to register LGPD consent
   const registrarAceiteLGPD = async (userId: string) => {
     try {
+      void userId; // user_id é derivado do JWT no servidor
       const { error } = await supabase.functions.invoke("registrar-aceite-lgpd", {
         body: {
-          user_id: userId,
           versao_termos: TERMS_VERSION,
           versao_privacidade: PRIVACY_VERSION,
         },
