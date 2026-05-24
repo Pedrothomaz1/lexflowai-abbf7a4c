@@ -99,8 +99,8 @@ serve(async (req) => {
 
     return json({ ok: false, error: 'Ação desconhecida' });
   } catch (e) {
-    console.error(e);
-    return json({ ok: false, error: e instanceof Error ? e.message : 'Erro' }, 500);
+    console.error('[portal-externo-publico] error:', e);
+    return json({ ok: false, error: 'Erro interno. Tente novamente.' }, 500);
   }
 });
 
