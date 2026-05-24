@@ -302,9 +302,9 @@ const ContratoDetalhes = () => {
 
       const startedAt = Date.now();
       const timeoutMs = 180000;
-      let latestAnalysis: any = null;
+      let latestAnalysis: typeof analise = null;
       let invokeFinished = false;
-      let invokeError: any = null;
+      let invokeError: unknown = null;
 
       const invokePromise = supabase.functions
         .invoke("analisar-contrato-ia", {
@@ -354,7 +354,7 @@ const ContratoDetalhes = () => {
           break;
         }
 
-        const isConnectionAbort = invokeError?.message === "Failed to send a request to the Edge Function";
+        const isConnectionAbort = invokeError instanceof Error && invokeError.message === "Failed to send a request to the Edge Function";
         if (invokeFinished && invokeError && !isConnectionAbort && Date.now() - startedAt > 30000) break;
       }
 
@@ -373,10 +373,11 @@ const ContratoDetalhes = () => {
           description: "A análise continua em segundo plano. Reabra este contrato em instantes para carregar o resultado.",
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const isConnectionAbort = error instanceof Error && error.message === "Failed to send a request to the Edge Function";
       toast({
         title: "Erro na análise",
-        description: error?.message === "Failed to send a request to the Edge Function"
+        description: isConnectionAbort
           ? "A análise foi iniciada, mas a conexão caiu antes da confirmação. Aguarde alguns instantes e atualize o contrato."
           : handleDbError(error).message,
         variant: "destructive",
