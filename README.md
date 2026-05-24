@@ -1,153 +1,264 @@
-# Welcome to your Lovable project
+# AIOX Core Module
 
-## Project Status
+> Central runtime module providing essential framework functionality for Synkra AIOX.
 
-![Tests](https://img.shields.io/github/actions/workflow/status/YOUR_ORG/lexflowai/test.yml?label=Tests)
-![Coverage](https://img.shields.io/badge/coverage-70%25-brightgreen?style=flat)
-![License](https://img.shields.io/badge/license-MIT-blue?style=flat)
+**Version:** 2.0.0
+**Created:** Story 2.2 - Core Module Creation
+**Architecture:** ADR-002 Modular Architecture
 
-## Project info
+## Overview
 
-**URL**: https://lovable.dev/projects/9b5e925d-516b-4c9a-8bf5-96cde5168edd
+The Core module contains the foundational runtime components that all other AIOX modules depend on. It provides configuration management, session handling, elicitation workflows, and essential utilities.
 
-## How can I edit this code?
+## Installation
 
-There are several ways of editing your application.
+The core module is automatically available within the Synkra AIOX framework:
 
-**Use Lovable**
+```javascript
+// CommonJS
+const core = require('./.aiox-core/core');
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/9b5e925d-516b-4c9a-8bf5-96cde5168edd) and start prompting.
+// ES Modules
+import { ConfigCache, ElicitationEngine } from './.aiox-core/core/index.esm.js';
+```
 
-Changes made via Lovable will be committed automatically to this repo.
+## Module Structure
 
-**Use your preferred IDE**
+```
+core/
+├── config/                 # Configuration management
+│   ├── config-cache.js     # Global configuration cache with TTL support
+│   └── config-loader.js    # Lazy-loading configuration system
+├── data/                   # Framework knowledge and patterns
+│   ├── aiox-kb.md          # AIOX knowledge base
+│   ├── workflow-patterns.yaml
+│   └── agent-config-requirements.yaml
+├── docs/                   # Internal documentation
+│   ├── agent-creation.md
+│   ├── component-overview.md
+│   ├── elicitation-guide.md
+│   ├── system-overview.md
+│   └── task-authoring.md
+├── elicitation/            # Interactive prompting system
+│   ├── elicitation-engine.js
+│   ├── session-manager.js
+│   ├── agent-elicitation.js
+│   ├── task-elicitation.js
+│   └── workflow-elicitation.js
+├── session/                # Session context management
+│   ├── context-detector.js
+│   └── context-loader.js
+├── utils/                  # Utility functions
+│   ├── output-formatter.js
+│   └── yaml-validator.js
+├── index.js                # CommonJS exports
+└── index.esm.js            # ES Module exports
+```
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## API Reference
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Configuration
 
-Follow these steps:
+#### `ConfigCache` / `globalConfigCache`
+Global configuration cache with TTL support.
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+```javascript
+const { globalConfigCache } = require('./.aiox-core/core');
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+// Store configuration
+globalConfigCache.set('my-key', { value: 42 }, 300000); // 5 min TTL
 
-# Step 3: Install the necessary dependencies.
-npm i
+// Retrieve configuration
+const config = globalConfigCache.get('my-key');
+```
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+#### `loadAgentConfig(agentId)`
+Load configuration for a specific agent with lazy loading.
+
+```javascript
+const { loadAgentConfig } = require('./.aiox-core/core');
+const agentConfig = await loadAgentConfig('dev');
+```
+
+#### `loadConfigSections(sections)`
+Load specific configuration sections.
+
+```javascript
+const { loadConfigSections } = require('./.aiox-core/core');
+const config = await loadConfigSections(['persona', 'commands']);
+```
+
+### Session Management
+
+#### `ContextDetector`
+Detects current execution context (IDE, terminal, environment).
+
+```javascript
+const { ContextDetector } = require('./.aiox-core/core');
+const detector = new ContextDetector();
+const context = detector.detectContext();
+```
+
+#### `SessionContextLoader`
+Manages session context loading and updates.
+
+```javascript
+const { SessionContextLoader } = require('./.aiox-core/core');
+const loader = new SessionContextLoader();
+const context = await loader.loadContext(sessionId);
+```
+
+### Elicitation System
+
+#### `ElicitationEngine`
+Core engine for interactive prompting workflows.
+
+```javascript
+const { ElicitationEngine } = require('./.aiox-core/core');
+const engine = new ElicitationEngine();
+
+const session = await engine.startSession('create-agent');
+const response = await engine.processStep(session.id, userInput);
+```
+
+#### `ElicitationSessionManager`
+Manages elicitation session state.
+
+```javascript
+const { ElicitationSessionManager } = require('./.aiox-core/core');
+const manager = new ElicitationSessionManager();
+```
+
+#### Elicitation Steps
+Pre-defined elicitation workflows:
+- `agentElicitationSteps` - Steps for creating agents
+- `taskElicitationSteps` - Steps for creating tasks
+- `workflowElicitationSteps` - Steps for creating workflows
+
+### Utilities
+
+#### `YAMLValidator`
+Validates YAML content with type-specific rules.
+
+```javascript
+const { YAMLValidator, validateYAML } = require('./.aiox-core/core');
+
+// Quick validation
+const result = await validateYAML(yamlContent, 'agent');
+
+// Full validator
+const validator = new YAMLValidator();
+const validation = await validator.validateFile('agent.yaml', 'agent');
+```
+
+#### `PersonalizedOutputFormatter`
+Formats agent output with personalization.
+
+```javascript
+const { PersonalizedOutputFormatter } = require('./.aiox-core/core');
+const formatter = new PersonalizedOutputFormatter(agent, task, result);
+const output = formatter.format();
+```
+
+## Exports Summary
+
+| Export | Type | Description |
+|--------|------|-------------|
+| `ConfigCache` | Class | Configuration cache class |
+| `globalConfigCache` | Instance | Global cache singleton |
+| `loadAgentConfig` | Function | Load agent configuration |
+| `loadConfigSections` | Function | Load config sections |
+| `loadMinimalConfig` | Function | Load minimal configuration |
+| `loadFullConfig` | Function | Load complete configuration |
+| `preloadConfig` | Function | Preload configuration |
+| `clearConfigCache` | Function | Clear configuration cache |
+| `getConfigPerformanceMetrics` | Function | Get cache performance stats |
+| `ContextDetector` | Class | Context detection |
+| `SessionContextLoader` | Class | Session context management |
+| `ElicitationEngine` | Class | Elicitation workflow engine |
+| `ElicitationSessionManager` | Class | Session state management |
+| `agentElicitationSteps` | Object | Agent creation steps |
+| `taskElicitationSteps` | Object | Task creation steps |
+| `workflowElicitationSteps` | Object | Workflow creation steps |
+| `PersonalizedOutputFormatter` | Class | Output formatting |
+| `YAMLValidator` | Class | YAML validation |
+| `validateYAML` | Function | Quick YAML validation |
+| `version` | String | Module version (2.0.0) |
+| `moduleName` | String | Module name ('core') |
+
+## Regression Tests
+
+The core module includes regression tests (CORE-01 to CORE-07):
+
+| Test ID | Name | Priority | Description |
+|---------|------|----------|-------------|
+| CORE-01 | Config Loading | P0 | Verifies config system loads |
+| CORE-02 | Config Caching | P1 | Verifies cache operations |
+| CORE-03 | Session Management | P0 | Verifies session loader |
+| CORE-04 | Elicitation Engine | P0 | Verifies elicitation system |
+| CORE-05 | YAML Validation | P1 | Verifies YAML validator |
+| CORE-06 | Output Formatting | P1 | Verifies output formatter |
+| CORE-07 | Package Exports | P0 | Verifies all exports |
+
+Run tests:
+```bash
+npm run test:core
+```
+
+## Dependencies
+
+- `js-yaml` - YAML parsing
+- `fs-extra` - Enhanced file operations
+
+## Migration Notes
+
+Files were migrated from various locations to create this unified module:
+
+| Original Location | New Location |
+|-------------------|--------------|
+| `config/config-loader.js` | `core/config/config-loader.js` |
+| `config/config-cache.js` | `core/config/config-cache.js` |
+| `session/context-*.js` | `core/session/context-*.js` |
+| `elicitation/*.js` | `core/elicitation/*.js` |
+| Various utils | `core/utils/` |
+
+Scripts that import these modules have been updated to reference the new paths.
+
+---
+
+*Synkra AIOX Core Module v2.0.0*
+
+
+## 🎉 PR Demo — Code Quality Improvements
+
+Este repositório contém implementações completas de melhorias de código:
+- **P0**: Decomposição de componentes landing, routing centralizado
+- **P1**: Type-safe Supabase, React Query hooks, Error boundaries  
+- **P2**: Lazy loading, Performance optimization
+- **P3**: Testes unitários com padrão estabelecido
+- **P4**: Documentação JSDoc + Code Style guide
+
+### Como começar?
+```bash
+npm install
 npm run dev
+npm test
 ```
 
-**Edit a file directly in GitHub**
+### Estrutura de arquivos
+- `src/constants/` — Constantes centralizadas (routes, landing config)
+- `src/components/landing/` — Componentes decompostos
+- `src/hooks/` — React Query hooks padronizados
+- `src/lib/` — Type-safe Supabase client
+- `docs/` — Documentação (CODE_STYLE, PERFORMANCE)
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Qualidade de código
+✅ Type-safe routing  
+✅ Lazy-loaded components  
+✅ Error boundaries  
+✅ React Query patterns  
+✅ Unit tests  
+✅ JSDoc documentation  
 
-**Use GitHub Codespaces**
+Para detalhes, veja `docs/CODE_STYLE.md`
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## Testing
-
-### Unit Tests
-
-Run unit tests with Vitest:
-
-```sh
-npm run test
-```
-
-Run with coverage report (HTML, JSON, LCOV):
-
-```sh
-npm run test:coverage
-```
-
-View coverage report:
-
-```sh
-# Open HTML report in browser
-open coverage/index.html
-```
-
-**Coverage Thresholds**: Minimum 70% required (lines, functions, branches, statements). CI pipeline enforces these thresholds and blocks merges below the threshold.
-
-### E2E Tests
-
-Run end-to-end tests with Playwright:
-
-```sh
-# Run all E2E tests
-npx playwright test
-
-# Run tests in UI mode (interactive)
-npx playwright test --ui
-
-# Run specific test file
-npx playwright test e2e/tests/example.spec.ts
-
-# Run tests for specific browser
-npx playwright test --project=chromium
-npx playwright test --project=firefox
-npx playwright test --project=webkit
-
-# Run with debugging
-npx playwright test --debug
-```
-
-View test report:
-
-```sh
-npx playwright show-report
-```
-
-**Browser Support**: Chrome, Firefox, Safari, Mobile Chrome, Mobile Safari
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-- Playwright (E2E Testing)
-- Vitest (Unit Testing)
-
-## Security notes
-
-- Keep real secrets out of the repo. Use `.env` locally and deployment secrets in your hosting platform.
-- Only the Supabase anon key should be used in the frontend; never expose service-role keys in client code.
-- Review `SECURITY.md` for additional guidance.
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/9b5e925d-516b-4c9a-8bf5-96cde5168edd) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
-
-## Security Notes
-
-Este projeto segue boas práticas de segurança para proteger dados sensíveis.
-
-- **Segredos**: Nunca commite arquivos `.env` com valores reais. Use `.env.example` como referência.
-- **Chaves de API**: Apenas a `anon key` é permitida no frontend. Chaves privadas devem ficar no backend.
-- **RLS**: Todas as tabelas com dados sensíveis possuem Row Level Security habilitado.
-
-Para mais detalhes, consulte o arquivo [SECURITY.md](./SECURITY.md).

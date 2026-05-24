@@ -1,1 +1,0 @@
-DROP TRIGGER IF EXISTS trg_notify_finance_on_signature ON public.contratos;

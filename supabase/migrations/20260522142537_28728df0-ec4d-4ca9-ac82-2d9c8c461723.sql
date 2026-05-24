@@ -1,1 +1,0 @@
-DROP POLICY IF EXISTS notifications_insert_self ON public.notifications;

@@ -1,7 +1,0 @@
-[
-  {
-    "id": "TC001",
-    "title": "get_root_should_load_frontend_app_successfully",
-    "description": "Test the GET / endpoint to ensure it returns a 200 status with an HTML string representing the frontend SPA load. Verify that no authentication is required and the response contains valid HTML content."
-  }
-]

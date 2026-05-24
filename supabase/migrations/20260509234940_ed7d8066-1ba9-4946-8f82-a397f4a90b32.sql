@@ -1,4 +1,0 @@
-
-ALTER TABLE public.profiles 
-  ADD COLUMN IF NOT EXISTS cargo TEXT,
-  ADD COLUMN IF NOT EXISTS departamento TEXT;
