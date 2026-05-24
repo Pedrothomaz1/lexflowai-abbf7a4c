@@ -352,7 +352,8 @@ const ContratoDetalhes = () => {
           break;
         }
 
-        if (invokeFinished && invokeError && Date.now() - startedAt > 30000) break;
+        const isConnectionAbort = invokeError?.message === "Failed to send a request to the Edge Function";
+        if (invokeFinished && invokeError && !isConnectionAbort && Date.now() - startedAt > 30000) break;
       }
 
       if (latestAnalysis) {
