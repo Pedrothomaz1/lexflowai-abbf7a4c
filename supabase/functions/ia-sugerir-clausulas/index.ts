@@ -8,6 +8,7 @@ const corsHeaders = {
 };
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_LEN = 80000;
+const MODEL = "gemini-2.5-flash";
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
@@ -26,29 +27,34 @@ serve(async (req) => {
     if (!contrato) return json({ ok: false, error: 'Contrato não encontrado' }, 404);
 
     const sanitized = conteudo.replace(/[\x00-\x1F\x7F-\x9F]/g, '').substring(0, MAX_LEN);
-    const apiKey = Deno.env.get('LOVABLE_API_KEY');
-    if (!apiKey) throw new Error('LOVABLE_API_KEY não configurada');
+    const apiKey = Deno.env.get('GEMINI_API_KEY');
+    if (!apiKey) throw new Error('GEMINI_API_KEY não configurada');
 
-    const aiResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const sys = `Você é um advogado contratual sênior. Sugira cláusulas a adicionar, fortalecer ou ajustar com base no contrato analisado. Considere LGPD, anticorrupção, SLA, multas, foro, propriedade intelectual, confidencialidade. Retorne APENAS JSON válido: { "sugestoes": [{ "categoria": string, "prioridade": "alta"|"media"|"baixa", "titulo": string, "justificativa": string, "redacao_sugerida": string, "acao": "adicionar"|"substituir"|"reforcar" }] }`;
+    const userMsg = `Tipo: ${tipoContrato || contrato.tipo || 'n/d'}\nContexto: ${contexto || 'n/d'}\n\nContrato:\n${sanitized}`;
+
+    const aiResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`, {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: `Você é um advogado contratual sênior. Sugira cláusulas a adicionar, fortalecer ou ajustar com base no contrato analisado. Considere LGPD, anticorrupção, SLA, multas, foro, propriedade intelectual, confidencialidade. Retorne APENAS JSON: { "sugestoes": [{ "categoria": string, "prioridade": "alta"|"media"|"baixa", "titulo": string, "justificativa": string, "redacao_sugerida": string, "acao": "adicionar"|"substituir"|"reforcar" }] }` },
-          { role: 'user', content: `Tipo: ${tipoContrato || contrato.tipo || 'n/d'}\nContexto: ${contexto || 'n/d'}\n\nContrato:\n${sanitized}` }
-        ],
-        temperature: 0.4,
+        systemInstruction: { parts: [{ text: sys }] },
+        contents: [{ role: 'user', parts: [{ text: userMsg }] }],
+        generationConfig: { temperature: 0.4, responseMimeType: 'application/json' },
       }),
     });
     if (!aiResp.ok) {
+      const errText = await aiResp.text();
+      console.error('Gemini error', aiResp.status, errText);
       if (aiResp.status === 429) return json({ ok: false, error: 'Limite excedido. Tente novamente.' });
-      if (aiResp.status === 402) return json({ ok: false, error: 'Créditos insuficientes.' });
-      throw new Error(`AI error ${aiResp.status}`);
+      if (aiResp.status === 403) return json({ ok: false, error: 'GEMINI_API_KEY inválida ou sem permissão.' });
+      if (aiResp.status === 400) return json({ ok: false, error: 'Requisição inválida ao Gemini.' });
+      throw new Error(`Gemini error ${aiResp.status}`);
     }
     const data = await aiResp.json();
-    const raw = data.choices?.[0]?.message?.content ?? '';
-    const tokens = data.usage?.total_tokens || 0;
+    const parts = data?.candidates?.[0]?.content?.parts ?? [];
+    const raw = parts.map((p: any) => p?.text || '').join('').trim();
+    const tokens = data?.usageMetadata?.totalTokenCount || 0;
+
     let parsed: any;
     try {
       const m = raw.match(/```json\n?([\s\S]*?)```/) || raw.match(/```\n?([\s\S]*?)```/);
@@ -60,7 +66,7 @@ serve(async (req) => {
       contrato_id: contratoId,
       tipo: 'sugestao_clausulas',
       conteudo: parsed,
-      model: 'google/gemini-2.5-flash',
+      model: MODEL,
       tokens_usados: tokens,
       created_by: user.id,
     }).select().maybeSingle();

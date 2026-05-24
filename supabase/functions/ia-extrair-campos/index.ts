@@ -1,4 +1,4 @@
-// Extrai campos estruturados e riscos de um contrato via Lovable AI (tool calling).
+// Extrai campos estruturados e riscos de um contrato via Google Gemini (function calling).
 // Input: { contrato_id: string, texto: string }
 // Persiste em ai_extractions (campos + confiança) e ai_risk_reviews (riscos).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
@@ -11,49 +11,46 @@ const corsHeaders = {
 const json = (s: number, b: unknown) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-const TOOL = {
-  type: "function",
-  function: {
-    name: "registrar_analise_estruturada",
-    description: "Registra campos extraídos do contrato e riscos identificados, cada um com score de confiança de 0 a 1.",
-    parameters: {
-      type: "object",
-      properties: {
-        campos: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              campo: { type: "string", description: "Use SOMENTE estes nomes quando o valor estiver no contrato: parte_contratante, parte_contratada, valor_total, data_inicio, data_fim, vigencia, objeto, multa_rescisoria, foro, forma_pagamento (boleto|pix|ted|cartao|debito_automatico), condicao_pagamento (à vista|30 dias|parcelado|etc), numero_parcelas, dia_vencimento, valor_parcela, data_primeiro_vencimento, indice_reajuste (IPCA|IGPM|INPC|etc), periodicidade_reajuste (anual|semestral|mensal), multa_atraso_pct, juros_mora_pct, banco, agencia, conta, pix, favorecido" },
-              valor: { type: "string" },
-              confianca: { type: "number", minimum: 0, maximum: 1 },
-              trecho_origem: { type: "string" },
-            },
-            required: ["campo", "valor", "confianca"],
-            additionalProperties: false,
+const MODEL = "gemini-2.5-flash";
+
+// Schema sem additionalProperties / $schema (Gemini não suporta)
+const FUNCTION_DECLARATION = {
+  name: "registrar_analise_estruturada",
+  description: "Registra campos extraídos do contrato e riscos identificados, cada um com score de confiança de 0 a 1.",
+  parameters: {
+    type: "object",
+    properties: {
+      campos: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            campo: { type: "string", description: "Use SOMENTE estes nomes quando o valor estiver no contrato: parte_contratante, parte_contratada, valor_total, data_inicio, data_fim, vigencia, objeto, multa_rescisoria, foro, forma_pagamento (boleto|pix|ted|cartao|debito_automatico), condicao_pagamento (à vista|30 dias|parcelado|etc), numero_parcelas, dia_vencimento, valor_parcela, data_primeiro_vencimento, indice_reajuste (IPCA|IGPM|INPC|etc), periodicidade_reajuste (anual|semestral|mensal), multa_atraso_pct, juros_mora_pct, banco, agencia, conta, pix, favorecido" },
+            valor: { type: "string" },
+            confianca: { type: "number" },
+            trecho_origem: { type: "string" },
           },
-        },
-        riscos: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              clausula: { type: "string" },
-              tipo_risco: { type: "string", description: "Ex: financeiro, juridico, operacional, prazo, garantia, propriedade_intelectual" },
-              severidade: { type: "string", enum: ["alta", "media", "baixa"] },
-              descricao: { type: "string" },
-              recomendacao: { type: "string" },
-              trecho_origem: { type: "string" },
-              confianca: { type: "number", minimum: 0, maximum: 1 },
-            },
-            required: ["tipo_risco", "severidade", "descricao", "confianca"],
-            additionalProperties: false,
-          },
+          required: ["campo", "valor", "confianca"],
         },
       },
-      required: ["campos", "riscos"],
-      additionalProperties: false,
+      riscos: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            clausula: { type: "string" },
+            tipo_risco: { type: "string", description: "Ex: financeiro, juridico, operacional, prazo, garantia, propriedade_intelectual" },
+            severidade: { type: "string", enum: ["alta", "media", "baixa"] },
+            descricao: { type: "string" },
+            recomendacao: { type: "string" },
+            trecho_origem: { type: "string" },
+            confianca: { type: "number" },
+          },
+          required: ["tipo_risco", "severidade", "descricao", "confianca"],
+        },
+      },
     },
+    required: ["campos", "riscos"],
   },
 };
 
@@ -78,7 +75,6 @@ Deno.serve(async (req) => {
       return json(200, { ok: false, error: "contrato_id e texto (>=50 chars) obrigatórios" });
     }
 
-    // Resolve org via contrato (RLS garante visibilidade)
     const { data: ctt, error: ctErr } = await supabase
       .from("contratos")
       .select("id, organization_id")
@@ -87,25 +83,33 @@ Deno.serve(async (req) => {
     if (ctErr || !ctt) return json(200, { ok: false, error: "Contrato não encontrado" });
     const orgId = ctt.organization_id;
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) return json(200, { ok: false, error: "LOVABLE_API_KEY não configurado" });
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) return json(200, { ok: false, error: "GEMINI_API_KEY não configurado" });
 
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const sys = "Você é um analista de contratos. Extraia campos estruturados (incluindo bloco financeiro: forma/condição de pagamento, parcelas, vencimentos, índice e periodicidade de reajuste, multa de atraso, juros de mora e dados bancários quando presentes) e riscos do texto fornecido. Use confiança baixa quando o campo for ambíguo ou ausente. Responda em português chamando a função registrar_analise_estruturada.";
+    const userMsg = `Analise o contrato abaixo e chame a ferramenta registrar_analise_estruturada com os campos e riscos identificados.\n\n${texto.slice(0, 30000)}`;
+
+    const aiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: "Você é um analista de contratos. Extraia campos estruturados (incluindo bloco financeiro: forma/condição de pagamento, parcelas, vencimentos, índice e periodicidade de reajuste, multa de atraso, juros de mora e dados bancários quando presentes) e riscos do texto fornecido. Use confiança baixa quando o campo for ambíguo ou ausente. Responda em português." },
-          { role: "user", content: `Analise o contrato abaixo e chame a ferramenta registrar_analise_estruturada com os campos e riscos identificados.\n\n${texto.slice(0, 30000)}` },
-        ],
-        tools: [TOOL],
-        tool_choice: { type: "function", function: { name: "registrar_analise_estruturada" } },
+        systemInstruction: { parts: [{ text: sys }] },
+        contents: [{ role: "user", parts: [{ text: userMsg }] }],
+        tools: [{ functionDeclarations: [FUNCTION_DECLARATION] }],
+        toolConfig: {
+          functionCallingConfig: { mode: "ANY", allowedFunctionNames: ["registrar_analise_estruturada"] },
+        },
+        generationConfig: { temperature: 0.2 },
       }),
     });
 
     if (aiRes.status === 429) return json(200, { ok: false, error: "Limite de uso de IA atingido. Tente em instantes." });
-    if (aiRes.status === 402) return json(200, { ok: false, error: "Créditos de IA esgotados. Adicione créditos em Settings > Workspace > Usage." });
+    if (aiRes.status === 403) return json(200, { ok: false, error: "GEMINI_API_KEY inválida ou sem permissão." });
+    if (aiRes.status === 400) {
+      const t = await aiRes.text();
+      console.error("Gemini 400", t);
+      return json(200, { ok: false, error: "Requisição inválida ao Gemini." });
+    }
     if (!aiRes.ok) {
       const t = await aiRes.text();
       console.error("AI error", aiRes.status, t);
@@ -113,16 +117,13 @@ Deno.serve(async (req) => {
     }
 
     const aiBody = await aiRes.json();
-    const toolCall = aiBody?.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall?.function?.arguments) {
+    const partsArr = aiBody?.candidates?.[0]?.content?.parts ?? [];
+    const fc = partsArr.find((p: any) => p?.functionCall)?.functionCall;
+    if (!fc?.args) {
+      console.error("Gemini sem functionCall", JSON.stringify(aiBody).slice(0, 500));
       return json(200, { ok: false, error: "IA não retornou estrutura esperada" });
     }
-    let parsed: { campos: any[]; riscos: any[] };
-    try {
-      parsed = JSON.parse(toolCall.function.arguments);
-    } catch {
-      return json(200, { ok: false, error: "IA retornou JSON inválido" });
-    }
+    const parsed = fc.args as { campos?: any[]; riscos?: any[] };
 
     const campos = Array.isArray(parsed.campos) ? parsed.campos : [];
     const riscos = Array.isArray(parsed.riscos) ? parsed.riscos : [];
@@ -134,7 +135,7 @@ Deno.serve(async (req) => {
       valor_extraido: c.valor != null ? String(c.valor) : null,
       confianca: typeof c.confianca === "number" ? Math.max(0, Math.min(1, c.confianca)) : null,
       trecho_origem: c.trecho_origem ?? null,
-      modelo: "google/gemini-3-flash-preview",
+      modelo: MODEL,
       status: "pendente",
       created_by: userId,
     }));

@@ -9,6 +9,7 @@ const corsHeaders = {
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_LEN = 60000;
+const MODEL = "gemini-2.5-pro";
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -21,7 +22,6 @@ function escapeHTML(s: string) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-// Diff palavra-a-palavra (mesmo algoritmo do ContractRedlineEditor)
 function computeChanges(original: string, modified: string) {
   const o = original.split(/\s+/);
   const m = modified.split(/\s+/);
@@ -78,8 +78,8 @@ serve(async (req) => {
     if (!contrato) return json({ ok: false, error: "Contrato não encontrado" }, 404);
 
     const sanitized = conteudo.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "").substring(0, MAX_LEN);
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!apiKey) throw new Error("LOVABLE_API_KEY não configurada");
+    const apiKey = Deno.env.get("GEMINI_API_KEY");
+    if (!apiKey) throw new Error("GEMINI_API_KEY não configurada");
 
     const sys = `Você é um advogado contratual sênior. Sua tarefa é REVISAR o contrato e devolver uma VERSÃO MARCADA (markup) com inserções, remoções e ajustes de redação para reduzir risco para a parte contratante.
 REGRAS:
@@ -94,28 +94,31 @@ REGRAS:
   ]
 }`;
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const userMsg = `Tipo do contrato: ${contrato.tipo || "n/d"}\nFoco da revisão: ${foco || "geral, com ênfase em redução de risco"}\n\n--- CONTRATO ORIGINAL ---\n${sanitized}`;
+
+    const aiResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`, {
       method: "POST",
-      headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
-        messages: [
-          { role: "system", content: sys },
-          { role: "user", content: `Tipo do contrato: ${contrato.tipo || "n/d"}\nFoco da revisão: ${foco || "geral, com ênfase em redução de risco"}\n\n--- CONTRATO ORIGINAL ---\n${sanitized}` },
-        ],
-        temperature: 0.3,
+        systemInstruction: { parts: [{ text: sys }] },
+        contents: [{ role: "user", parts: [{ text: userMsg }] }],
+        generationConfig: { temperature: 0.3, responseMimeType: "application/json" },
       }),
     });
 
     if (!aiResp.ok) {
+      const errText = await aiResp.text();
+      console.error("Gemini error", aiResp.status, errText);
       if (aiResp.status === 429) return json({ ok: false, error: "Limite de uso da IA excedido. Tente novamente em instantes." });
-      if (aiResp.status === 402) return json({ ok: false, error: "Créditos de IA insuficientes." });
-      throw new Error(`AI error ${aiResp.status}`);
+      if (aiResp.status === 403) return json({ ok: false, error: "GEMINI_API_KEY inválida ou sem permissão." });
+      if (aiResp.status === 400) return json({ ok: false, error: "Requisição inválida ao Gemini." });
+      throw new Error(`Gemini error ${aiResp.status}`);
     }
 
     const data = await aiResp.json();
-    const raw: string = data.choices?.[0]?.message?.content ?? "";
-    const tokens = data.usage?.total_tokens || 0;
+    const parts = data?.candidates?.[0]?.content?.parts ?? [];
+    const raw: string = parts.map((p: any) => p?.text || "").join("").trim();
+    const tokens = data?.usageMetadata?.totalTokenCount || 0;
 
     let parsed: any;
     try {
@@ -136,7 +139,6 @@ REGRAS:
     const alteracoes = computeChanges(sanitized, conteudoRevisado);
     const marcado = generateMarkedContent(sanitized, conteudoRevisado);
 
-    // Próxima versão
     const { data: existing } = await supabase
       .from("contract_redlines").select("versao")
       .eq("contrato_id", contratoId).order("versao", { ascending: false }).limit(1).maybeSingle();
@@ -162,7 +164,6 @@ REGRAS:
       return json({ ok: false, error: "Falha ao salvar a marcação sugerida." });
     }
 
-    // Registra também em contract_ai_insights (tipo: redline) para histórico de IA
     await supabase.from("contract_ai_insights").insert({
       organization_id: contrato.organization_id,
       contrato_id: contratoId,
@@ -173,7 +174,7 @@ REGRAS:
         resumo_alteracoes: parsed?.resumo_alteracoes ?? [],
         total_alteracoes: alteracoes.length,
       },
-      model: "google/gemini-2.5-pro",
+      model: MODEL,
       tokens_usados: tokens,
       created_by: user.id,
     });
