@@ -1782,6 +1782,9 @@ export type Database = {
       }
       contratos: {
         Row: {
+          analise_error: string | null
+          analise_iniciada_em: string | null
+          analise_status: string
           arquivo_hash: string | null
           arquivo_url: string | null
           centro_custo: string | null
@@ -1840,6 +1843,9 @@ export type Database = {
           versao: number
         }
         Insert: {
+          analise_error?: string | null
+          analise_iniciada_em?: string | null
+          analise_status?: string
           arquivo_hash?: string | null
           arquivo_url?: string | null
           centro_custo?: string | null
@@ -1898,6 +1904,9 @@ export type Database = {
           versao?: number
         }
         Update: {
+          analise_error?: string | null
+          analise_iniciada_em?: string | null
+          analise_status?: string
           arquivo_hash?: string | null
           arquivo_url?: string | null
           centro_custo?: string | null
