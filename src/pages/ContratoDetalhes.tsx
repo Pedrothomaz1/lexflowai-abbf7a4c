@@ -278,6 +278,14 @@ const ContratoDetalhes = () => {
 
     setIsAnalyzing(true);
     try {
+      const { data: previousAnalysis } = await supabase
+        .from("contract_analysis")
+        .select("id")
+        .eq("contrato_id", contrato.id)
+        .order("analisado_em", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
       const conteudo = `
         Contrato: ${contrato.numero_contrato}
         Título: ${contrato.titulo}
@@ -288,11 +296,26 @@ const ContratoDetalhes = () => {
       `;
 
       const { data, error } = await supabase.functions.invoke("analisar-contrato-ia", {
-        body: { contratoId: contrato.id, conteudo, skill },
+        body: { contratoId: contrato.id, conteudo, skill, async: true },
       });
 
-      if (error) {
-        const { data: latestAnalysis } = await supabase
+      if (error) throw error;
+      if (!data?.success) {
+        throw new Error(data.error || "Erro na análise");
+      }
+
+      toast({
+        title: "Análise iniciada",
+        description: "Você pode continuar na tela; o resultado será carregado automaticamente.",
+      });
+
+      const startedAt = Date.now();
+      const timeoutMs = 180000;
+      let latestAnalysis: any = null;
+
+      while (Date.now() - startedAt < timeoutMs) {
+        await new Promise((resolve) => window.setTimeout(resolve, 5000));
+        const { data: polledAnalysis } = await supabase
           .from("contract_analysis")
           .select("*")
           .eq("contrato_id", contrato.id)
@@ -300,34 +323,30 @@ const ContratoDetalhes = () => {
           .limit(1)
           .maybeSingle();
 
-        if (latestAnalysis) {
-          toast({
-            title: "Análise concluída",
-            description: "O resultado foi salvo e carregado abaixo.",
-          });
-          setAnalise(latestAnalysis);
-          setShowAnalise(true);
-          return;
+        if (polledAnalysis && polledAnalysis.id !== previousAnalysis?.id) {
+          latestAnalysis = polledAnalysis;
+          break;
         }
-
-        throw error;
       }
 
-      if (data.success) {
+      if (latestAnalysis) {
         toast({
           title: "Análise concluída",
-          description: `Skill aplicada: ${data.skill ?? skill}`,
+          description: "O resultado foi salvo e carregado abaixo.",
         });
-        setAnalise(data.analise);
+        setAnalise(latestAnalysis);
         setShowAnalise(true);
       } else {
-        throw new Error(data.error || "Erro na análise");
+        toast({
+          title: "Análise em processamento",
+          description: "A análise continua em segundo plano. Reabra este contrato em instantes para carregar o resultado.",
+        });
       }
     } catch (error: any) {
       toast({
         title: "Erro na análise",
         description: error?.message === "Failed to send a request to the Edge Function"
-          ? "A análise demorou mais que o limite da conexão. Tente novamente; se já tiver concluído, o resultado aparecerá automaticamente."
+          ? "A análise foi iniciada, mas a conexão caiu antes da confirmação. Aguarde alguns instantes e atualize o contrato."
           : handleDbError(error).message,
         variant: "destructive",
       });
