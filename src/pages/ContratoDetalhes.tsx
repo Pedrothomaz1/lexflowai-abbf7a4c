@@ -278,6 +278,14 @@ const ContratoDetalhes = () => {
 
     setIsAnalyzing(true);
     try {
+      const { data: previousAnalysis } = await supabase
+        .from("contract_analysis")
+        .select("id")
+        .eq("contrato_id", contrato.id)
+        .order("analisado_em", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
       const conteudo = `
         Contrato: ${contrato.numero_contrato}
         Título: ${contrato.titulo}
@@ -287,12 +295,53 @@ const ContratoDetalhes = () => {
         Observações: ${contrato.observacoes || ""}
       `;
 
-      const { data, error } = await supabase.functions.invoke("analisar-contrato-ia", {
-        body: { contratoId: contrato.id, conteudo, skill },
+      toast({
+        title: "Análise iniciada",
+        description: "Você pode continuar na tela; o resultado será carregado automaticamente.",
       });
 
-      if (error) {
-        const { data: latestAnalysis } = await supabase
+      const startedAt = Date.now();
+      const timeoutMs = 180000;
+      let latestAnalysis: typeof analise = null;
+      let invokeFinished = false;
+      let invokeError: unknown = null;
+
+      const invokePromise = supabase.functions
+        .invoke("analisar-contrato-ia", {
+          body: { contratoId: contrato.id, conteudo, skill },
+        })
+        .then(({ data, error }) => {
+          invokeFinished = true;
+          if (error) {
+            invokeError = error;
+            return null;
+          }
+          if (!data?.success) {
+            invokeError = new Error(data?.error || "Erro na análise");
+            return null;
+          }
+          return data.analise ?? null;
+        })
+        .catch((error) => {
+          invokeFinished = true;
+          invokeError = error;
+          return null;
+        });
+
+      while (Date.now() - startedAt < timeoutMs) {
+        const directResult = !invokeFinished
+          ? await Promise.race([
+              invokePromise,
+              new Promise<null>((resolve) => window.setTimeout(() => resolve(null), 5000)),
+            ])
+          : (await new Promise<null>((resolve) => window.setTimeout(() => resolve(null), 5000)));
+
+        if (directResult && directResult.id !== previousAnalysis?.id) {
+          latestAnalysis = directResult;
+          break;
+        }
+
+        const { data: polledAnalysis } = await supabase
           .from("contract_analysis")
           .select("*")
           .eq("contrato_id", contrato.id)
@@ -300,34 +349,36 @@ const ContratoDetalhes = () => {
           .limit(1)
           .maybeSingle();
 
-        if (latestAnalysis) {
-          toast({
-            title: "Análise concluída",
-            description: "O resultado foi salvo e carregado abaixo.",
-          });
-          setAnalise(latestAnalysis);
-          setShowAnalise(true);
-          return;
+        if (polledAnalysis && polledAnalysis.id !== previousAnalysis?.id) {
+          latestAnalysis = polledAnalysis;
+          break;
         }
 
-        throw error;
+        const isConnectionAbort = invokeError instanceof Error && invokeError.message === "Failed to send a request to the Edge Function";
+        if (invokeFinished && invokeError && !isConnectionAbort && Date.now() - startedAt > 30000) break;
       }
 
-      if (data.success) {
+      if (latestAnalysis) {
         toast({
           title: "Análise concluída",
-          description: `Skill aplicada: ${data.skill ?? skill}`,
+          description: "O resultado foi salvo e carregado abaixo.",
         });
-        setAnalise(data.analise);
+        setAnalise(latestAnalysis);
         setShowAnalise(true);
+      } else if (invokeError) {
+        throw invokeError;
       } else {
-        throw new Error(data.error || "Erro na análise");
+        toast({
+          title: "Análise em processamento",
+          description: "A análise continua em segundo plano. Reabra este contrato em instantes para carregar o resultado.",
+        });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const isConnectionAbort = error instanceof Error && error.message === "Failed to send a request to the Edge Function";
       toast({
         title: "Erro na análise",
-        description: error?.message === "Failed to send a request to the Edge Function"
-          ? "A análise demorou mais que o limite da conexão. Tente novamente; se já tiver concluído, o resultado aparecerá automaticamente."
+        description: isConnectionAbort
+          ? "A análise foi iniciada, mas a conexão caiu antes da confirmação. Aguarde alguns instantes e atualize o contrato."
           : handleDbError(error).message,
         variant: "destructive",
       });
