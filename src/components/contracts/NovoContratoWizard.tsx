@@ -163,9 +163,35 @@ export function NovoContratoWizard({
       setUploading(false);
       setExtracting(true);
 
-      const { data, error: fnError } = await supabase.functions.invoke("extrair-dados-pdf", {
-        body: { fileUrl: path },
-      });
+      // Bypass supabase.functions.invoke (its global fetch has a 10s abort timeout
+      // that kills long extractions). Call edge function directly with a 90s timeout.
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/extrair-dados-pdf`;
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 90_000);
+
+      let data: any = null;
+      let fnError: unknown = null;
+      try {
+        const resp = await fetch(fnUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({ fileUrl: path }),
+          signal: controller.signal,
+        });
+        data = await resp.json().catch(() => null);
+        if (!resp.ok) fnError = data?.error || `HTTP ${resp.status}`;
+      } catch (e) {
+        fnError = e;
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
       console.log("[NovoContratoWizard] extrair-dados-pdf response:", { data, fnError });
 
