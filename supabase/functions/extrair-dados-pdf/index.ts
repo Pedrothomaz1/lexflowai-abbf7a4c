@@ -176,18 +176,10 @@ serve(async (req) => {
         messages: [
           {
             role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: `Analise este documento de contrato e extraia as seguintes informações estruturadas. Seja preciso e extraia apenas o que está claramente presente no documento.`
-              },
-              {
-                type: 'image_url',
-                image_url: { url: dataUrl }
-              }
-            ]
+            content: userContent
           }
         ],
+
         tools: [
           {
             type: 'function',
