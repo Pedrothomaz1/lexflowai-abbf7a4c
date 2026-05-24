@@ -23,7 +23,7 @@
  *   return (
  *     <>
  *       <HeroSection />
- *       <FeaturesGrid /> {/* Scrolls to this when clicking "Ver como funciona" */}
+ *       <FeaturesGrid />
  *       <Footer />
  *     </>
  *   );

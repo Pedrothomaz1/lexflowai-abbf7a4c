@@ -19,7 +19,7 @@
  *   return (
  *     <>
  *       <LandingHeader />
- *       <main>{/* page content */}</main>
+ *       <main>...page content...</main>
  *     </>
  *   );
  * }

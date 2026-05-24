@@ -17,7 +17,7 @@
  *   return (
  *     <>
  *       <HeroSection />
- *       {/* ... other sections */}
+ *       ... other sections
  *     </>
  *   );
  * }
