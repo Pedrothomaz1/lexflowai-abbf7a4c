@@ -1,8 +1,0 @@
-User-agent: *
-Allow: /
-Disallow: /dashboard
-Disallow: /contratos
-Disallow: /admin
-Disallow: /api/
-
-Sitemap: https://www.lexflowai.com.br/sitemap.xml
