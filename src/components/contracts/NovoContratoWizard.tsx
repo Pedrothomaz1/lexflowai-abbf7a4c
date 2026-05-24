@@ -167,13 +167,20 @@ export function NovoContratoWizard({
         body: { fileUrl: path },
       });
 
-      if (!fnError && data?.success && data.data) {
+      console.log("[NovoContratoWizard] extrair-dados-pdf response:", { data, fnError });
+
+      if (fnError) {
+        console.error("[NovoContratoWizard] Edge function error:", fnError);
+        setExtractionFailed(true);
+      } else if (data?.success && data.data) {
         applyExtractedData(data.data);
         setExtractionFailed(false);
       } else {
+        console.error("[NovoContratoWizard] Extraction returned no data:", data);
         setExtractionFailed(true);
       }
-    } catch {
+    } catch (err) {
+      console.error("[NovoContratoWizard] Exception during extraction:", err);
       setExtractionFailed(true);
     } finally {
       setUploading(false);
