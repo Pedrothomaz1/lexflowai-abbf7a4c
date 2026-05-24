@@ -1,7 +1,5 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import {
   Dialog,
@@ -9,7 +7,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,383 +19,390 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Upload, FileText, Loader2, Sparkles, X, ArrowRight, ArrowLeft } from "lucide-react";
-import { handleDbError } from "@/utils/dbErrorHandler";
-import { InlineFornecedorForm } from "./InlineFornecedorForm";
+import { Loader2, Upload, Sparkles, ArrowRight, ArrowLeft, FileText, X } from "lucide-react";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
-type Fornecedor = { id: string; nome: string; cnpj?: string | null };
+type WizardStep = "upload" | "extracao" | "revisao";
 
-interface Props {
+interface ExtractedData {
+  titulo?: string;
+  numero_contrato?: string;
+  tipo?: string;
+  contratante?: { nome?: string; documento?: string };
+  contratada?: { nome?: string; documento?: string };
+  valor_total?: number;
+  data_inicio?: string;
+  data_fim?: string;
+  data_assinatura?: string;
+  objeto?: string;
+  confianca?: number;
+}
+
+interface FormData {
+  numero_contrato: string;
+  titulo: string;
+  descricao: string;
+  tipo: string;
+  valor_total: string;
+  moeda: string;
+  data_inicio: string;
+  data_fim: string;
+  fornecedor_id: string;
+}
+
+interface Fornecedor {
+  id: string;
+  nome: string;
+  cnpj?: string | null;
+  cpf?: string | null;
+}
+
+interface NovoContratoWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   fornecedores: Fornecedor[];
-  onFornecedorCreated?: (f: Fornecedor) => void;
-  onCreated?: () => void;
+  initialFormData: FormData;
+  onSuccess: () => void;
 }
 
-type Step = "upload" | "extracao" | "revisao";
-
-const EMPTY_FORM = {
-  numero_contrato: "",
-  titulo: "",
-  descricao: "",
-  tipo: "outro",
-  valor_total: "",
-  moeda: "BRL",
-  data_inicio: "",
-  data_fim: "",
-  fornecedor_id: "",
+const STEPS: WizardStep[] = ["upload", "extracao", "revisao"];
+const STEP_LABELS: Record<WizardStep, string> = {
+  upload: "Upload",
+  extracao: "Extração",
+  revisao: "Revisão",
 };
-
-function sanitizeStorageFileName(fileName: string) {
-  const parts = fileName.split(".");
-  const ext = parts.length > 1 ? `.${parts.pop()?.toLowerCase().replace(/[^a-z0-9]/g, "")}` : "";
-  const base = parts.join(".") || "contrato";
-  const safeBase = base
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9._-]+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^[-.]+|[-.]+$/g, "")
-    .slice(0, 80);
-
-  return `${safeBase || "contrato"}${ext || ""}`;
-}
 
 export function NovoContratoWizard({
   open,
   onOpenChange,
   fornecedores,
-  onFornecedorCreated,
-  onCreated,
-}: Props) {
-  const navigate = useNavigate();
-  const { toast } = useToast();
+  initialFormData,
+  onSuccess,
+}: NovoContratoWizardProps) {
   const { organization } = useOrganization();
-
-  const [step, setStep] = useState<Step>("upload");
+  const [step, setStep] = useState<WizardStep>("upload");
   const [file, setFile] = useState<File | null>(null);
-  const [formData, setFormData] = useState(EMPTY_FORM);
-  const [extractionNote, setExtractionNote] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [extracting, setExtracting] = useState(false);
+  const [extractionFailed, setExtractionFailed] = useState(false);
+  const [uploadedPath, setUploadedPath] = useState<string | null>(null);
+  const [formData, setFormData] = useState<FormData>(initialFormData);
   const [submitting, setSubmitting] = useState(false);
-  const [showNewFornecedor, setShowNewFornecedor] = useState(false);
 
-  useEffect(() => {
-    if (!open) {
-      // reset on close
-      setStep("upload");
-      setFile(null);
-      setFormData(EMPTY_FORM);
-      setExtractionNote(null);
-      setShowNewFornecedor(false);
-    } else {
-      // pré-gerar número
-      (async () => {
-        const { data } = await supabase
-          .from("contratos")
-          .select("numero_contrato")
-          .order("created_at", { ascending: false })
-          .limit(1);
-        let next = `CT-${new Date().getFullYear()}-001`;
-        if (data && data.length > 0) {
-          const last = data[0].numero_contrato;
-          const m = last.match(/(\d+)$/);
-          if (m) {
-            const n = parseInt(m[1]) + 1;
-            const prefix = last.substring(0, last.length - m[1].length);
-            next = `${prefix}${n.toString().padStart(m[1].length, "0")}`;
-          }
-        }
-        setFormData((p) => ({ ...p, numero_contrato: next }));
-      })();
-    }
-  }, [open]);
+  const reset = useCallback(() => {
+    setStep("upload");
+    setFile(null);
+    setIsDragging(false);
+    setUploading(false);
+    setExtracting(false);
+    setExtractionFailed(false);
+    setUploadedPath(null);
+    setFormData(initialFormData);
+    setSubmitting(false);
+  }, [initialFormData]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (f) setFile(f);
-    e.target.value = "";
+  const handleClose = useCallback(() => {
+    reset();
+    onOpenChange(false);
+  }, [reset, onOpenChange]);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const dropped = e.dataTransfer.files[0];
+    if (dropped) setFile(dropped);
+  };
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0];
+    if (selected) setFile(selected);
   };
 
-  const proceedToExtracao = async () => {
-    if (!file) {
-      toast({ variant: "destructive", title: "Anexe o contrato", description: "O upload do PDF/DOCX é obrigatório para iniciar." });
-      return;
-    }
+  const applyExtractedData = (data: ExtractedData) => {
+    setFormData((prev) => ({
+      ...prev,
+      titulo: data.titulo || prev.titulo,
+      numero_contrato: data.numero_contrato || prev.numero_contrato,
+      tipo: data.tipo || prev.tipo,
+      valor_total: data.valor_total != null ? String(data.valor_total) : prev.valor_total,
+      data_inicio: data.data_inicio || prev.data_inicio,
+      data_fim: data.data_fim || prev.data_fim,
+      descricao: data.objeto || prev.descricao,
+    }));
+  };
+
+  const handleUploadAndExtract = async () => {
+    if (!file || !organization?.id) return;
+
+    setUploading(true);
     setStep("extracao");
-    setExtracting(true);
-    setExtractionNote(null);
+
     try {
-      // 1) Ler texto do arquivo se for texto/docx-light — fallback: pular extração de campos
-      let texto = "";
-      if (file.type === "text/plain" || file.name.toLowerCase().endsWith(".txt")) {
-        texto = await file.text();
-      } else if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
-        try {
-          texto = await file.text();
-        } catch {
-          texto = "";
-        }
-      }
-
-      // Para PDFs a leitura via .text() pode vir suja; a extração de campos via texto exigirá ao menos 50 chars
-      // Em paralelo chamamos a função analisar-contrato (que usa o arquivo no storage) só depois do upload.
-      // Aqui vamos primeiro fazer upload temporário para conseguir signed URL.
-
-      // Faremos: upload temporário -> analisar-contrato (datas) -> se texto disponível, ia-extrair-campos
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user || !organization?.id) {
-        setExtractionNote("Sem organização ativa. Você pode revisar manualmente os campos.");
-        return;
-      }
-      const safeFileName = sanitizeStorageFileName(file.name);
-      const tempPath = `${organization.id}/rascunhos/${crypto.randomUUID()}-${safeFileName}`;
-      const { error: upErr } = await supabase.storage
+      if (!user) throw new Error("Não autenticado");
+
+      const ext = file.name.split(".").pop();
+      const path = `${organization.id}/${user.id}/${Date.now()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
         .from("contratos-documentos")
-        .upload(tempPath, file);
-      if (upErr) {
-        setExtractionNote("Não foi possível enviar o arquivo para análise. Preencha manualmente.");
-        return;
+        .upload(path, file);
+
+      if (uploadError) throw uploadError;
+
+      setUploadedPath(path);
+      setUploading(false);
+      setExtracting(true);
+
+      const { data, error: fnError } = await supabase.functions.invoke("extrair-dados-pdf", {
+        body: { fileUrl: path },
+      });
+
+      if (!fnError && data?.success && data.data) {
+        applyExtractedData(data.data);
+        setExtractionFailed(false);
+      } else {
+        setExtractionFailed(true);
       }
-      // guarda o path para reaproveitar ao salvar
-      (file as any).__tempPath = tempPath;
-
-      // analisar contrato (datas + demais campos)
-      try {
-        const { data: dt } = await supabase.functions.invoke("analisar-contrato", {
-          body: { fileUrl: tempPath },
-        });
-        if (dt?.success) {
-          // tentar mapear fornecedor pelo nome
-          let matchedFornecedorId = "";
-          if (dt.fornecedor_nome && fornecedores.length > 0) {
-            const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
-            const target = norm(dt.fornecedor_nome);
-            const found = fornecedores.find((f) => {
-              const n = norm(f.nome);
-              return n === target || n.includes(target) || target.includes(n);
-            });
-            if (found) matchedFornecedorId = found.id;
-          }
-
-          setFormData((p) => ({
-            ...p,
-            data_inicio: dt.data_inicio || p.data_inicio,
-            data_fim: dt.data_fim || p.data_fim,
-            titulo: dt.titulo || p.titulo,
-            descricao: dt.descricao || p.descricao,
-            tipo: dt.tipo || p.tipo,
-            valor_total: dt.valor_total || p.valor_total,
-            moeda: dt.moeda || p.moeda,
-            fornecedor_id: matchedFornecedorId || p.fornecedor_id,
-          }));
-
-          const partes: string[] = [];
-          if (dt.data_inicio || dt.data_fim) partes.push("datas");
-          if (dt.titulo) partes.push("título");
-          if (dt.valor_total) partes.push("valor");
-          if (dt.tipo) partes.push("tipo");
-          if (matchedFornecedorId) partes.push("fornecedor");
-          else if (dt.fornecedor_nome) partes.push(`fornecedor sugerido: "${dt.fornecedor_nome}" (não encontrado — selecione manualmente)`);
-
-          setExtractionNote(
-            partes.length > 0
-              ? `Extraído: ${partes.join(", ")}. Revise antes de salvar.`
-              : "Extração concluída sem campos identificáveis. Preencha manualmente."
-          );
-        } else {
-          setExtractionNote("Não foi possível extrair dados. Preencha manualmente.");
-        }
-      } catch (e) {
-        console.warn("analisar-contrato falhou:", e);
-        setExtractionNote("Falha na extração IA. Preencha manualmente.");
-      }
+    } catch {
+      setExtractionFailed(true);
     } finally {
+      setUploading(false);
       setExtracting(false);
     }
   };
 
-  const handleSubmit = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    if (!organization?.id) {
-      toast({ variant: "destructive", title: "Organização não encontrada" });
-      return;
-    }
-    if (!formData.titulo || !formData.fornecedor_id || !formData.data_inicio || !formData.data_fim) {
-      toast({ variant: "destructive", title: "Campos obrigatórios", description: "Preencha título, fornecedor e datas." });
-      return;
-    }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!organization?.id) return;
 
     setSubmitting(true);
     try {
-      const { data: ctt, error } = await supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+
+      const { data: newContrato, error } = await supabase
         .from("contratos")
-        .insert([{
-          ...formData,
-          organization_id: organization.id,
+        .insert({
+          numero_contrato: formData.numero_contrato,
+          titulo: formData.titulo,
+          descricao: formData.descricao || null,
+          tipo: formData.tipo,
+          status: "ativo",
           valor_total: formData.valor_total ? parseFloat(formData.valor_total) : null,
+          moeda: formData.moeda,
+          data_inicio: formData.data_inicio || null,
+          data_fim: formData.data_fim || null,
+          fornecedor_id: formData.fornecedor_id || null,
+          organization_id: organization.id,
           created_by: user.id,
-        }])
+        })
         .select("id")
         .single();
 
-      if (error || !ctt) {
-        toast({ variant: "destructive", title: "Erro ao criar contrato", description: handleDbError(error).message });
-        return;
+      if (error) throw error;
+
+      if (uploadedPath && newContrato?.id) {
+        await supabase.from("contract_documents").insert({
+          contrato_id: newContrato.id,
+          file_name: file?.name || "documento.pdf",
+          file_path: uploadedPath,
+          file_size: file?.size || 0,
+          mime_type: file?.type || "application/pdf",
+          uploaded_by: user.id,
+        }).then(() => null);
       }
 
-      // Vincular anexo original
-      if (file) {
-        const tempPath = (file as any).__tempPath as string | undefined;
-        let finalPath = tempPath;
-        if (!finalPath) {
-          finalPath = `${organization.id}/${user.id}/${Date.now()}-${sanitizeStorageFileName(file.name)}`;
-          const { error: upErr } = await supabase.storage.from("contratos-documentos").upload(finalPath, file);
-          if (upErr) {
-            console.error(upErr);
-          }
-        }
-        if (finalPath) {
-          await supabase.from("contract_attachments").insert({
-            organization_id: organization.id,
-            contrato_id: ctt.id,
-            nome_arquivo: file.name,
-            arquivo_url: finalPath,
-            tipo_documento: file.type,
-            tamanho_bytes: file.size,
-            uploaded_by: user.id,
-            is_original: true,
-          });
-        }
-      }
-
-      toast({ title: "Rascunho criado", description: "Revise os campos restantes e envie para análise." });
-      onCreated?.();
-      onOpenChange(false);
-      navigate(`/contratos/${ctt.id}`);
+      toast.success("Contrato criado com sucesso!");
+      onSuccess();
+      handleClose();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao criar contrato");
     } finally {
       setSubmitting(false);
     }
   };
 
+  const currentStepIndex = STEPS.indexOf(step);
+  const subtitle: Record<WizardStep, string> = {
+    upload: "Faça upload do arquivo do contrato para extrair dados automaticamente",
+    extracao: extracting || uploading ? "Extraindo dados do contrato com IA..." : "Extração concluída",
+    revisao: "Revise os dados extraídos e complete as informações",
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Novo Contrato</DialogTitle>
-          <DialogDescription>
-            {step === "upload" && "Comece pelo upload do contrato. A IA extrai os principais dados."}
-            {step === "extracao" && "Extraindo dados do contrato com IA…"}
-            {step === "revisao" && "Revise os dados extraídos e complete o cadastro."}
-          </DialogDescription>
+          <DialogDescription>{subtitle[step]}</DialogDescription>
         </DialogHeader>
 
-        {/* Stepper */}
-        <div className="flex items-center gap-2 text-xs">
-          {(["upload", "extracao", "revisao"] as Step[]).map((s, i) => (
-            <div key={s} className="flex items-center gap-2">
+        {/* Step indicators */}
+        <div className="flex items-center justify-center gap-2 py-2">
+          {STEPS.map((s, i) => (
+            <div key={s} className="flex items-center">
               <div
-                className={
-                  "h-6 w-6 rounded-full grid place-items-center font-semibold " +
-                  (step === s
+                className={cn(
+                  "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium",
+                  step === s
                     ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground")
-                }
+                    : currentStepIndex > i
+                    ? "bg-primary/20 text-primary"
+                    : "bg-muted text-muted-foreground"
+                )}
               >
                 {i + 1}
               </div>
-              <span className={step === s ? "font-medium" : "text-muted-foreground"}>
-                {s === "upload" ? "Upload" : s === "extracao" ? "Extração" : "Revisão"}
+              <span
+                className={cn(
+                  "ml-1 text-sm hidden sm:inline",
+                  step === s ? "font-semibold" : "text-muted-foreground"
+                )}
+              >
+                {STEP_LABELS[s]}
               </span>
-              {i < 2 && <ArrowRight className="h-3 w-3 text-muted-foreground" />}
+              {i < STEPS.length - 1 && (
+                <div
+                  className={cn(
+                    "w-8 h-0.5 mx-2",
+                    currentStepIndex > i ? "bg-primary/50" : "bg-muted"
+                  )}
+                />
+              )}
             </div>
           ))}
         </div>
 
-        {/* Step UPLOAD */}
+        {/* Step 1: Upload */}
         {step === "upload" && (
           <div className="space-y-4">
-            <label
-              htmlFor="contrato-upload"
-              className="block border-2 border-dashed rounded-xl p-8 text-center hover:bg-muted/30 transition-colors cursor-pointer"
+            <div
+              className={cn(
+                "border-2 border-dashed rounded-lg p-10 text-center cursor-pointer transition-colors",
+                isDragging
+                  ? "border-primary bg-primary/5"
+                  : "border-muted-foreground/25 hover:border-primary/50"
+              )}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => document.getElementById("wizard-file-input")?.click()}
             >
-              <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-              <p className="text-sm font-medium">Clique para selecionar o contrato</p>
-              <p className="text-xs text-muted-foreground mt-1">PDF, DOCX ou TXT</p>
               <input
-                id="contrato-upload"
+                id="wizard-file-input"
                 type="file"
-                accept=".pdf,.doc,.docx,.txt"
+                accept=".pdf,.doc,.docx"
                 className="hidden"
-                onChange={handleFileChange}
+                onChange={handleFileSelect}
               />
-            </label>
-            {file && (
-              <div className="flex items-center gap-2 text-sm bg-muted/40 rounded-lg px-3 py-2">
-                <FileText className="h-4 w-4 text-muted-foreground" />
-                <span className="truncate flex-1">{file.name}</span>
-                <span className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(0)} KB</span>
-                <button onClick={() => setFile(null)} className="text-muted-foreground hover:text-destructive">
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            )}
-            <DialogFooter>
-              <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-              <Button onClick={proceedToExtracao} disabled={!file}>
-                Próximo <ArrowRight className="h-4 w-4 ml-1" />
-              </Button>
-            </DialogFooter>
-          </div>
-        )}
-
-        {/* Step EXTRACAO */}
-        {step === "extracao" && (
-          <div className="space-y-4 py-6">
-            <div className="flex items-center justify-center gap-2 text-sm">
-              {extracting ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                  <span>Lendo seu contrato com IA…</span>
-                </>
+              {file ? (
+                <div className="flex items-center justify-center gap-3">
+                  <FileText className="h-8 w-8 text-primary" />
+                  <div className="text-left">
+                    <p className="font-medium">{file.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {(file.size / 1024).toFixed(0)} KB
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setFile(null); }}
+                    className="ml-2 text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
               ) : (
                 <>
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  <span>Extração concluída.</span>
+                  <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+                  <p className="font-medium">Arraste o contrato aqui</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    ou clique para selecionar · PDF, DOC, DOCX
+                  </p>
                 </>
               )}
             </div>
-            {extractionNote && (
-              <p className="text-xs text-center text-muted-foreground">{extractionNote}</p>
-            )}
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setStep("upload")} disabled={extracting}>
-                <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
+
+            <div className="flex justify-between">
+              <Button variant="outline" onClick={handleClose}>
+                Cancelar
               </Button>
-              <Button onClick={() => setStep("revisao")} disabled={extracting}>
-                Revisar dados <ArrowRight className="h-4 w-4 ml-1" />
+              <Button onClick={handleUploadAndExtract} disabled={!file}>
+                Extrair com IA
+                <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
-            </DialogFooter>
+            </div>
           </div>
         )}
 
-        {/* Step REVISAO */}
+        {/* Step 2: Extraction */}
+        {step === "extracao" && (
+          <div className="flex flex-col items-center justify-center py-10 space-y-4 text-center">
+            {uploading || extracting ? (
+              <>
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                <p className="font-medium">
+                  {uploading ? "Enviando arquivo..." : "Analisando com IA..."}
+                </p>
+                <p className="text-sm text-muted-foreground">Isso pode levar alguns segundos</p>
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-12 w-12 text-primary" />
+                <p className="text-lg font-semibold">Extração concluída.</p>
+                {extractionFailed && (
+                  <p className="text-sm text-muted-foreground max-w-xs">
+                    Não foi possível enviar o arquivo para análise. Preencha manualmente.
+                  </p>
+                )}
+                <div className="flex gap-3 pt-2">
+                  <Button variant="outline" onClick={() => { setStep("upload"); setExtractionFailed(false); }}>
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Voltar
+                  </Button>
+                  <Button onClick={() => setStep("revisao")}>
+                    Revisar dados
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Step 3: Review form */}
         {step === "revisao" && (
-          <div className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Número do contrato *</Label>
+                <Label htmlFor="wiz-numero">Número do Contrato *</Label>
                 <Input
+                  id="wiz-numero"
                   value={formData.numero_contrato}
-                  onChange={(e) => setFormData({ ...formData, numero_contrato: e.target.value })}
+                  onChange={(e) => setFormData((p) => ({ ...p, numero_contrato: e.target.value }))}
+                  required
+                  placeholder="Ex: CT-2024-001"
                 />
               </div>
               <div className="space-y-2">
-                <Label>Tipo *</Label>
-                <Select value={formData.tipo} onValueChange={(v) => setFormData({ ...formData, tipo: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Label htmlFor="wiz-tipo">Tipo *</Label>
+                <Select
+                  value={formData.tipo}
+                  onValueChange={(v) => setFormData((p) => ({ ...p, tipo: v }))}
+                >
+                  <SelectTrigger id="wiz-tipo">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="prestacao_servicos">Prestação de Serviço</SelectItem>
                     <SelectItem value="fornecimento">Fornecimento</SelectItem>
@@ -412,58 +416,65 @@ export function NovoContratoWizard({
             </div>
 
             <div className="space-y-2">
-              <Label>Título *</Label>
-              <Input value={formData.titulo} onChange={(e) => setFormData({ ...formData, titulo: e.target.value })} />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Descrição</Label>
-              <Textarea
-                rows={2}
-                value={formData.descricao}
-                onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
+              <Label htmlFor="wiz-titulo">Título *</Label>
+              <Input
+                id="wiz-titulo"
+                value={formData.titulo}
+                onChange={(e) => setFormData((p) => ({ ...p, titulo: e.target.value }))}
+                required
               />
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Fornecedor *</Label>
-                {!showNewFornecedor && (
-                  <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setShowNewFornecedor(true)}>
-                    + Novo fornecedor
-                  </Button>
-                )}
-              </div>
-              {showNewFornecedor ? (
-                <InlineFornecedorForm
-                  onCreated={(nf) => {
-                    onFornecedorCreated?.(nf);
-                    setFormData({ ...formData, fornecedor_id: nf.id });
-                    setShowNewFornecedor(false);
-                  }}
-                  onCancel={() => setShowNewFornecedor(false)}
-                />
-              ) : (
-                <Select value={formData.fornecedor_id} onValueChange={(v) => setFormData({ ...formData, fornecedor_id: v })}>
-                  <SelectTrigger><SelectValue placeholder="Selecione um fornecedor" /></SelectTrigger>
-                  <SelectContent>
-                    {fornecedores.map((f) => (
-                      <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+              <Label htmlFor="wiz-descricao">Descrição / Objeto</Label>
+              <Textarea
+                id="wiz-descricao"
+                value={formData.descricao}
+                onChange={(e) => setFormData((p) => ({ ...p, descricao: e.target.value }))}
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="wiz-fornecedor">Fornecedor *</Label>
+              <Select
+                value={formData.fornecedor_id}
+                onValueChange={(v) => setFormData((p) => ({ ...p, fornecedor_id: v }))}
+                required
+              >
+                <SelectTrigger id="wiz-fornecedor">
+                  <SelectValue placeholder="Selecione um fornecedor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {fornecedores.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      {f.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Valor total</Label>
-                <Input type="number" step="0.01" value={formData.valor_total} onChange={(e) => setFormData({ ...formData, valor_total: e.target.value })} />
+                <Label htmlFor="wiz-valor">Valor Total</Label>
+                <Input
+                  id="wiz-valor"
+                  type="number"
+                  step="0.01"
+                  value={formData.valor_total}
+                  onChange={(e) => setFormData((p) => ({ ...p, valor_total: e.target.value }))}
+                />
               </div>
               <div className="space-y-2">
-                <Label>Moeda</Label>
-                <Select value={formData.moeda} onValueChange={(v) => setFormData({ ...formData, moeda: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Label htmlFor="wiz-moeda">Moeda</Label>
+                <Select
+                  value={formData.moeda}
+                  onValueChange={(v) => setFormData((p) => ({ ...p, moeda: v }))}
+                >
+                  <SelectTrigger id="wiz-moeda">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="BRL">BRL (R$)</SelectItem>
                     <SelectItem value="USD">USD ($)</SelectItem>
@@ -475,29 +486,38 @@ export function NovoContratoWizard({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Data início *</Label>
-                <Input type="date" value={formData.data_inicio} onChange={(e) => setFormData({ ...formData, data_inicio: e.target.value })} />
+                <Label htmlFor="wiz-inicio">Data de Início *</Label>
+                <Input
+                  id="wiz-inicio"
+                  type="date"
+                  value={formData.data_inicio}
+                  onChange={(e) => setFormData((p) => ({ ...p, data_inicio: e.target.value }))}
+                  required
+                />
               </div>
               <div className="space-y-2">
-                <Label>Data fim *</Label>
-                <Input type="date" value={formData.data_fim} onChange={(e) => setFormData({ ...formData, data_fim: e.target.value })} />
+                <Label htmlFor="wiz-fim">Data de Término *</Label>
+                <Input
+                  id="wiz-fim"
+                  type="date"
+                  value={formData.data_fim}
+                  onChange={(e) => setFormData((p) => ({ ...p, data_fim: e.target.value }))}
+                  required
+                />
               </div>
             </div>
 
-            <p className="text-xs text-muted-foreground">
-              O bloco financeiro será liberado após o contrato passar pelos gates de validação.
-            </p>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setStep("extracao")} disabled={submitting}>
-                <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
+            <div className="flex justify-between pt-2">
+              <Button type="button" variant="outline" onClick={() => setStep("extracao")}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Voltar
               </Button>
-              <Button onClick={handleSubmit} disabled={submitting}>
+              <Button type="submit" disabled={submitting}>
                 {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Criar rascunho
+                Criar Contrato
               </Button>
-            </DialogFooter>
-          </div>
+            </div>
+          </form>
         )}
       </DialogContent>
     </Dialog>

@@ -1,59 +1,18 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// Allowed origins for CORS
-const STATIC_ALLOWED_ORIGINS = new Set<string>([
-  'http://localhost:8080',
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'https://lexflowai.com.br',
-  'https://www.lexflowai.com.br',
-  'https://lexflowai.lovable.app',
-  Deno.env.get('ALLOWED_ORIGIN') || '',
-].filter(Boolean));
-
-// Allowed origin regex patterns (Lovable preview/published domains)
-const ALLOWED_ORIGIN_PATTERNS: RegExp[] = [
-  /^https:\/\/[a-z0-9-]+\.lovableproject\.com$/i,
-  /^https:\/\/[a-z0-9-]+\.lovable\.app$/i,
-  /^https:\/\/[a-z0-9-]+--[a-z0-9-]+\.lovable\.app$/i,
-];
-
-function isOriginAllowed(origin: string): boolean {
-  if (!origin) return true; // same-origin / server-to-server
-  if (STATIC_ALLOWED_ORIGINS.has(origin)) return true;
-  return ALLOWED_ORIGIN_PATTERNS.some((re) => re.test(origin));
-}
-
-// Get CORS headers based on request origin
-function getCorsHeaders(req: Request): Record<string, string> | null {
-  const origin = req.headers.get('Origin') || '';
-  if (!isOriginAllowed(origin)) return null;
-  const allowedOrigin = origin || '*';
-
-  return {
-    'Access-Control-Allow-Origin': allowedOrigin,
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Max-Age': '86400',
-    'Vary': 'Origin',
-  };
-}
+// CORS: use wildcard since this endpoint is already protected by JWT auth
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Max-Age': '86400',
+};
 
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 serve(async (req) => {
-  const corsHeaders = getCorsHeaders(req);
-
-  // Reject requests from unauthorized origins
-  if (!corsHeaders) {
-    return new Response(
-      JSON.stringify({ error: 'Origin not allowed' }),
-      { status: 403, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }

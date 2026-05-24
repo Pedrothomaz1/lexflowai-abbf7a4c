@@ -16,7 +16,6 @@ import { ContractImport } from "@/components/ContractImport/ContractImport";
 import { KanbanBoard } from "@/components/contracts/KanbanBoard";
 import { CalendarView, CalendarObligation } from "@/components/contracts/CalendarView";
 import { NovoContratoWizard } from "@/components/contracts/NovoContratoWizard";
-import { Plus } from "lucide-react";
 import { helpTexts } from "@/lib/help-texts";
 import { HelpTooltip } from "@/components/ui/help-tooltip";
 import { handleDbError } from "@/utils/dbErrorHandler";
@@ -472,21 +471,22 @@ const Contratos = () => {
               Exportar
             </Button>
             <Button size="sm" className="btn-cta" onClick={() => setDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-1.5" />
+              <Upload className="h-4 w-4 mr-1.5" />
               Novo Contrato
             </Button>
-            <NovoContratoWizard
-              open={dialogOpen}
-              onOpenChange={(open) => { setDialogOpen(open); if (!open) setUploadedFiles([]); }}
-              fornecedores={fornecedores}
-              onFornecedorCreated={(newFornecedor) => {
-                setFornecedores(prev => [...prev, newFornecedor].sort((a, b) => a.nome.localeCompare(b.nome)));
-              }}
-              onCreated={fetchContratos}
-            />
-
           </div>
         }
+      />
+
+      <NovoContratoWizard
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        fornecedores={fornecedores}
+        initialFormData={formData}
+        onSuccess={() => {
+          fetchContratos();
+          generateNextContractNumber();
+        }}
       />
 
       <BuscaAvancada 
