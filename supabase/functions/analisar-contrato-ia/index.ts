@@ -208,8 +208,8 @@ const PROMPTS: Record<Exclude<SkillId, "auto" | "full">, { system: string; tool:
   },
 };
 
-function modelFor(skill: Exclude<SkillId, "auto" | "full">): string {
-  if (skill === "contract-review") return "google/gemini-2.5-pro";
+function modelFor(_skill: Exclude<SkillId, "auto" | "full">): string {
+  // Usamos flash em todas as skills para garantir conclusão dentro do limite do edge runtime.
   return "google/gemini-2.5-flash";
 }
 
