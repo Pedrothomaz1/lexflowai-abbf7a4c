@@ -70,6 +70,22 @@ const DashboardIA = React.lazy(() => import("./pages/DashboardIA"));
 const ContratoWorkflow = React.lazy(() => import("./pages/ContratoWorkflow"));
 const Onboarding = React.lazy(() => import("./pages/Onboarding"));
 
+const isChunkLoadError = (error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return /Importing a module script failed|Failed to fetch dynamically imported module|Loading chunk|ChunkLoadError/i.test(message);
+};
+
+const hardReload = async () => {
+  if ("caches" in window) {
+    const cacheNames = await window.caches.keys();
+    await Promise.all(cacheNames.map((cacheName) => window.caches.delete(cacheName)));
+  }
+
+  const url = new URL(window.location.href);
+  url.searchParams.set("reload", Date.now().toString());
+  window.location.replace(url.toString());
+};
+
 // Catches chunk load failures (e.g. deploy after user session, offline)
 class AppErrorBoundary extends Component<
   { children: React.ReactNode },
@@ -78,6 +94,12 @@ class AppErrorBoundary extends Component<
   state = { hasError: false };
   static getDerivedStateFromError() {
     return { hasError: true };
+  }
+  componentDidCatch(error: unknown) {
+    if (isChunkLoadError(error) && sessionStorage.getItem("lexflow:chunk-reload") !== "done") {
+      sessionStorage.setItem("lexflow:chunk-reload", "done");
+      void hardReload();
+    }
   }
   render() {
     if (this.state.hasError) {
@@ -89,7 +111,7 @@ class AppErrorBoundary extends Component<
           </p>
           <button
             className="mt-2 px-4 py-2 rounded bg-primary text-primary-foreground text-sm"
-            onClick={() => window.location.reload()}
+            onClick={() => void hardReload()}
           >
             Recarregar
           </button>
