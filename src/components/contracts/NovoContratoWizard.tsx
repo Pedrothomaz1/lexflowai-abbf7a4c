@@ -266,7 +266,7 @@ export function NovoContratoWizard({
           titulo: formData.titulo,
           descricao: formData.descricao || null,
           tipo: formData.tipo,
-          status: "vigente",
+          status: "rascunho",
           valor_total: formData.valor_total ? parseFloat(formData.valor_total) : null,
           moeda: formData.moeda,
           data_inicio: formData.data_inicio || null,
