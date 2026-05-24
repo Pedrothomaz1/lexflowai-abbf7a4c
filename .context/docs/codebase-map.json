@@ -1,0 +1,304 @@
+{
+  "version": "1.0.0",
+  "generated": "2026-05-23T20:00:00.000Z",
+  "stack": {
+    "primaryLanguage": "typescript",
+    "languages": [
+      "typescript",
+      "javascript",
+      "sql"
+    ],
+    "frameworks": [
+      "react",
+      "tailwindcss",
+      "shadcn-ui",
+      "framer-motion"
+    ],
+    "buildTools": [
+      "vite"
+    ],
+    "testFrameworks": [
+      "vitest",
+      "playwright",
+      "testing-library"
+    ],
+    "packageManager": "bun",
+    "isMonorepo": false,
+    "hasDocker": false,
+    "hasCI": true,
+    "runtimeEnvironment": "node",
+    "backendPlatform": "supabase",
+    "edgeFunctionRuntime": "deno"
+  },
+  "structure": {
+    "totalFiles": 200,
+    "rootPath": ".",
+    "topDirectories": [
+      {
+        "path": "src",
+        "description": "Código-fonte frontend (React + TypeScript)"
+      },
+      {
+        "path": "src/components",
+        "description": "Componentes React (UI, layout, módulos)"
+      },
+      {
+        "path": "src/hooks",
+        "description": "Custom hooks (auth, RBAC, data fetching)"
+      },
+      {
+        "path": "src/pages",
+        "description": "Páginas/rotas da aplicação"
+      },
+      {
+        "path": "src/integrations",
+        "description": "Integrações (Supabase client, types)"
+      },
+      {
+        "path": "src/lib",
+        "description": "Utilitários e helpers"
+      },
+      {
+        "path": "src/types",
+        "description": "Definições de tipos TypeScript"
+      },
+      {
+        "path": "supabase/functions",
+        "description": "25+ Edge Functions (Deno runtime)"
+      },
+      {
+        "path": "supabase/migrations",
+        "description": "Migrações SQL (schema, RLS, triggers)"
+      },
+      {
+        "path": "docs",
+        "description": "Documentação do projeto"
+      },
+      {
+        "path": "docs/stories",
+        "description": "Stories de desenvolvimento"
+      },
+      {
+        "path": "public",
+        "description": "Assets estáticos"
+      }
+    ],
+    "languageDistribution": [
+      {
+        "extension": ".tsx",
+        "count": 80,
+        "description": "React components and pages"
+      },
+      {
+        "extension": ".ts",
+        "count": 50,
+        "description": "TypeScript modules, hooks, utils"
+      },
+      {
+        "extension": ".sql",
+        "count": 30,
+        "description": "Database migrations"
+      },
+      {
+        "extension": ".md",
+        "count": 20,
+        "description": "Documentation"
+      },
+      {
+        "extension": ".json",
+        "count": 10,
+        "description": "Configuration files"
+      },
+      {
+        "extension": ".css",
+        "count": 2,
+        "description": "Stylesheets (index.css, globals)"
+      },
+      {
+        "extension": ".js",
+        "count": 3,
+        "description": "Config files (eslint, postcss)"
+      },
+      {
+        "extension": ".html",
+        "count": 1,
+        "description": "Entry point"
+      }
+    ]
+  },
+  "architecture": {
+    "layers": [
+      {
+        "name": "UI Layer",
+        "directories": ["src/components/", "src/pages/"],
+        "description": "React components + shadcn/ui + Tailwind CSS"
+      },
+      {
+        "name": "State Layer",
+        "directories": ["src/hooks/"],
+        "description": "React Query + custom hooks for data fetching and state"
+      },
+      {
+        "name": "Integration Layer",
+        "directories": ["src/integrations/"],
+        "description": "Supabase client, generated types, API wrappers"
+      },
+      {
+        "name": "Backend Layer",
+        "directories": ["supabase/functions/", "supabase/migrations/"],
+        "description": "Edge Functions (Deno) + PostgreSQL + RLS policies"
+      }
+    ],
+    "patterns": [
+      "Multi-tenant with RLS (organization_id)",
+      "Story-Driven Development (SDD)",
+      "PREVC phases (Planning, Review, Execution, Validation, Confirmation)",
+      "Conventional Commits",
+      "React Query for server state",
+      "shadcn/ui component primitives",
+      "Edge function response pattern: { success, data/error }"
+    ],
+    "entryPoints": [
+      "index.html",
+      "src/main.tsx",
+      "src/App.tsx"
+    ],
+    "mainEntryPoints": [
+      "src/main.tsx"
+    ],
+    "moduleExports": [
+      "src/integrations/supabase/client.ts",
+      "src/hooks/useAuth.ts",
+      "src/hooks/useRoles.ts",
+      "src/hooks/usePermissions.ts",
+      "src/lib/utils.ts",
+      "src/components/ui/"
+    ]
+  },
+  "symbols": {
+    "classes": [],
+    "interfaces": [],
+    "functions": [
+      {
+        "name": "current_user_org",
+        "type": "SQL SECURITY DEFINER",
+        "description": "Returns active organization_id for authenticated user"
+      },
+      {
+        "name": "has_role",
+        "type": "SQL SECURITY DEFINER",
+        "description": "Checks user role within current org"
+      },
+      {
+        "name": "has_permission",
+        "type": "SQL SECURITY DEFINER",
+        "description": "Checks user permission via role_permissions"
+      },
+      {
+        "name": "is_super_admin",
+        "type": "SQL SECURITY DEFINER",
+        "description": "Checks if user is global platform admin"
+      }
+    ],
+    "types": [],
+    "enums": []
+  },
+  "publicAPI": [],
+  "dependencies": {
+    "mostImported": [
+      "@/integrations/supabase/client",
+      "@/components/ui/*",
+      "@tanstack/react-query",
+      "react",
+      "lucide-react",
+      "framer-motion"
+    ]
+  },
+  "stats": {
+    "totalSymbols": 4,
+    "exportedSymbols": 4,
+    "analysisTimeMs": 100
+  },
+  "keyFiles": [
+    {
+      "path": "src/main.tsx",
+      "description": "React application bootstrap",
+      "category": "entry"
+    },
+    {
+      "path": "src/App.tsx",
+      "description": "Root component with routing and providers",
+      "category": "entry"
+    },
+    {
+      "path": "src/integrations/supabase/client.ts",
+      "description": "Supabase client singleton",
+      "category": "integration"
+    },
+    {
+      "path": "src/index.css",
+      "description": "CSS design tokens (HSL variables)",
+      "category": "style"
+    },
+    {
+      "path": "tailwind.config.ts",
+      "description": "Tailwind CSS configuration with design system",
+      "category": "config"
+    },
+    {
+      "path": "vite.config.ts",
+      "description": "Vite build and dev server configuration",
+      "category": "config"
+    },
+    {
+      "path": "vitest.config.ts",
+      "description": "Vitest test configuration",
+      "category": "config"
+    },
+    {
+      "path": "playwright.config.ts",
+      "description": "Playwright E2E test configuration",
+      "category": "config"
+    },
+    {
+      "path": "eslint.config.js",
+      "description": "ESLint linting rules",
+      "category": "config"
+    },
+    {
+      "path": "tsconfig.json",
+      "description": "TypeScript configuration",
+      "category": "config"
+    },
+    {
+      "path": "package.json",
+      "description": "Package manifest and scripts",
+      "category": "config"
+    }
+  ],
+  "navigation": {
+    "tests": "src/**/*.test.ts",
+    "config": [
+      "package.json",
+      "tsconfig.json",
+      "tsconfig.*.json",
+      "vitest.config.ts",
+      "eslint.config.js",
+      "vite.config.ts",
+      "tailwind.config.ts",
+      "playwright.config.ts",
+      "postcss.config.js"
+    ],
+    "types": [
+      "src/integrations/supabase/types.ts",
+      "src/types/"
+    ],
+    "mainLogic": [
+      "src"
+    ],
+    "backend": [
+      "supabase/functions",
+      "supabase/migrations"
+    ]
+  }
+}
