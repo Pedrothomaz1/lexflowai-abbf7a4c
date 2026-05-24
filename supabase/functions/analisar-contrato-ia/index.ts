@@ -451,8 +451,23 @@ async function processAnalysis(params: {
     });
   }
 
-  return { saved, skillAplicada, results };
+    await supabase
+      .from("contratos")
+      .update({ analise_status: "done", analise_error: null })
+      .eq("id", contratoId);
+
+    return { saved, skillAplicada, results };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("processAnalysis falhou:", msg);
+    await supabase
+      .from("contratos")
+      .update({ analise_status: "failed", analise_error: msg.slice(0, 500) })
+      .eq("id", contratoId);
+    throw err;
+  }
 }
+
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
