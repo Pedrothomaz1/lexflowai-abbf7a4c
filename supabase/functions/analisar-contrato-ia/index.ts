@@ -353,7 +353,55 @@ serve(async (req) => {
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) throw new Error("LOVABLE_API_KEY não configurada");
 
-    const sanitizado = sanitize(conteudo);
+    // Tentar enriquecer com o texto do documento anexado mais recente
+    let docText = "";
+    try {
+      const { data: docs } = await supabase
+        .from("contract_documents")
+        .select("file_path, file_name")
+        .eq("contrato_id", contratoId)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      const doc = docs?.[0];
+      if (doc?.file_path) {
+        const ext = (doc.file_path.split(".").pop() || "").toLowerCase();
+        const { data: signed } = await supabase.storage
+          .from("contratos-documentos")
+          .createSignedUrl(doc.file_path, 120);
+        if (signed?.signedUrl) {
+          const resp = await fetch(signed.signedUrl);
+          if (resp.ok) {
+            const buf = new Uint8Array(await resp.arrayBuffer());
+            if (ext === "docx") {
+              const mammoth = await import("npm:mammoth@1.8.0");
+              const { value } = await mammoth.extractRawText({ buffer: buf });
+              docText = (value || "").slice(0, MAX_CONTENT_LENGTH);
+            } else if (ext === "pdf" || ext === "txt") {
+              // Para PDF: extrair texto via pdf-parse
+              if (ext === "pdf") {
+                try {
+                  const pdfParse = (await import("npm:pdf-parse@1.1.1")).default;
+                  const parsed = await pdfParse(buf);
+                  docText = (parsed.text || "").slice(0, MAX_CONTENT_LENGTH);
+                } catch (e) {
+                  console.error("pdf-parse falhou:", e);
+                }
+              } else {
+                docText = new TextDecoder().decode(buf).slice(0, MAX_CONTENT_LENGTH);
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Falha ao extrair texto do documento:", e);
+    }
+
+    const conteudoCompleto = docText
+      ? `${conteudo}\n\n=== TEXTO INTEGRAL DO CONTRATO ===\n${docText}`
+      : conteudo;
+    const sanitizado = sanitize(conteudoCompleto);
+
 
     // Resolver skills a rodar
     const resolved: Exclude<SkillId, "auto" | "full">[] =
