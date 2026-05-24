@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,13 +19,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, FileText, X, Loader2 } from "lucide-react";
+import { Plus, FileText, X, Loader2, Search, AlertTriangle } from "lucide-react";
+import { InlineFornecedorForm } from "./InlineFornecedorForm";
+import { CnpjStatusBadge, isCnpjProblem } from "@/components/cnpj/CnpjStatusBadge";
+import { useCnpjVerification } from "@/hooks/useCnpjVerification";
+import { CnpjDetailsDialog } from "@/components/cnpj/CnpjDetailsDialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 type Fornecedor = {
   id: string;
   nome: string;
   cnpj?: string | null;
   cpf?: string | null;
+  cnpj_status?: string | null;
 };
 
 interface ContratoFormData {
@@ -50,6 +57,7 @@ interface ContratoFormDialogProps {
   fornecedores: Fornecedor[];
   onSubmit: (e: React.FormEvent) => void;
   submitting: boolean;
+  onFornecedorCreated?: (fornecedor: Fornecedor) => void;
 }
 
 export function ContratoFormDialog({
@@ -63,7 +71,15 @@ export function ContratoFormDialog({
   fornecedores,
   onSubmit,
   submitting,
+  onFornecedorCreated,
 }: ContratoFormDialogProps) {
+  const [showNewFornecedor, setShowNewFornecedor] = useState(false);
+  const { verify, loading: verifyingCnpj, result: verifyResult, setResult: setVerifyResult } = useCnpjVerification();
+  const [showCnpjDetails, setShowCnpjDetails] = useState(false);
+
+  const selectedFornecedor = fornecedores.find((f) => f.id === formData.fornecedor_id);
+  const cnpjStatus = verifyResult?.status || selectedFornecedor?.cnpj_status || (selectedFornecedor?.cnpj ? "nao_verificado" : null);
+  const cnpjBlocked = !!selectedFornecedor?.cnpj && isCnpjProblem(cnpjStatus);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
@@ -163,23 +179,97 @@ export function ContratoFormDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="fornecedor">Fornecedor *</Label>
-            <Select
-              value={formData.fornecedor_id}
-              onValueChange={(value) => onFormDataChange({ ...formData, fornecedor_id: value })}
-              required
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione um fornecedor" />
-              </SelectTrigger>
-              <SelectContent>
-                {fornecedores.map((fornecedor) => (
-                  <SelectItem key={fornecedor.id} value={fornecedor.id}>
-                    {fornecedor.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="fornecedor">Fornecedor *</Label>
+              {!showNewFornecedor && (
+                <Button
+                  type="button"
+                  variant="link"
+                  size="sm"
+                  className="h-auto p-0 text-xs"
+                  onClick={() => setShowNewFornecedor(true)}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Novo Fornecedor
+                </Button>
+              )}
+            </div>
+
+            {showNewFornecedor ? (
+              <InlineFornecedorForm
+                onCreated={(newFornecedor) => {
+                  onFornecedorCreated?.(newFornecedor);
+                  onFormDataChange({ ...formData, fornecedor_id: newFornecedor.id });
+                  setShowNewFornecedor(false);
+                }}
+                onCancel={() => setShowNewFornecedor(false)}
+              />
+            ) : (
+              <Select
+                value={formData.fornecedor_id}
+                onValueChange={(value) => { onFormDataChange({ ...formData, fornecedor_id: value }); setVerifyResult(null); }}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um fornecedor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {fornecedores.map((fornecedor) => (
+                    <SelectItem key={fornecedor.id} value={fornecedor.id}>
+                      {fornecedor.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {selectedFornecedor?.cnpj && !showNewFornecedor && (
+              <div className="flex items-center justify-between gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => verifyResult && setShowCnpjDetails(true)}
+                  className="hover:opacity-80 transition-opacity"
+                  disabled={!verifyResult}
+                  title={verifyResult ? "Ver detalhes da Receita Federal" : ""}
+                >
+                  <CnpjStatusBadge status={cnpjStatus} />
+                </button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  disabled={verifyingCnpj}
+                  onClick={async () => {
+                    const r = await verify(selectedFornecedor.cnpj!, { fornecedorId: selectedFornecedor.id, force: true });
+                    if (r) setShowCnpjDetails(true);
+                  }}
+                >
+                  {verifyingCnpj ? (
+                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                  ) : (
+                    <Search className="h-3 w-3 mr-1" />
+                  )}
+                  Reverificar
+                </Button>
+              </div>
+            )}
+            <CnpjDetailsDialog
+              open={showCnpjDetails}
+              onOpenChange={setShowCnpjDetails}
+              result={verifyResult}
+              cnpj={selectedFornecedor?.cnpj}
+              fornecedorId={selectedFornecedor?.id}
+            />
+
+            {cnpjBlocked && (
+              <Alert variant="destructive" className="mt-2">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="text-xs">
+                  Este fornecedor está com CNPJ inativo na Receita Federal. Não é possível criar contratos até regularizar.
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -242,7 +332,7 @@ export function ContratoFormDialog({
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={submitting}>
+            <Button type="submit" disabled={submitting || cnpjBlocked}>
               {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Criar Contrato
             </Button>

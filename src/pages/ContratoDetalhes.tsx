@@ -16,6 +16,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   ArrowLeft,
   FileText,
   Building,
@@ -28,10 +36,15 @@ import {
   Paperclip,
   History,
   Edit3,
+  ScrollText,
 } from "lucide-react";
 import { exportContratoDetalhePDF } from "@/utils/pdfExport";
+import { exportContratoExecutivoPDF } from "@/utils/pdfExecutiveReport";
 import { ContractComments } from "@/components/ContractComments";
 import { ContractSignature } from "@/components/ContractSignature";
+import { ZapsignPanel } from "@/components/Assinaturas/ZapsignPanel";
+import { PacoteFinalCard } from "@/components/Assinaturas/PacoteFinalCard";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion, AnimatePresence } from "framer-motion";
 import { PageSkeleton } from "@/components/ui/skeleton-loaders";
@@ -47,16 +60,26 @@ import {
   ContractSupplierCard,
   ContractAttachments,
   ContractObligations,
-  ContractVersionHistory,
-  ContractRedlineEditor,
   NegotiationMetrics,
 } from "@/components/ContractDetails";
+import { ContractRevisionsTab } from "@/components/contracts/ContractRevisionsTab";
 import { ContractInfoCard } from "@/components/ContractDetails/ContractInfoCard";
 import { ContractAIAnalysis } from "@/components/ContractDetails/ContractAIAnalysis";
 import { ContractApprovalCard } from "@/components/ContractDetails/ContractApprovalCard";
 import { FinanceNotificationModal } from "@/components/FinanceNotificationModal";
+import { PreSignatureGuard } from "@/components/Aprovacoes/PreSignatureGuard";
+import { NegotiationThread } from "@/components/Negociacao/NegotiationThread";
+import { AssistenteIA } from "@/components/IA/AssistenteIA";
+import { RevisaoExtracoesPanel } from "@/components/IA/RevisaoExtracoesPanel";
+import { PortalContraparteDialog } from "@/components/Portal/PortalContraparteDialog";
+import { PortalLinksPanel } from "@/components/Portal/PortalLinksPanel";
+import { IntakeGatesPanel } from "@/components/contracts/IntakeGatesPanel";
+import { BlocoFinanceiroPanel } from "@/components/contracts/BlocoFinanceiroPanel";
+import { ComplianceChecklistPanel } from "@/components/contracts/ComplianceChecklistPanel";
+import { LegalReviewPanel } from "@/components/contracts/LegalReviewPanel";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { handleDbError } from "@/utils/dbErrorHandler";
 
 type Contrato = {
   id: string;
@@ -157,7 +180,7 @@ const ContratoDetalhes = () => {
         toast({
           variant: "destructive",
           title: "Erro ao carregar contrato",
-          description: error.message,
+          description: handleDbError(error).message,
         });
         return;
       }
@@ -178,7 +201,7 @@ const ContratoDetalhes = () => {
       toast({
         variant: "destructive",
         title: "Erro",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } finally {
       setLoading(false);
@@ -213,7 +236,7 @@ const ContratoDetalhes = () => {
     }
   };
 
-  const handleAnalisarIA = async () => {
+  const handleAnalisarIA = async (skill: "auto" | "full" | "contract-review" | "nda-triage" | "risk-assessment" | "compliance" = "auto") => {
     if (!contrato) return;
 
     setIsAnalyzing(true);
@@ -228,15 +251,15 @@ const ContratoDetalhes = () => {
       `;
 
       const { data, error } = await supabase.functions.invoke("analisar-contrato-ia", {
-        body: { contratoId: contrato.id, conteudo },
+        body: { contratoId: contrato.id, conteudo, skill },
       });
 
       if (error) throw error;
 
       if (data.success) {
         toast({
-          title: "Análise concluída!",
-          description: "O contrato foi analisado com sucesso pela IA.",
+          title: "Análise concluída",
+          description: `Skill aplicada: ${data.skill ?? skill}`,
         });
         setAnalise(data.analise);
         setShowAnalise(true);
@@ -246,7 +269,7 @@ const ContratoDetalhes = () => {
     } catch (error: any) {
       toast({
         title: "Erro na análise",
-        description: error.message,
+        description: handleDbError(error).message,
         variant: "destructive",
       });
     } finally {
@@ -291,13 +314,9 @@ const ContratoDetalhes = () => {
         description: uploadError.message,
       });
     } else {
-      const { data: { publicUrl } } = supabase.storage
-        .from("contratos-documentos")
-        .getPublicUrl(filePath);
-
       const { error: updateError } = await supabase
         .from("contratos")
-        .update({ arquivo_url: publicUrl })
+        .update({ arquivo_url: filePath })
         .eq("id", contrato.id);
 
       if (updateError) {
@@ -349,7 +368,7 @@ const ContratoDetalhes = () => {
       toast({
         variant: "destructive",
         title: "Erro ao adicionar aprovação",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } else {
       toast({
@@ -382,7 +401,7 @@ const ContratoDetalhes = () => {
       toast({
         variant: "destructive",
         title: "Erro ao atualizar status",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } else {
       toast({
@@ -395,6 +414,21 @@ const ContratoDetalhes = () => {
   const handleExportPDF = () => {
     if (contrato) {
       exportContratoDetalhePDF(contrato, null, aprovacoes);
+    }
+  };
+
+  const handleExportExecutivoPDF = async () => {
+    if (!contrato) return;
+    try {
+      toast({ title: "Gerando relatório executivo…" });
+      await exportContratoExecutivoPDF({ contrato, aprovacoes });
+    } catch (err: any) {
+      console.error(err);
+      toast({
+        variant: "destructive",
+        title: "Erro ao gerar relatório",
+        description: err?.message ?? "Tente novamente.",
+      });
     }
   };
 
@@ -459,10 +493,26 @@ const ContratoDetalhes = () => {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <AnimatedButton variant="outline" size="sm" onClick={handleExportPDF}>
-              <Download className="h-4 w-4 mr-2" />
-              PDF
-            </AnimatedButton>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <AnimatedButton variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  PDF
+                </AnimatedButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Exportar PDF</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleExportPDF}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Resumo simples
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportExecutivoPDF}>
+                  <ScrollText className="h-4 w-4 mr-2" />
+                  Relatório executivo
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <ContractQuickActions
               contratoId={contrato.id}
               contratoNumero={contrato.numero_contrato}
@@ -590,29 +640,58 @@ const ContratoDetalhes = () => {
                 <Separator />
 
                 <div className="space-y-2">
-                  <Label className="text-muted-foreground">Análise com IA</Label>
-                  <AnimatedButton 
-                    variant="outline" 
-                    className="w-full" 
-                    onClick={handleAnalisarIA}
-                    disabled={isAnalyzing}
-                  >
-                    <Brain className="h-4 w-4 mr-2" />
-                    {isAnalyzing ? "Analisando..." : analise ? "Reanalisar" : "Analisar Contrato"}
-                  </AnimatedButton>
+                  <Label className="text-muted-foreground">Análise com IA (skills jurídicas)</Label>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <AnimatedButton variant="outline" className="w-full" disabled={isAnalyzing}>
+                        <Brain className="h-4 w-4 mr-2" />
+                        {isAnalyzing ? "Analisando..." : analise ? "Reanalisar contrato" : "Analisar contrato"}
+                      </AnimatedButton>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-64 z-50 bg-popover">
+                      <DropdownMenuLabel>Escolha a skill</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => handleAnalisarIA("full")}>
+                        <ScrollText className="h-4 w-4 mr-2" />
+                        Análise completa (recomendado)
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => handleAnalisarIA("contract-review")}>
+                        Revisão cláusula a cláusula
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleAnalisarIA("nda-triage")}>
+                        Triagem de NDA
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleAnalisarIA("risk-assessment")}>
+                        Mapa de riscos jurídicos
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleAnalisarIA("compliance")}>
+                        Compliance (LGPD, anticorrupção…)
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   {analise && (
-                    <Button 
-                      variant="ghost" 
-                      className="w-full text-xs" 
+                    <Button
+                      variant="ghost"
+                      className="w-full text-xs"
                       onClick={() => setShowAnalise(!showAnalise)}
                     >
-                      {showAnalise ? "Ocultar" : "Ver"} Análise
+                      {showAnalise ? "Ocultar" : "Ver"} análise
                     </Button>
                   )}
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => navigate(`/contratos/${id}/workflow`)}
+                  >
+                    Workflow Kanban
+                  </Button>
                 </div>
               </AnimatedCardContent>
             </AnimatedCard>
           </StaggerItem>
+
+
+
 
           {/* Supplier Card */}
           <StaggerItem>
@@ -659,15 +738,52 @@ const ContratoDetalhes = () => {
 
       {/* Tabs Section */}
       <FadeIn delay={0.3}>
-        <Tabs defaultValue="aprovacoes" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-6 lg:w-[720px]">
+        <Tabs defaultValue="intake" className="space-y-4">
+          <TabsList className="flex w-full flex-wrap h-auto">
+            <TabsTrigger value="intake">Intake</TabsTrigger>
+            <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
+            <TabsTrigger value="compliance">Compliance</TabsTrigger>
+            <TabsTrigger value="revisao-legal">Revisão Legal</TabsTrigger>
             <TabsTrigger value="aprovacoes">Aprovações</TabsTrigger>
             <TabsTrigger value="assinaturas">Assinaturas</TabsTrigger>
             <TabsTrigger value="comentarios">Comentários</TabsTrigger>
-            <TabsTrigger value="redlining">Redlining</TabsTrigger>
-            <TabsTrigger value="versoes">Versões</TabsTrigger>
+            <TabsTrigger value="revisoes">Revisões</TabsTrigger>
             <TabsTrigger value="negociacao">Negociação</TabsTrigger>
+            <TabsTrigger value="revisao-ia">Revisão IA</TabsTrigger>
+            <TabsTrigger value="ia">Assistente IA</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="intake">
+            <IntakeGatesPanel
+              contratoId={contrato.id}
+              intakeStatus={(contrato as unknown as { intake_status?: string | null }).intake_status ?? null}
+              onChanged={fetchContrato}
+            />
+          </TabsContent>
+
+          <TabsContent value="financeiro">
+            <BlocoFinanceiroPanel
+              contratoId={contrato.id}
+              intakeStatus={(contrato as unknown as { intake_status?: string | null }).intake_status ?? null}
+              contratoStatus={contrato.status}
+              emailFinanceiroNotificadoEm={(contrato as unknown as { email_financeiro_notificado_em?: string | null }).email_financeiro_notificado_em ?? null}
+              onSaved={fetchContrato}
+            />
+          </TabsContent>
+
+
+          <TabsContent value="compliance">
+            <ComplianceChecklistPanel contratoId={contrato.id} onChanged={fetchContrato} />
+          </TabsContent>
+
+          <TabsContent value="revisao-legal">
+            <LegalReviewPanel
+              contratoId={contrato.id}
+              nivelRisco={(contrato as unknown as { nivel_risco?: string | null }).nivel_risco ?? null}
+              onChanged={fetchContrato}
+            />
+          </TabsContent>
+
 
           <TabsContent value="aprovacoes">
             <AnimatedCard>
@@ -732,65 +848,72 @@ const ContratoDetalhes = () => {
             </AnimatedCard>
           </TabsContent>
 
-          <TabsContent value="assinaturas">
-            <ContractSignature 
-              contratoId={contrato.id} 
-              contratoTitulo={contrato.titulo}
-              arquivoUrl={contrato.arquivo_url}
+          <TabsContent value="assinaturas" className="space-y-4">
+            <PacoteFinalCard
+              pacoteFinalUrl={(contrato as any).pacote_final_url ?? null}
+              pacoteFinalHash={(contrato as any).pacote_final_hash ?? null}
+              congeladoEm={(contrato as any).pacote_final_congelado_at ?? null}
             />
+            <PreSignatureGuard contratoId={contrato.id}>
+              <ZapsignPanel contratoId={contrato.id} arquivoUrl={contrato.arquivo_url} />
+            </PreSignatureGuard>
           </TabsContent>
+
 
           <TabsContent value="comentarios">
             <ContractComments contratoId={contrato.id} />
           </TabsContent>
 
-          <TabsContent value="redlining">
-            <AnimatedCard>
-              <AnimatedCardHeader>
-                <div className="flex items-center gap-2">
-                  <Edit3 className="h-5 w-5 text-primary" />
-                  <div>
-                    <h3 className="text-lg font-semibold">Redlining / Markup</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Edição colaborativa com marcações visuais
-                    </p>
-                  </div>
-                </div>
-              </AnimatedCardHeader>
-              <AnimatedCardContent>
-                <ContractRedlineEditor
-                  contratoId={contrato.id}
-                  conteudoOriginal={contrato.descricao || ""}
-                />
-              </AnimatedCardContent>
-            </AnimatedCard>
-          </TabsContent>
-
-          <TabsContent value="versoes">
+          <TabsContent value="revisoes">
             <AnimatedCard>
               <AnimatedCardHeader>
                 <div className="flex items-center gap-2">
                   <History className="h-5 w-5 text-primary" />
                   <div>
-                    <h3 className="text-lg font-semibold">Histórico de Versões</h3>
+                    <h3 className="text-lg font-semibold">Revisões</h3>
                     <p className="text-sm text-muted-foreground">
-                      Versão atual: v{contrato.versao}
+                      Histórico de versões, devoluções de workflow e redlining em uma visão única.
                     </p>
                   </div>
                 </div>
               </AnimatedCardHeader>
               <AnimatedCardContent>
-                <ContractVersionHistory
+                <ContractRevisionsTab
                   contratoId={contrato.id}
                   currentVersion={contrato.versao}
+                  conteudoOriginal={contrato.descricao}
                   onVersionRestored={fetchContrato}
                 />
               </AnimatedCardContent>
             </AnimatedCard>
           </TabsContent>
 
-          <TabsContent value="negociacao">
+          <TabsContent value="negociacao" className="space-y-4">
+            <div className="flex justify-end">
+              <PortalContraparteDialog contratoId={contrato.id} />
+            </div>
+            <PortalLinksPanel contratoId={contrato.id} />
+            <NegotiationThread contratoId={contrato.id} />
             <NegotiationMetrics contratoId={contrato.id} />
+          </TabsContent>
+
+          <TabsContent value="revisao-ia" className="space-y-4">
+            <RevisaoExtracoesPanel contratoId={contrato.id} />
+          </TabsContent>
+
+          <TabsContent value="ia" className="space-y-4">
+            <AssistenteIA
+              contratoId={contrato.id}
+              tipoContrato={contrato.tipo}
+              contratoConteudo={[
+                `Contrato: ${contrato.numero_contrato}`,
+                `Título: ${contrato.titulo}`,
+                `Tipo: ${contrato.tipo}`,
+                `Valor: ${contrato.valor_total ?? "N/A"}`,
+                `Descrição: ${contrato.descricao || ""}`,
+                `Observações: ${contrato.observacoes || ""}`,
+              ].join("\n")}
+            />
           </TabsContent>
         </Tabs>
       </FadeIn>

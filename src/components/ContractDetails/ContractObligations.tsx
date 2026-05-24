@@ -54,6 +54,7 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { AnimatedCard, AnimatedCardContent, AnimatedCardHeader } from "@/components/ui/animated-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
+import { handleDbError } from "@/utils/dbErrorHandler";
 
 interface Obligation {
   id: string;
@@ -230,7 +231,7 @@ export function ContractObligations({ contratoId }: ContractObligationsProps) {
       toast({
         variant: "destructive",
         title: "Erro ao salvar",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } finally {
       setSubmitting(false);
@@ -258,7 +259,7 @@ export function ContractObligations({ contratoId }: ContractObligationsProps) {
       toast({
         variant: "destructive",
         title: "Erro",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     }
   };
@@ -278,7 +279,7 @@ export function ContractObligations({ contratoId }: ContractObligationsProps) {
       toast({
         variant: "destructive",
         title: "Erro ao remover",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     }
   };

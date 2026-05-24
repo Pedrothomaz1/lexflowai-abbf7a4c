@@ -78,13 +78,13 @@ describe("Contratos page", () => {
     });
   });
 
-  it("renders the page header with Contratos title", async () => {
-    const Contratos = (await import("@/pages/Contratos")).default;
-    const { container } = renderWithProviders(<Contratos />);
-    await waitFor(() => {
-      const headings = screen.queryAllByText(/contratos/i);
-      expect(headings.length > 0 || container).toBeTruthy();
-    }, { timeout: 3000 });
+ it("renders the page header with Contratos title", async () => {
+  const Contratos = (await import("@/pages/Contratos")).default;
+  const { container } = renderWithProviders(<Contratos />);
+  await waitFor(() => {
+    const btns = screen.queryAllByRole("button");
+    expect(btns.length).toBeGreaterThan(0);
+  }, { timeout: 3000 });
   });
 
   it("has a button to create new contract", async () => {

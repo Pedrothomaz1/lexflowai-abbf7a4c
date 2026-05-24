@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bell, Search, Moon, Sun, X, Calendar, Settings, LogOut, User, Building2, ShieldCheck, ShieldAlert } from "lucide-react";
+import { Bell, Search, Moon, Sun, Calendar, Settings, LogOut, Building2, ShieldCheck, ShieldAlert } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -19,6 +19,7 @@ import { useOrganization } from "@/contexts/OrganizationContext";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { NotificationPanel } from "@/components/notifications/NotificationPanel";
+import { CommandPalette } from "@/components/CommandPalette";
 
 const routeTitles: Record<string, { title: string; description?: string }> = {
   "/dashboard": { title: "Dashboard", description: "Visão geral do sistema" },
@@ -40,8 +41,7 @@ export function GlobalHeader() {
   const navigate = useNavigate();
   const { organization } = useOrganization();
   const { unreadCount } = useNotifications();
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [userProfile, setUserProfile] = useState<{
     full_name: string;
@@ -93,15 +93,6 @@ export function GlobalHeader() {
     document.documentElement.classList.toggle("dark");
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/contratos?search=${encodeURIComponent(searchQuery)}`);
-      setSearchOpen(false);
-      setSearchQuery("");
-    }
-  };
-
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/auth");
@@ -116,15 +107,12 @@ export function GlobalHeader() {
       .slice(0, 2);
   };
 
-  // Keyboard shortcut for search
+  // ⌘K / Ctrl+K opens the global command palette
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        setSearchOpen(true);
-      }
-      if (e.key === "Escape") {
-        setSearchOpen(false);
+        setPaletteOpen((o) => !o);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -160,44 +148,24 @@ export function GlobalHeader() {
       {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Search */}
+      {/* Search trigger — opens command palette */}
       <div className="relative">
-        {searchOpen ? (
-          <form onSubmit={handleSearch} className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              autoFocus
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar contratos..."
-              className="w-64 pl-9 pr-8 h-9 text-sm bg-muted/50 border-muted"
-            />
-            <button
-              type="button"
-              onClick={() => {
-                setSearchOpen(false);
-                setSearchQuery("");
-              }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </form>
-        ) : (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setSearchOpen(true)}
-            className="gap-2 text-muted-foreground hover:text-foreground"
-          >
-            <Search className="h-4 w-4" />
-            <span className="hidden sm:inline text-sm">Buscar</span>
-            <kbd className="hidden lg:inline-flex h-5 select-none items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-2xs text-muted-foreground">
-              <span className="text-xs">⌘</span>K
-            </kbd>
-          </Button>
-        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setPaletteOpen(true)}
+          className="gap-2 text-muted-foreground hover:text-foreground"
+        >
+          <Search className="h-4 w-4" />
+          <span className="hidden sm:inline text-sm">Buscar</span>
+          <kbd className="hidden lg:inline-flex h-5 select-none items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-2xs text-muted-foreground">
+            <span className="text-xs">⌘</span>K
+          </kbd>
+        </Button>
       </div>
+
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+
 
       {/* 2FA Security Indicator */}
       {is2FAEnabled !== null && (

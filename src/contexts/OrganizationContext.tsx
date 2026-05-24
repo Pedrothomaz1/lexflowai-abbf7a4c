@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useState, ReactNode, useCallback 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./AuthContext";
 
+export type OrgStatus = "pendente_aprovacao" | "ativa" | "suspensa" | "cancelada";
+
 interface Organization {
   id: string;
   nome: string;
@@ -16,6 +18,8 @@ interface Organization {
   cep: string | null;
   plano: string | null;
   is_active: boolean;
+  status: OrgStatus;
+  motivo_suspensao: string | null;
 }
 
 interface OrganizationMembership {
@@ -33,6 +37,9 @@ interface OrganizationContextType {
   isOwner: boolean;
   isOrgAdmin: boolean;
   hasOrganization: boolean;
+  /** True when membership exists but the org status is not 'ativa' */
+  hasInactiveOrganization: boolean;
+  orgStatus: OrgStatus | null;
   refresh: () => Promise<void>;
 }
 
@@ -44,14 +51,14 @@ const OrganizationContext = createContext<OrganizationContextType>({
   isOwner: false,
   isOrgAdmin: false,
   hasOrganization: false,
+  hasInactiveOrganization: false,
+  orgStatus: null,
   refresh: async () => {},
 });
 
 export const useOrganization = () => {
   const context = useContext(OrganizationContext);
-  if (!context) {
-    throw new Error("useOrganization must be used within an OrganizationProvider");
-  }
+  if (!context) throw new Error("useOrganization must be used within an OrganizationProvider");
   return context;
 };
 
@@ -78,7 +85,7 @@ export const OrganizationProvider = ({ children }: OrganizationProviderProps) =>
       setLoading(true);
       setError(null);
 
-      // Fetch user's organization membership
+      // Fetch user's organization membership (regardless of org status — we need to know if it's pending/suspended)
       const { data: membershipData, error: membershipError } = await supabase
         .from("organization_members")
         .select(`
@@ -86,23 +93,15 @@ export const OrganizationProvider = ({ children }: OrganizationProviderProps) =>
           role_in_org,
           is_active,
           organizations:organization_id (
-            id,
-            nome,
-            slug,
-            cnpj,
-            logo_url,
-            email_contato,
-            telefone,
-            endereco,
-            cidade,
-            estado,
-            cep,
-            plano,
-            is_active
+            id, nome, slug, cnpj, logo_url, email_contato, telefone,
+            endereco, cidade, estado, cep, plano, is_active,
+            status, motivo_suspensao
           )
         `)
         .eq("user_id", user.id)
         .eq("is_active", true)
+        .order("joined_at", { ascending: true })
+        .limit(1)
         .maybeSingle();
 
       if (membershipError) {
@@ -120,7 +119,6 @@ export const OrganizationProvider = ({ children }: OrganizationProviderProps) =>
           organization: org,
         });
       } else {
-        // User has no organization
         setOrganization(null);
         setMembership(null);
       }
@@ -135,12 +133,9 @@ export const OrganizationProvider = ({ children }: OrganizationProviderProps) =>
   }, [user]);
 
   useEffect(() => {
-    if (!authLoading) {
-      fetchOrganization();
-    }
+    if (!authLoading) fetchOrganization();
   }, [authLoading, fetchOrganization]);
 
-  // Clear state on logout
   useEffect(() => {
     if (!user && !authLoading) {
       setOrganization(null);
@@ -149,9 +144,13 @@ export const OrganizationProvider = ({ children }: OrganizationProviderProps) =>
     }
   }, [user, authLoading]);
 
+  const orgStatus: OrgStatus | null = organization?.status ?? null;
+  const isOrgActive = orgStatus === "ativa";
   const isOwner = membership?.role_in_org === "owner";
   const isOrgAdmin = membership?.role_in_org === "admin" || isOwner;
-  const hasOrganization = !!organization && !!membership;
+  // hasOrganization is TRUE only when org is active (preserves prior behavior for routing)
+  const hasOrganization = !!organization && !!membership && isOrgActive;
+  const hasInactiveOrganization = !!organization && !!membership && !isOrgActive;
 
   return (
     <OrganizationContext.Provider
@@ -163,6 +162,8 @@ export const OrganizationProvider = ({ children }: OrganizationProviderProps) =>
         isOwner,
         isOrgAdmin,
         hasOrganization,
+        hasInactiveOrganization,
+        orgStatus,
         refresh: fetchOrganization,
       }}
     >

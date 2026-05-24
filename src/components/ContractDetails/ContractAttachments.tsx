@@ -19,6 +19,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { handleDbError } from "@/utils/dbErrorHandler";
+import { getSignedFileUrl } from "@/utils/storageUtils";
 
 interface Attachment {
   id: string;
@@ -85,17 +87,13 @@ export function ContractAttachments({ contratoId }: ContractAttachmentsProps) {
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from("contratos-documentos")
-        .getPublicUrl(fileName);
-
       const { error: insertError } = await supabase
         .from("contract_attachments")
         .insert([{
           organization_id: organization.id,
           contrato_id: contratoId,
           nome_arquivo: file.name,
-          arquivo_url: publicUrl,
+          arquivo_url: fileName,
           tipo_documento: file.type,
           tamanho_bytes: file.size,
           uploaded_by: user.id,
@@ -118,7 +116,7 @@ export function ContractAttachments({ contratoId }: ContractAttachmentsProps) {
       toast({
         variant: "destructive",
         title: "Erro no upload",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } finally {
       setUploading(false);
@@ -146,7 +144,7 @@ export function ContractAttachments({ contratoId }: ContractAttachmentsProps) {
       toast({
         variant: "destructive",
         title: "Erro ao remover",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     }
   };
@@ -229,7 +227,10 @@ export function ContractAttachments({ contratoId }: ContractAttachmentsProps) {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8"
-                      onClick={() => window.open(attachment.arquivo_url, '_blank')}
+                      onClick={async () => {
+                        const url = await getSignedFileUrl(attachment.arquivo_url);
+                        if (url) window.open(url, '_blank');
+                      }}
                     >
                       <Download className="h-4 w-4" />
                     </Button>

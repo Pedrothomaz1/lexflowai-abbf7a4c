@@ -59,3 +59,53 @@ verify_jwt = true
 
 [functions.registrar-aceite-lgpd]
 verify_jwt = false
+
+[functions.consultar-cnpj]
+verify_jwt = true
+
+[functions.create-organization-onboarding]
+verify_jwt = true
+
+[functions.cron-verificar-cnpjs]
+verify_jwt = false
+
+[functions.security-regression-runner]
+verify_jwt = false
+
+[functions.cron-lexflow-diario]
+verify_jwt = false
+
+[functions.portal-externo-publico]
+verify_jwt = false
+
+[functions.ia-resumo-executivo]
+verify_jwt = true
+
+[functions.ia-sugerir-clausulas]
+verify_jwt = true
+
+[functions.criar-portal-contraparte]
+verify_jwt = true
+
+[functions.zapsign-criar-envelope]
+verify_jwt = true
+
+[functions.zapsign-cancelar-envelope]
+verify_jwt = true
+
+[functions.zapsign-lembrar-signatarios]
+verify_jwt = true
+
+[functions.zapsign-webhook]
+verify_jwt = false
+
+[functions.lead-novo-plano]
+verify_jwt = false
+
+
+
+
+
+[functions.auto-notificar-financeiro]
+verify_jwt = false
+

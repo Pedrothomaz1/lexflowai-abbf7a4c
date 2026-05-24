@@ -28,6 +28,7 @@ import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { handleDbError } from "@/utils/dbErrorHandler";
 
 interface NegotiationMetric {
   id: string;
@@ -111,7 +112,7 @@ export function NegotiationMetrics({ contratoId }: NegotiationMetricsProps) {
     } catch (error: any) {
       toast({
         title: "Erro ao carregar métricas",
-        description: error.message,
+        description: handleDbError(error).message,
         variant: "destructive",
       });
     } finally {
@@ -187,7 +188,7 @@ export function NegotiationMetrics({ contratoId }: NegotiationMetricsProps) {
     } catch (error: any) {
       toast({
         title: "Erro ao salvar métricas",
-        description: error.message,
+        description: handleDbError(error).message,
         variant: "destructive",
       });
     } finally {

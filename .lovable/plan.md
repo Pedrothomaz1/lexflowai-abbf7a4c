@@ -1,59 +1,49 @@
+# Aba "Revisões" unificada no Contrato
 
+Consolidar histórico de versões, redlines e devoluções de workflow em uma única visão dentro de `ContratoDetalhes.tsx`.
 
-## Plano: Multiplos Anexos na Criacao de Contrato + Correcao do Botao de Analise IA
+## O que entra
 
----
+1. **Nova aba "Revisões"** substitui/absorve abas separadas de versões e redlines existentes.
+2. **Componente `ContractRevisionsTab.tsx`** com três sub-visões:
+   - **Timeline** — lista cronológica unificada (desc) mesclando:
+     - `contract_versions` (snapshots automáticos do trigger)
+     - `contract_redlines` (se existir; senão omite)
+     - Devoluções do workflow (`workflow_run_stages` com status `devolvido` + comentário motivo)
+     - Marcos de status (assinado, congelado)
+   - **Diff** — selecionar 2 versões e exibir lado-a-lado os campos alterados (já temos `alteracoes` jsonb na trigger).
+   - **Restaurar** — admin pode reverter contrato para snapshot anterior (aplica campos do `snapshot` jsonb via UPDATE; gera nova versão automaticamente pela trigger com motivo "Restauração da v{N}").
 
-### Problema 1: Upload de apenas 1 anexo na criacao de contrato
+## Regras
 
-Atualmente, o formulario de "Novo Contrato" em `Contratos.tsx` aceita apenas um arquivo (`uploadedFile` e um unico `<Input type="file">`). Os arquivos sao enviados ao Storage mas nao sao inseridos na tabela `contract_attachments` apos a criacao do contrato.
+- **Permissão restaurar:** apenas `administrador` (via `has_role`). Bloqueado se `pacote_final_congelado_at` não for nulo (trigger `enforce_contrato_imutavel` já protege).
+- **Motivo de restauração** obrigatório (mínimo 10 chars) — gravado via `SET LOCAL app.versao_motivo`.
+- **Diff visual:** verde/vermelho por campo, formata datas e moeda.
+- **Timeline:** ícones distintos por tipo de evento (snapshot, devolução, redline, assinatura).
 
-**Solucao:**
-- Trocar `uploadedFile: File | null` para `uploadedFiles: File[]` (array)
-- Adicionar `multiple` ao input de arquivo para permitir selecao de varios arquivos
-- Exibir lista de arquivos selecionados com opcao de remover individualmente
-- Apos criar o contrato com sucesso, fazer upload de todos os arquivos para o Storage e inserir cada um na tabela `contract_attachments` com o `contrato_id` recem-criado
+## Arquivos
 
-### Problema 2: Botao mostra "Reanalisar" em contrato novo
+- **Criar:** `src/components/contracts/ContractRevisionsTab.tsx`
+- **Criar:** `src/components/contracts/RevisionDiffView.tsx` (sub-componente do diff)
+- **Editar:** `src/pages/ContratoDetalhes.tsx` — adicionar aba e remover/consolidar abas redundantes
+- **Edge function nova:** `restore-contract-version` — recebe `{ contrato_id, versao_id, motivo }`, valida admin, faz `SET LOCAL app.versao_motivo`, aplica UPDATE com os campos do snapshot. Service role para bypass de RLS controlado.
 
-Em `ContratoDetalhes.tsx`, linha 805, o botao usa `analise ? "Reanalisar" : "Analisar Contrato"`. Quando o usuario navega de um contrato (que ja tem analise) para outro contrato novo, o estado `analise` pode ficar com o valor antigo ate o `fetchAnalise` completar, causando o texto errado momentaneamente.
+## Banco
 
-**Solucao:**
-- Resetar `analise` para `null` e `showAnalise` para `false` no inicio do `useEffect` que depende de `[id]`, antes de chamar os fetchers
-- Isso garante que ao abrir qualquer contrato, o botao comeca sempre como "Analisar Contrato" ate que a busca confirme que existe analise previa
+Nenhuma migration nova obrigatória — `contract_versions.snapshot` já contém o estado completo. Se `contract_redlines` não existir no schema, omitir essa fonte da timeline (verificar antes de implementar).
 
----
+## Não entra agora
 
-### Detalhes Tecnicos
+- PDF executivo (fica para próxima task se desejado)
+- Comparação 3-way (apenas pares)
+- Edição inline na timeline
 
-**Arquivo: `src/pages/Contratos.tsx`**
+## Ordem de implementação
 
-1. Mudar estado:
-   - `uploadedFile: File | null` -> `uploadedFiles: File[]` (inicializa `[]`)
-2. Atualizar `handleFileUpload`:
-   - Aceitar `e.target.files` como lista e concatenar ao array `uploadedFiles`
-   - Nao fazer upload imediato ao Storage (apenas coleta os arquivos)
-3. Atualizar o input:
-   - Adicionar atributo `multiple`
-   - Renderizar lista de arquivos com botao X para remover
-4. Atualizar `handleSubmit`:
-   - Apos o `insert` do contrato, obter o `id` retornado
-   - Para cada arquivo em `uploadedFiles`, fazer upload ao Storage e inserir na tabela `contract_attachments`
-   - Ajustar o insert para usar `.select()` e obter o ID do contrato criado
-5. Limpar `uploadedFiles` ao fechar dialog
+1. Verificar schema de `contract_redlines` e devoluções no workflow
+2. Edge function `restore-contract-version`
+3. Componentes Timeline + Diff
+4. Plugar aba em `ContratoDetalhes.tsx`
+5. Smoke test: criar versão → restaurar → conferir nova versão
 
-**Arquivo: `src/pages/ContratoDetalhes.tsx`**
-
-1. No `useEffect` que depende de `[id]` (linha 117-130):
-   - Adicionar `setAnalise(null)` e `setShowAnalise(false)` antes de chamar `fetchContrato()` / `fetchAnalise()`
-   - Isso forca o reset do estado ao trocar de contrato
-
----
-
-### Arquivos Modificados
-
-| Arquivo | Mudanca |
-|---|---|
-| `src/pages/Contratos.tsx` | Upload multiplo de anexos na criacao, salvar em `contract_attachments` |
-| `src/pages/ContratoDetalhes.tsx` | Reset de `analise` ao trocar de contrato |
-
+Confirma para implementar?

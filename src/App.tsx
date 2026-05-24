@@ -14,6 +14,9 @@ import { CookieBanner } from "./components/CookieBanner";
 import { PageSkeleton } from "./components/ui/skeleton-loaders";
 
 const Index = React.lazy(() => import("./pages/Index"));
+const Planos = React.lazy(() => import("./pages/Planos"));
+
+const PortalExterno = React.lazy(() => import("./pages/PortalExterno"));
 const Auth = React.lazy(() => import("./pages/Auth"));
 const Privacidade = React.lazy(() => import("./pages/Privacidade"));
 const AuthCallback = React.lazy(() => import("./pages/AuthCallback"));
@@ -30,6 +33,7 @@ const Alertas = React.lazy(() => import("./pages/Alertas"));
 const Calendario = React.lazy(() => import("./pages/Calendario"));
 const Obrigacoes = React.lazy(() => import("./pages/Obrigacoes"));
 const WorkflowAprovacoes = React.lazy(() => import("./pages/WorkflowAprovacoes"));
+const WorkflowBuilder = React.lazy(() => import("./pages/WorkflowBuilder"));
 const SignatureSettings = React.lazy(() => import("./pages/SignatureSettings"));
 const NotificationSettings = React.lazy(() => import("./pages/NotificationSettings"));
 const Servicos = React.lazy(() => import("./pages/Servicos"));
@@ -44,16 +48,27 @@ const TwoFactorSettings = React.lazy(() => import("./pages/TwoFactorSettings"));
 const SecurityDashboard = React.lazy(() => import("./pages/SecurityDashboard"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 const RequisicaoPublica = React.lazy(() => import("./pages/RequisicaoPublica"));
+const RequisicaoFormPublica = React.lazy(() => import("./pages/RequisicaoFormPublica"));
+const FormBuilder = React.lazy(() => import("./pages/FormBuilder"));
 const Requisicoes = React.lazy(() => import("./pages/Requisicoes"));
+const MinhasAprovacoes = React.lazy(() => import("./pages/MinhasAprovacoes"));
 const Franquias = React.lazy(() => import("./pages/Franquias"));
 const FranquiaDetalhes = React.lazy(() => import("./pages/FranquiaDetalhes"));
-const OnboardingOrganization = React.lazy(() => import("./pages/OnboardingOrganization"));
+
 const WaitingForInvite = React.lazy(() => import("./pages/WaitingForInvite"));
 const OrganizationSettings = React.lazy(() => import("./pages/OrganizationSettings"));
 const OrganizationMembers = React.lazy(() => import("./pages/OrganizationMembers"));
 const AcceptInvite = React.lazy(() => import("./pages/AcceptInvite"));
 const TermosDeUso = React.lazy(() => import("./pages/TermosDeUso"));
 const CentralAjuda = React.lazy(() => import("./pages/CentralAjuda"));
+const PermissoesAdmin = React.lazy(() => import("./pages/PermissoesAdmin"));
+const ResetPassword = React.lazy(() => import("./pages/ResetPassword"));
+const AguardandoAprovacao = React.lazy(() => import("./pages/AguardandoAprovacao"));
+const ContaSuspensa = React.lazy(() => import("./pages/ContaSuspensa"));
+const SuperAdminPage = React.lazy(() => import("./pages/SuperAdmin"));
+const DashboardIA = React.lazy(() => import("./pages/DashboardIA"));
+const ContratoWorkflow = React.lazy(() => import("./pages/ContratoWorkflow"));
+const Onboarding = React.lazy(() => import("./pages/Onboarding"));
 
 // Catches chunk load failures (e.g. deploy after user session, offline)
 class AppErrorBoundary extends Component<
@@ -116,23 +131,35 @@ function App() {
                   <Routes>
                     {/* Public routes */}
                     <Route path="/" element={<Index />} />
+                    <Route path="/index" element={<Index />} />
+                    <Route path="/planos" element={<Planos />} />
+
                     <Route path="/auth" element={<Auth />} />
                     <Route path="/auth/callback" element={<AuthCallback />} />
                     <Route path="/privacidade" element={<Privacidade />} />
                     <Route path="/termos" element={<TermosDeUso />} />
                     <Route path="/requisicao" element={<RequisicaoPublica />} />
+                    <Route path="/requisicao/form/:formId" element={<RequisicaoFormPublica />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
+                    <Route path="/portal/:token" element={<PortalExterno />} />
 
-                    {/* Organization onboarding routes */}
-                    <Route path="/onboarding" element={<ProtectedRoute requireOrg={false}><OnboardingOrganization /></ProtectedRoute>} />
+                    {/* Organization status routes (no public onboarding — orgs are created by super-admin) */}
                     <Route path="/waiting-for-invite" element={<ProtectedRoute requireOrg={false}><WaitingForInvite /></ProtectedRoute>} />
+                    <Route path="/aguardando-aprovacao" element={<ProtectedRoute requireOrg={false}><AguardandoAprovacao /></ProtectedRoute>} />
+                    <Route path="/conta-suspensa" element={<ProtectedRoute requireOrg={false}><ContaSuspensa /></ProtectedRoute>} />
                     <Route path="/aceitar-convite" element={<AcceptInvite />} />
 
+                    {/* Super Admin (LexFlow team only) */}
+                    <Route path="/super-admin" element={<ProtectedRoute requireOrg={false}><SuperAdminPage /></ProtectedRoute>} />
+
                     {/* Protected routes requiring organization */}
+                    <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
                     <Route path="/seletor-modulo" element={<ProtectedRoute><SeletorModulo /></ProtectedRoute>} />
                     <Route path="/requisicoes" element={<ProtectedRoute><DashboardLayout><Requisicoes /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout><Dashboard /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/contratos" element={<ProtectedRoute><DashboardLayout><Contratos /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/contratos/:id" element={<ProtectedRoute><DashboardLayout><ContratoDetalhes /></DashboardLayout></ProtectedRoute>} />
+                    <Route path="/contratos/:id/workflow" element={<ProtectedRoute><DashboardLayout><ContratoWorkflow /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/franquias" element={<ProtectedRoute><DashboardLayout><Franquias /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/franquias/:id" element={<ProtectedRoute><DashboardLayout><FranquiaDetalhes /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/kanban" element={<ProtectedRoute><DashboardLayout><Kanban /></DashboardLayout></ProtectedRoute>} />
@@ -144,6 +171,9 @@ function App() {
                     <Route path="/calendario" element={<ProtectedRoute><DashboardLayout><Calendario /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/obrigacoes" element={<ProtectedRoute><DashboardLayout><Obrigacoes /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/workflows" element={<ProtectedRoute><DashboardLayout><WorkflowAprovacoes /></DashboardLayout></ProtectedRoute>} />
+                    <Route path="/workflows/builder" element={<ProtectedRoute><DashboardLayout><WorkflowBuilder /></DashboardLayout></ProtectedRoute>} />
+                    <Route path="/forms/builder" element={<ProtectedRoute><DashboardLayout><FormBuilder /></DashboardLayout></ProtectedRoute>} />
+                    <Route path="/aprovacoes" element={<ProtectedRoute><DashboardLayout><MinhasAprovacoes /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/servicos" element={<ProtectedRoute><DashboardLayout><Servicos /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/unidades" element={<ProtectedRoute><DashboardLayout><Unidades /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/especificacoes" element={<ProtectedRoute><DashboardLayout><EspecificacoesServico /></DashboardLayout></ProtectedRoute>} />
@@ -154,12 +184,14 @@ function App() {
                     <Route path="/settings/2fa" element={<ProtectedRoute requireOrg={false}><TwoFactorSettings /></ProtectedRoute>} />
                     <Route path="/audit-logs" element={<ProtectedRoute><DashboardLayout><AuditLogs /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/relatorios" element={<ProtectedRoute><DashboardLayout><Relatorios /></DashboardLayout></ProtectedRoute>} />
+                    <Route path="/dashboard-ia" element={<ProtectedRoute><DashboardLayout><DashboardIA /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/compliance" element={<ProtectedRoute><DashboardLayout><ComplianceLGPD /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/security" element={<ProtectedRoute><DashboardLayout><SecurityDashboard /></DashboardLayout></ProtectedRoute>} />
 
                     {/* Organization management routes */}
                     <Route path="/organization/settings" element={<ProtectedRoute><DashboardLayout><OrganizationSettings /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/organization/members" element={<ProtectedRoute><DashboardLayout><OrganizationMembers /></DashboardLayout></ProtectedRoute>} />
+                    <Route path="/admin/permissoes" element={<ProtectedRoute><DashboardLayout><PermissoesAdmin /></DashboardLayout></ProtectedRoute>} />
 
                     {/* Help Center */}
                     <Route path="/ajuda" element={<ProtectedRoute><DashboardLayout><CentralAjuda /></DashboardLayout></ProtectedRoute>} />

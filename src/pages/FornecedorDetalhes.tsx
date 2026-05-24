@@ -18,6 +18,7 @@ import { PageSkeleton } from "@/components/ui/skeleton-loaders";
 import { FornecedorAnexos } from "@/components/Fornecedores/FornecedorAnexos";
 import { FornecedorCategorias } from "@/components/Fornecedores/FornecedorCategorias";
 import { formatCNPJ, formatCPF } from "@/utils/documentValidation";
+import { handleDbError } from "@/utils/dbErrorHandler";
 import {
   ArrowLeft,
   Building2,
@@ -99,7 +100,7 @@ const FornecedorDetalhes = () => {
       toast({
         variant: "destructive",
         title: "Erro ao carregar fornecedor",
-        description: error.message,
+        description: handleDbError(error).message,
       });
       navigate("/fornecedores");
     } finally {

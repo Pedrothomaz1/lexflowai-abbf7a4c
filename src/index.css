@@ -97,11 +97,11 @@
     --shadow-xl: 0 20px 25px -5px hsl(165 20% 10% / 0.1), 0 8px 10px -6px hsl(165 20% 10% / 0.05);
   }
 
-  /* Classe para módulo Serviços - Dynamic Theme */
+  /* Classe para módulo Serviços - Mesma identidade visual do módulo Contratos */
   .modulo-servicos {
-    --modulo-accent: var(--lexflow-mostarda);
-    --sidebar-primary: var(--lexflow-mostarda);
-    --sidebar-ring: var(--lexflow-mostarda);
+    --modulo-accent: var(--lexflow-verde-principal);
+    --sidebar-primary: var(--lexflow-verde-principal);
+    --sidebar-ring: var(--lexflow-verde-principal);
   }
 
   .dark {

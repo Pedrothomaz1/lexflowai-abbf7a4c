@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useOrganization } from "@/contexts/OrganizationContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,7 +10,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -20,185 +19,301 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/components/ui/use-toast";
-import { Plus, FileText, Edit, Trash2 } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/components/ui/use-toast";
+import {
+  Plus,
+  FileText,
+  Edit,
+  Trash2,
+  Sparkles,
+  History,
+  Copy,
+  Save,
+} from "lucide-react";
+import { handleDbError } from "@/utils/dbErrorHandler";
 
-type ContractTemplate = {
+type Template = {
   id: string;
   nome: string;
-  descricao: string;
-  tipo: string;
-  conteudo_template: string;
-  campos_variaveis: any[];
+  descricao: string | null;
+  tipo: string | null;
+  categoria: string | null;
+  current_version: number;
   is_active: boolean;
   created_at: string;
 };
 
+type Version = {
+  id: string;
+  template_id: string;
+  versao: number;
+  conteudo: string;
+  variaveis: any;
+  is_published: boolean;
+  changelog: string | null;
+  created_at: string;
+};
+
+const TIPOS = [
+  { value: "prestacao_servicos", label: "Prestação de Serviços" },
+  { value: "fornecimento", label: "Fornecimento" },
+  { value: "locacao", label: "Locação" },
+  { value: "confidencialidade", label: "Confidencialidade (NDA)" },
+  { value: "parceria", label: "Parceria" },
+  { value: "outro", label: "Outro" },
+];
+
+const extrairVariaveis = (conteudo: string): string[] => {
+  const regex = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
+  const set = new Set<string>();
+  let m;
+  while ((m = regex.exec(conteudo)) !== null) set.add(m[1]);
+  return Array.from(set);
+};
+
 const Templates = () => {
-  const [templates, setTemplates] = useState<ContractTemplate[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingTemplate, setEditingTemplate] = useState<ContractTemplate | null>(null);
   const { toast } = useToast();
-  const { organization } = useOrganization();
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [formData, setFormData] = useState({
-    nome: "",
-    descricao: "",
-    tipo: "prestacao_servicos",
-    conteudo_template: "",
-  });
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editing, setEditing] = useState<Template | null>(null);
+  const [nome, setNome] = useState("");
+  const [descricao, setDescricao] = useState("");
+  const [tipo, setTipo] = useState("prestacao_servicos");
+  const [conteudo, setConteudo] = useState("");
+  const [changelog, setChangelog] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    fetchTemplates();
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [versions, setVersions] = useState<Version[]>([]);
+
+  const [genOpen, setGenOpen] = useState(false);
+  const [genTemplate, setGenTemplate] = useState<Template | null>(null);
+  const [genVersion, setGenVersion] = useState<Version | null>(null);
+  const [genValores, setGenValores] = useState<Record<string, string>>({});
+  const [genResultado, setGenResultado] = useState<string>("");
+  const [generating, setGenerating] = useState(false);
+
+  const carregar = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("document_templates")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) handleDbError(error);
+    setTemplates((data as Template[]) || []);
+    setLoading(false);
   }, []);
 
-  const fetchTemplates = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("contract_templates")
-        .select("*")
-        .order("created_at", { ascending: false });
+  useEffect(() => {
+    carregar();
+  }, [carregar]);
 
-      if (error) throw error;
-      setTemplates(data || []);
-    } catch (error: any) {
-      toast({
-        title: "Erro ao carregar templates",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+  const variaveis = useMemo(() => extrairVariaveis(conteudo), [conteudo]);
+
+  const openCreate = () => {
+    setEditing(null);
+    setNome("");
+    setDescricao("");
+    setTipo("prestacao_servicos");
+    setConteudo("");
+    setChangelog("");
+    setEditorOpen(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const openEdit = async (t: Template) => {
+    setEditing(t);
+    setNome(t.nome);
+    setDescricao(t.descricao || "");
+    setTipo(t.tipo || "outro");
+    setChangelog("");
+    // carrega conteúdo da versão atual
+    const { data, error } = await supabase
+      .from("template_versions")
+      .select("conteudo")
+      .eq("template_id", t.id)
+      .eq("versao", t.current_version)
+      .maybeSingle();
+    if (error) handleDbError(error);
+    setConteudo(data?.conteudo || "");
+    setEditorOpen(true);
+  };
 
-    if (!organization?.id) {
-      toast({
-        title: "Organização não encontrada",
-        description: "Finalize o onboarding ou verifique seu acesso.",
-        variant: "destructive",
-      });
+  const salvar = async () => {
+    if (!nome.trim() || !conteudo.trim()) {
+      toast({ title: "Nome e conteúdo são obrigatórios", variant: "destructive" });
       return;
     }
-
+    setSaving(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Sessão expirada");
 
-      if (editingTemplate) {
-        const { error } = await supabase
-          .from("contract_templates")
+      const { data: orgRes } = await supabase.rpc("current_user_org" as any);
+      const orgId = orgRes as string;
+      if (!orgId) throw new Error("Organização não encontrada");
+
+      const vars = extrairVariaveis(conteudo);
+      let templateId = editing?.id;
+      let novaVersao = editing ? editing.current_version + 1 : 1;
+
+      if (editing) {
+        const { data, error } = await supabase
+          .from("document_templates")
           .update({
-            nome: formData.nome,
-            descricao: formData.descricao,
-            tipo: formData.tipo,
-            conteudo_template: formData.conteudo_template,
+            nome,
+            descricao: descricao || null,
+            tipo: tipo as any,
+            current_version: novaVersao,
           })
-          .eq("id", editingTemplate.id);
-
-        if (error) throw error;
-
-        toast({
-          title: "Template atualizado",
-          description: "O template foi atualizado com sucesso.",
-        });
+          .eq("id", editing.id)
+          .select()
+          .maybeSingle();
+        if (error || !data) throw error || new Error("Falha ao atualizar");
       } else {
-        const { error } = await supabase.from("contract_templates").insert({
-          organization_id: organization.id,
-          nome: formData.nome,
-          descricao: formData.descricao,
-          tipo: formData.tipo,
-          conteudo_template: formData.conteudo_template,
-          created_by: userData.user?.id,
-        });
-
-        if (error) {
-          if (error.message.includes("row-level security") || error.code === "42501") {
-            throw new Error("Sem permissão para criar template. Verifique seu acesso.");
-          }
-          throw error;
-        }
-
-        toast({
-          title: "Template criado",
-          description: "Novo template foi criado com sucesso.",
-        });
+        const { data, error } = await supabase
+          .from("document_templates")
+          .insert({
+            nome,
+            descricao: descricao || null,
+            tipo: tipo as any,
+            organization_id: orgId,
+            created_by: user.id,
+            current_version: 1,
+          })
+          .select()
+          .maybeSingle();
+        if (error || !data) throw error || new Error("Falha ao criar");
+        templateId = data.id;
+        novaVersao = 1;
       }
 
-      setIsDialogOpen(false);
-      setEditingTemplate(null);
-      setFormData({
-        nome: "",
-        descricao: "",
-        tipo: "prestacao_servicos",
-        conteudo_template: "",
+      const { error: vErr } = await supabase.from("template_versions").insert({
+        template_id: templateId!,
+        organization_id: orgId,
+        created_by: user.id,
+        versao: novaVersao,
+        conteudo,
+        variaveis: vars as any,
+        is_published: true,
+        changelog: changelog || (editing ? "Atualização" : "Versão inicial"),
       });
-      fetchTemplates();
-    } catch (error: any) {
-      toast({
-        title: "Erro ao salvar template",
-        description: error.message,
-        variant: "destructive",
-      });
+      if (vErr) throw vErr;
+
+      toast({ title: "Template salvo", description: `Versão ${novaVersao} publicada.` });
+      setEditorOpen(false);
+      await carregar();
+    } catch (e: any) {
+      toast({ title: "Erro", description: e?.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleEdit = (template: ContractTemplate) => {
-    setEditingTemplate(template);
-    setFormData({
-      nome: template.nome,
-      descricao: template.descricao || "",
-      tipo: template.tipo,
-      conteudo_template: template.conteudo_template,
-    });
-    setIsDialogOpen(true);
+  const excluir = async (t: Template) => {
+    if (!confirm(`Excluir "${t.nome}"? Esta ação é irreversível.`)) return;
+    const { error } = await supabase.from("document_templates").delete().eq("id", t.id);
+    if (error) {
+      handleDbError(error);
+      return;
+    }
+    toast({ title: "Template excluído" });
+    await carregar();
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir este template?")) return;
+  const toggleAtivo = async (t: Template) => {
+    const { data, error } = await supabase
+      .from("document_templates")
+      .update({ is_active: !t.is_active })
+      .eq("id", t.id)
+      .select()
+      .maybeSingle();
+    if (error || !data) {
+      handleDbError(error);
+      return;
+    }
+    setTemplates((prev) => prev.map((x) => (x.id === t.id ? (data as Template) : x)));
+  };
 
+  const abrirHistorico = async (t: Template) => {
+    const { data, error } = await supabase
+      .from("template_versions")
+      .select("*")
+      .eq("template_id", t.id)
+      .order("versao", { ascending: false });
+    if (error) handleDbError(error);
+    setVersions((data as Version[]) || []);
+    setHistoryOpen(true);
+  };
+
+  const abrirGerar = async (t: Template) => {
+    const { data, error } = await supabase
+      .from("template_versions")
+      .select("*")
+      .eq("template_id", t.id)
+      .eq("versao", t.current_version)
+      .maybeSingle();
+    if (error || !data) {
+      handleDbError(error);
+      return;
+    }
+    const v = data as Version;
+    setGenTemplate(t);
+    setGenVersion(v);
+    const vars = Array.isArray(v.variaveis) ? v.variaveis : extrairVariaveis(v.conteudo);
+    const inicial: Record<string, string> = {};
+    vars.forEach((k: string) => (inicial[k] = ""));
+    setGenValores(inicial);
+    setGenResultado("");
+    setGenOpen(true);
+  };
+
+  const gerarDocumento = async () => {
+    if (!genVersion) return;
+    setGenerating(true);
     try {
-      const { error } = await supabase
-        .from("contract_templates")
-        .delete()
-        .eq("id", id);
-
+      const { data, error } = await supabase.functions.invoke("gerar-documento", {
+        body: {
+          template_version_id: genVersion.id,
+          valores: genValores,
+        },
+      });
       if (error) throw error;
-
-      toast({
-        title: "Template excluído",
-        description: "O template foi removido com sucesso.",
-      });
-
-      fetchTemplates();
-    } catch (error: any) {
-      toast({
-        title: "Erro ao excluir template",
-        description: error.message,
-        variant: "destructive",
-      });
+      if (data?.error) throw new Error(data.error);
+      setGenResultado(data.conteudo_gerado || "");
+      const faltando = data.variaveis_faltando as string[] | undefined;
+      if (faltando && faltando.length > 0) {
+        toast({
+          title: "Variáveis não preenchidas",
+          description: faltando.join(", "),
+        });
+      }
+    } catch (e: any) {
+      toast({ title: "Erro", description: e?.message, variant: "destructive" });
+    } finally {
+      setGenerating(false);
     }
   };
 
-  const getTipoBadge = (tipo: string) => {
-    const tipos: { [key: string]: { label: string; variant: any } } = {
-      prestacao_servicos: { label: "Prestação de Serviços", variant: "default" },
-      fornecimento: { label: "Fornecimento", variant: "secondary" },
-      locacao: { label: "Locação", variant: "outline" },
-      confidencialidade: { label: "Confidencialidade", variant: "default" },
-      parceria: { label: "Parceria", variant: "secondary" },
-      outro: { label: "Outro", variant: "outline" },
-    };
-    const config = tipos[tipo] || tipos.outro;
-    return <Badge variant={config.variant}>{config.label}</Badge>;
+  const copiarResultado = () => {
+    navigator.clipboard.writeText(genResultado);
+    toast({ title: "Copiado para a área de transferência" });
   };
 
-  if (isLoading) {
+  const getTipoLabel = (t: string | null) =>
+    TIPOS.find((x) => x.value === t)?.label || "—";
+
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
         <p className="text-muted-foreground">Carregando templates...</p>
@@ -207,109 +322,21 @@ const Templates = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Templates de Contratos</h1>
-          <p className="text-muted-foreground mt-2">
-            Gerencie modelos padrão para criação rápida de contratos
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <FileText className="h-7 w-7 text-primary" />
+            Templates de Documentos
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Modelos versionados com variáveis dinâmicas para geração rápida de documentos.
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => {
-              setEditingTemplate(null);
-              setFormData({
-                nome: "",
-                descricao: "",
-                tipo: "prestacao_servicos",
-                conteudo_template: "",
-              });
-            }}>
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Template
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingTemplate ? "Editar Template" : "Novo Template"}
-              </DialogTitle>
-              <DialogDescription>
-                Crie um modelo de contrato para reutilização
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="nome">Nome do Template</Label>
-                <Input
-                  id="nome"
-                  value={formData.nome}
-                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="descricao">Descrição</Label>
-                <Input
-                  id="descricao"
-                  value={formData.descricao}
-                  onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="tipo">Tipo de Contrato</Label>
-                <Select
-                  value={formData.tipo}
-                  onValueChange={(value) => setFormData({ ...formData, tipo: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="prestacao_servicos">Prestação de Serviços</SelectItem>
-                    <SelectItem value="fornecimento">Fornecimento</SelectItem>
-                    <SelectItem value="locacao">Locação</SelectItem>
-                    <SelectItem value="confidencialidade">Confidencialidade (NDA)</SelectItem>
-                    <SelectItem value="parceria">Parceria</SelectItem>
-                    <SelectItem value="outro">Outro</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="conteudo">Conteúdo do Template</Label>
-                <Textarea
-                  id="conteudo"
-                  value={formData.conteudo_template}
-                  onChange={(e) =>
-                    setFormData({ ...formData, conteudo_template: e.target.value })
-                  }
-                  rows={10}
-                  placeholder="Digite o conteúdo do template aqui. Use {{campo}} para campos variáveis."
-                  required
-                />
-                <p className="text-sm text-muted-foreground">
-                  Use {`{{nome_campo}}`} para criar campos variáveis que serão preenchidos ao usar o template
-                </p>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setIsDialogOpen(false);
-                    setEditingTemplate(null);
-                  }}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit">
-                  {editingTemplate ? "Atualizar" : "Criar"} Template
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={openCreate}>
+          <Plus className="mr-2 h-4 w-4" />
+          Novo Template
+        </Button>
       </div>
 
       {templates.length === 0 ? (
@@ -323,41 +350,224 @@ const Templates = () => {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {templates.map((template) => (
-            <Card key={template.id} className="flex flex-col">
+          {templates.map((t) => (
+            <Card key={t.id} className="flex flex-col hover:border-primary/40 transition-colors">
               <CardHeader>
-                <div className="flex items-start justify-between">
-                  <FileText className="h-8 w-8 text-primary" />
-                  {getTipoBadge(template.tipo)}
+                <div className="flex items-start justify-between gap-2">
+                  <FileText className="h-7 w-7 text-primary" />
+                  <div className="flex gap-1 flex-wrap justify-end">
+                    <Badge variant={t.is_active ? "default" : "secondary"}>
+                      {t.is_active ? "Ativo" : "Inativo"}
+                    </Badge>
+                    <Badge variant="outline">v{t.current_version}</Badge>
+                  </div>
                 </div>
-                <CardTitle className="mt-4">{template.nome}</CardTitle>
-                <CardDescription>{template.descricao}</CardDescription>
+                <CardTitle className="mt-3">{t.nome}</CardTitle>
+                <CardDescription>
+                  {getTipoLabel(t.tipo)}
+                  {t.descricao && ` — ${t.descricao}`}
+                </CardDescription>
               </CardHeader>
-              <CardContent className="flex-1">
-                <p className="text-sm text-muted-foreground line-clamp-3">
-                  {template.conteudo_template}
-                </p>
-              </CardContent>
-              <CardFooter className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleEdit(template)}
-                >
+              <CardContent className="flex-1" />
+              <CardFooter className="flex flex-wrap gap-2 justify-end">
+                <Button variant="default" size="sm" onClick={() => abrirGerar(t)}>
+                  <Sparkles className="h-3.5 w-3.5 mr-1" /> Gerar
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => abrirHistorico(t)} title="Histórico">
+                  <History className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => toggleAtivo(t)}>
+                  {t.is_active ? "Desativar" : "Ativar"}
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => openEdit(t)}>
                   <Edit className="h-4 w-4" />
                 </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => handleDelete(template.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
+                <Button variant="ghost" size="sm" onClick={() => excluir(t)}>
+                  <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
               </CardFooter>
             </Card>
           ))}
         </div>
       )}
+
+      {/* Editor */}
+      <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editing
+                ? `Editar Template (v${editing.current_version} → v${editing.current_version + 1})`
+                : "Novo Template"}
+            </DialogTitle>
+            <DialogDescription>
+              Use <code className="text-xs bg-muted px-1 py-0.5 rounded">{`{{nome_variavel}}`}</code>{" "}
+              para criar campos dinâmicos.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <Label>Nome</Label>
+                <Input value={nome} onChange={(e) => setNome(e.target.value)} />
+              </div>
+              <div>
+                <Label>Tipo</Label>
+                <Select value={tipo} onValueChange={setTipo}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {TIPOS.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label>Descrição</Label>
+              <Input value={descricao} onChange={(e) => setDescricao(e.target.value)} />
+            </div>
+            <div>
+              <Label>Conteúdo</Label>
+              <Textarea
+                value={conteudo}
+                onChange={(e) => setConteudo(e.target.value)}
+                rows={12}
+                placeholder="Ex: Contrato firmado entre {{contratante}} e {{contratado}}..."
+                className="font-mono text-sm"
+              />
+            </div>
+            {variaveis.length > 0 && (
+              <div className="rounded-md border p-3 bg-muted/30">
+                <p className="text-xs font-medium mb-2">
+                  Variáveis detectadas ({variaveis.length})
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {variaveis.map((v) => (
+                    <Badge key={v} variant="secondary" className="text-xs font-mono">
+                      {`{{${v}}}`}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            {editing && (
+              <div>
+                <Label>Changelog (opcional)</Label>
+                <Input
+                  value={changelog}
+                  onChange={(e) => setChangelog(e.target.value)}
+                  placeholder="O que mudou nesta versão?"
+                />
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditorOpen(false)}>Cancelar</Button>
+            <Button onClick={salvar} disabled={saving}>
+              <Save className="h-4 w-4 mr-2" />
+              {saving ? "Salvando..." : "Salvar e publicar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Histórico */}
+      <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Histórico de versões</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            {versions.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhuma versão.</p>
+            ) : (
+              versions.map((v) => (
+                <Card key={v.id}>
+                  <CardContent className="py-3">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">v{v.versao}</Badge>
+                        {v.is_published && <Badge>Publicada</Badge>}
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(v.created_at).toLocaleString("pt-BR")}
+                      </span>
+                    </div>
+                    {v.changelog && (
+                      <p className="text-sm text-muted-foreground">{v.changelog}</p>
+                    )}
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Gerar documento */}
+      <Dialog open={genOpen} onOpenChange={setGenOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Gerar documento — {genTemplate?.nome}
+            </DialogTitle>
+            <DialogDescription>
+              Preencha as variáveis para gerar o documento final.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            {Object.keys(genValores).length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Este template não tem variáveis dinâmicas.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {Object.keys(genValores).map((k) => (
+                  <div key={k}>
+                    <Label className="font-mono text-xs">{`{{${k}}}`}</Label>
+                    <Input
+                      value={genValores[k]}
+                      onChange={(e) =>
+                        setGenValores((prev) => ({ ...prev, [k]: e.target.value }))
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {genResultado && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Documento gerado</Label>
+                  <Button variant="outline" size="sm" onClick={copiarResultado}>
+                    <Copy className="h-3.5 w-3.5 mr-1" /> Copiar
+                  </Button>
+                </div>
+                <Textarea
+                  value={genResultado}
+                  readOnly
+                  rows={14}
+                  className="font-mono text-sm"
+                />
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGenOpen(false)}>Fechar</Button>
+            <Button onClick={gerarDocumento} disabled={generating}>
+              <Sparkles className="h-4 w-4 mr-2" />
+              {generating ? "Gerando..." : "Gerar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

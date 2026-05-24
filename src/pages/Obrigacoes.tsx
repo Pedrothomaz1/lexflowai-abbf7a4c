@@ -28,6 +28,7 @@ import { DataTable, DataTableColumn } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageSkeleton } from "@/components/ui/skeleton-loaders";
 import { StatCard, StatCardGrid } from "@/components/ui/stat-card";
+import { TIPO_OBRIGACAO_OPTIONS } from "@/lib/lexflow-constants";
 import { AnimatedButton } from "@/components/ui/animated-button";
 import { StaggerContainer, StaggerItem, FadeIn } from "@/components/ui/motion-container";
 import { AnimatedCard, AnimatedCardContent, AnimatedCardHeader } from "@/components/ui/animated-card";
@@ -40,6 +41,8 @@ import {
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { handleDbError } from "@/utils/dbErrorHandler";
+import { ObrigacaoRowActions } from "@/components/Obrigacoes/ObrigacaoRowActions";
 
 type Obligation = {
   id: string;
@@ -140,7 +143,7 @@ const Obrigacoes = () => {
     } catch (error: any) {
       toast({
         title: "Erro ao carregar obrigações",
-        description: error.message,
+        description: handleDbError(error).message,
         variant: "destructive",
       });
     } finally {
@@ -177,7 +180,7 @@ const Obrigacoes = () => {
     } catch (error: any) {
       toast({
         title: "Erro ao atualizar obrigação",
-        description: error.message,
+        description: handleDbError(error).message,
         variant: "destructive",
       });
     }
@@ -339,14 +342,13 @@ const Obrigacoes = () => {
       key: "id",
       header: "",
       render: (_, row) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => row.contrato_id && navigate(`/contratos/${row.contrato_id}`)}
-          disabled={!row.contrato_id}
-        >
-          <Eye className="h-4 w-4" />
-        </Button>
+        <ObrigacaoRowActions
+          obrigacaoId={row.id}
+          obrigacaoTitulo={row.titulo}
+          contratoId={row.contrato_id}
+          contratoTitulo={row.contratos?.titulo}
+          onRefresh={fetchObligations}
+        />
       ),
     },
   ];
@@ -479,11 +481,9 @@ const Obrigacoes = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os tipos</SelectItem>
-              <SelectItem value="comunicacao">Comunicação</SelectItem>
-              <SelectItem value="entrega">Entrega</SelectItem>
-              <SelectItem value="relatorio">Relatório</SelectItem>
-              <SelectItem value="renovacao">Renovação</SelectItem>
-              <SelectItem value="notificacao">Notificação</SelectItem>
+              {TIPO_OBRIGACAO_OPTIONS.map((t) => (
+                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
 

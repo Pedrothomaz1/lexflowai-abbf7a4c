@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useMemo } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +23,8 @@ import { AnimatedCard, AnimatedCardContent, AnimatedCardHeader } from "@/compone
 import { formatCPF, formatCNPJ } from "@/utils/documentValidation";
 import { FornecedorForm } from "@/components/Fornecedores";
 import { Button } from "@/components/ui/button";
+import { CnpjStatusBadge } from "@/components/cnpj/CnpjStatusBadge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type Fornecedor = {
   id: string;
@@ -36,6 +38,7 @@ type Fornecedor = {
   estado: string | null;
   is_active: boolean | null;
   created_at: string;
+  cnpj_status: string | null;
 };
 
 type FornecedorCategoria = {
@@ -64,10 +67,18 @@ const CATEGORIA_LABELS: Record<string, string> = {
 const Fornecedores = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [categorias, setCategorias] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  const filtroAtivo = searchParams.get("filtro") === "cnpj_inativo";
+  const PROBLEM = ["baixada", "suspensa", "inapta", "nula"];
+  const fornecedoresFiltrados = useMemo(
+    () => (filtroAtivo ? fornecedores.filter((f) => PROBLEM.includes(String(f.cnpj_status))) : fornecedores),
+    [filtroAtivo, fornecedores],
+  );
 
   useEffect(() => {
     fetchFornecedores();
@@ -79,7 +90,7 @@ const Fornecedores = () => {
     // Fetch fornecedores
     const { data: fornecedoresData, error: fornecedoresError } = await supabase
       .from("fornecedores")
-      .select("id, nome, tipo_pessoa, cnpj, cpf, email, telefone, cidade, estado, is_active, created_at")
+      .select("id, nome, tipo_pessoa, cnpj, cpf, email, telefone, cidade, estado, is_active, created_at, cnpj_status")
       .order("nome");
 
     if (fornecedoresError) {
@@ -154,9 +165,10 @@ const Fornecedores = () => {
         if (!doc) return <span className="text-muted-foreground">—</span>;
         const formatted = row.cnpj ? formatCNPJ(doc) : formatCPF(doc);
         return (
-          <span className="font-mono text-sm text-muted-foreground">
-            {formatted}
-          </span>
+          <div className="space-y-1">
+            <span className="font-mono text-sm text-muted-foreground">{formatted}</span>
+            {row.cnpj && <CnpjStatusBadge status={row.cnpj_status} className="text-[10px]" />}
+          </div>
         );
       },
     },
@@ -281,28 +293,41 @@ const Fornecedores = () => {
         <StaggerItem>
           <AnimatedCard hoverScale={1}>
             <AnimatedCardHeader>
-              <div className="flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-primary" />
-                <h3 className="text-lg font-semibold">Lista de Fornecedores</h3>
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-5 w-5 text-primary" />
+                    <h3 className="text-lg font-semibold">Lista de Fornecedores</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {fornecedoresFiltrados.length} fornecedor(es){filtroAtivo ? " com CNPJ inativo" : " cadastrado(s)"}
+                  </p>
+                </div>
+                <Tabs
+                  value={filtroAtivo ? "cnpj_inativo" : "todos"}
+                  onValueChange={(v) => {
+                    if (v === "cnpj_inativo") setSearchParams({ filtro: "cnpj_inativo" });
+                    else setSearchParams({});
+                  }}
+                >
+                  <TabsList>
+                    <TabsTrigger value="todos">Todos</TabsTrigger>
+                    <TabsTrigger value="cnpj_inativo">CNPJs com problemas</TabsTrigger>
+                  </TabsList>
+                </Tabs>
               </div>
-              <p className="text-sm text-muted-foreground">
-                {fornecedores.length} fornecedor(es) cadastrado(s)
-              </p>
             </AnimatedCardHeader>
             <AnimatedCardContent>
-              {fornecedores.length === 0 ? (
+              {fornecedoresFiltrados.length === 0 ? (
                 <EmptyState
                   icon={Building2}
-                  title="Nenhum fornecedor cadastrado"
-                  description="Cadastre seu primeiro fornecedor para começar a gerenciar suas parcerias."
-                  action={{
-                    label: "Novo Fornecedor",
-                    onClick: () => setDialogOpen(true),
-                  }}
+                  title={filtroAtivo ? "Nenhum CNPJ com problemas" : "Nenhum fornecedor cadastrado"}
+                  description={filtroAtivo ? "Todos os fornecedores estão com CNPJ ativo na Receita Federal." : "Cadastre seu primeiro fornecedor para começar."}
+                  action={filtroAtivo ? undefined : { label: "Novo Fornecedor", onClick: () => setDialogOpen(true) }}
                 />
               ) : (
                 <DataTable
-                  data={fornecedores}
+                  data={fornecedoresFiltrados}
                   columns={columns}
                   searchable
                   searchPlaceholder="Buscar por nome, documento..."

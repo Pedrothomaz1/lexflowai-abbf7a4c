@@ -1,7 +1,9 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { GlobalHeader } from "./GlobalHeader";
-import { OnboardingTour } from "./Onboarding";
+import { OnboardingTour, OnboardingChecklist } from "./Onboarding";
+import { Breadcrumbs } from "./Breadcrumbs";
+import { SuspendedBanner } from "./states/SuspendedBanner";
 import { useModulo } from "@/contexts/ModuloContext";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { cn } from "@/lib/utils";
@@ -31,12 +33,18 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       )}>
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
+          <SuspendedBanner />
           <GlobalHeader />
-          <main className="flex-1 p-6 overflow-auto">{children}</main>
+          <main className="flex-1 p-6 overflow-auto">
+            <Breadcrumbs />
+            {children}
+          </main>
         </div>
       </div>
       {/* Onboarding Tour - renders on first visit */}
       <OnboardingTour />
+      {/* Onboarding Checklist - persistent until completed/dismissed */}
+      <OnboardingChecklist />
     </SidebarProvider>
   );
 }

@@ -70,10 +70,43 @@ serve(async (req) => {
   }
 
   try {
+    // SECURITY: require Bearer token + admin role
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Não autorizado' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: userData, error: authErr } = await supabase.auth.getUser(token);
+    if (authErr || !userData?.user) {
+      return new Response(
+        JSON.stringify({ error: 'Token inválido' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Verify caller has admin role
+    const { data: roleRow } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userData.user.id)
+      .in('role', ['administrador', 'system_admin'])
+      .maybeSingle();
+
+    if (!roleRow) {
+      return new Response(
+        JSON.stringify({ error: 'Acesso negado: requer privilégio de administrador' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const { alert_id, action } = await req.json();
 
@@ -106,6 +139,22 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ error: 'Alerta sem organização associada' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Ensure caller belongs to the alert's organization
+    const { data: callerMembership } = await supabase
+      .from('organization_members')
+      .select('id')
+      .eq('user_id', userData.user.id)
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (!callerMembership) {
+      return new Response(
+        JSON.stringify({ error: 'Acesso negado a esta organização' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 

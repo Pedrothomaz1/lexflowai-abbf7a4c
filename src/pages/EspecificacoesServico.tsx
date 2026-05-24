@@ -56,6 +56,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PageSkeleton } from "@/components/ui/skeleton-loaders";
+import { handleDbError } from "@/utils/dbErrorHandler";
 
 interface Especificacao {
   id: string;
@@ -137,7 +138,7 @@ export default function EspecificacoesServico() {
     } catch (error: any) {
       toast({
         title: "Erro ao carregar especificações",
-        description: error.message,
+        description: handleDbError(error).message,
         variant: "destructive",
       });
     } finally {
@@ -205,7 +206,7 @@ export default function EspecificacoesServico() {
     } catch (error: any) {
       toast({
         title: "Erro ao salvar",
-        description: error.message,
+        description: handleDbError(error).message,
         variant: "destructive",
       });
     } finally {
@@ -256,7 +257,7 @@ export default function EspecificacoesServico() {
     } catch (error: any) {
       toast({
         title: "Erro ao excluir",
-        description: error.message,
+        description: handleDbError(error).message,
         variant: "destructive",
       });
     }
@@ -274,7 +275,7 @@ export default function EspecificacoesServico() {
     } catch (error: any) {
       toast({
         title: "Erro ao atualizar",
-        description: error.message,
+        description: handleDbError(error).message,
         variant: "destructive",
       });
     }

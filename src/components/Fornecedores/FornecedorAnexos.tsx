@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { getSignedFileUrl } from "@/utils/storageUtils";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +42,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { handleDbError } from "@/utils/dbErrorHandler";
 
 const TIPOS_DOCUMENTO = [
   "Contrato Social",
@@ -103,7 +105,7 @@ export function FornecedorAnexos({
       toast({
         variant: "destructive",
         title: "Erro ao carregar anexos",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } finally {
       setLoading(false);
@@ -151,18 +153,13 @@ export function FornecedorAnexos({
 
       if (uploadError) throw uploadError;
 
-      // Obtém URL pública
-      const { data: urlData } = supabase.storage
-        .from("contratos-documentos")
-        .getPublicUrl(fileName);
-
-      // Salva registro no banco
+      // Salva registro no banco com o path do storage
       const { error: insertError } = await supabase
         .from("fornecedor_anexos")
         .insert({
           fornecedor_id: fornecedorId,
           nome_arquivo: file.name,
-          arquivo_url: urlData.publicUrl,
+          arquivo_url: fileName,
           tipo_documento: tipoDocumento,
           tamanho_bytes: file.size,
           uploaded_by: user.id,
@@ -177,7 +174,7 @@ export function FornecedorAnexos({
       toast({
         variant: "destructive",
         title: "Erro ao enviar anexo",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } finally {
       setUploading(false);
@@ -206,7 +203,7 @@ export function FornecedorAnexos({
       toast({
         variant: "destructive",
         title: "Erro ao remover anexo",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } finally {
       setDeleting(false);
@@ -333,15 +330,12 @@ export function FornecedorAnexos({
                       <Button
                         variant="ghost"
                         size="icon"
-                        asChild
+                        onClick={async () => {
+                          const url = await getSignedFileUrl(anexo.arquivo_url);
+                          if (url) window.open(url, '_blank');
+                        }}
                       >
-                        <a
-                          href={anexo.arquivo_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <Download className="h-4 w-4" />
-                        </a>
+                        <Download className="h-4 w-4" />
                       </Button>
                       {!readOnly && (
                         <Button

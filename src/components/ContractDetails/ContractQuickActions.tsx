@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { handleDbError } from "@/utils/dbErrorHandler";
+import { getSignedFileUrl } from "@/utils/storageUtils";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -111,7 +113,7 @@ export function ContractQuickActions({
       toast({
         variant: "destructive",
         title: "Erro ao duplicar",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } finally {
       setIsDuplicating(false);
@@ -121,12 +123,23 @@ export function ContractQuickActions({
   const handleArchive = async () => {
     setIsArchiving(true);
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("contratos")
         .update({ status: 'encerrado' })
-        .eq("id", contratoId);
+        .eq("id", contratoId)
+        .select()
+        .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes("row-level security") || error.code === "42501") {
+          throw new Error("Sem permissão para arquivar contrato. Verifique seu acesso.");
+        }
+        throw error;
+      }
+
+      if (!data) {
+        throw new Error("Sem permissão para arquivar este contrato. Somente administradores ou consultoria jurídica podem arquivar.");
+      }
 
       toast({
         title: "Contrato arquivado",
@@ -139,7 +152,7 @@ export function ContractQuickActions({
       toast({
         variant: "destructive",
         title: "Erro ao arquivar",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } finally {
       setIsArchiving(false);
@@ -184,7 +197,7 @@ export function ContractQuickActions({
       toast({
         variant: "destructive",
         title: "Erro ao criar alerta",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     }
   };
@@ -209,7 +222,10 @@ export function ContractQuickActions({
       id: 'view-doc',
       label: 'Ver Documento',
       icon: FileText,
-      onClick: () => window.open(arquivoUrl!, '_blank'),
+      onClick: async () => {
+        const url = await getSignedFileUrl(arquivoUrl!);
+        if (url) window.open(url, '_blank');
+      },
       show: !!arquivoUrl,
     },
   ].filter(action => action.show);

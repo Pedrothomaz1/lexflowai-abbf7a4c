@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Verify authentication
+    // Verify authentication — validate token against Supabase Auth
     const authHeader = req.headers.get('Authorization')
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(
@@ -102,6 +102,15 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
+
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user }, error: authErr } = await supabaseClient.auth.getUser(token)
+    if (authErr || !user) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Token inválido ou expirado' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
     const { contratoId, contratoNumero, contratoTitulo, novoStatus } = await req.json() as NotificacaoRequest
 

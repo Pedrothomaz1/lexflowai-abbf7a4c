@@ -1,263 +1,187 @@
-# LexFlowAI - Documentacao Tecnica
+# Documentação Técnica — LexFlow
 
-## Resumo Executivo
+> Versão 2.0 — Maio/2026
+> Substitui versões anteriores (fev/2026 e anteriores).
 
-Sistema de Gestao de Contratos Empresariais desenvolvido em React + TypeScript com backend Supabase (PostgreSQL + Edge Functions).
-
-**Stack Principal:**
-- Frontend: React 18.3 + TypeScript + Vite
-- UI: TailwindCSS + Shadcn/ui (Radix)
-- Backend: Supabase (PostgreSQL + Deno Edge Functions)
-- Autenticacao: Supabase Auth + 2FA/TOTP
+LexFlow é um SaaS B2B de **gestão preventiva de contratos, fornecedores, obrigações e franquias**, voltado a gestores executivos (não-jurídicos). Este documento descreve a arquitetura técnica, modelo multi-tenant, segurança e principais fluxos de backend.
 
 ---
 
-## 1. Estrutura de Pastas
+## 1. Stack
 
-```
-lexflowai/
-├── src/
-│   ├── components/          # Componentes React reutilizaveis
-│   │   ├── ui/             # Biblioteca Shadcn (50+ componentes)
-│   │   ├── ContractDetails/ # Visualizacao de contratos
-│   │   ├── Fornecedores/    # Gestao de fornecedores
-│   │   ├── Franquias/       # Gestao de franquias
-│   │   ├── security/        # Componentes de seguranca
-│   │   └── Settings/        # Configuracoes
-│   ├── contexts/            # Contextos React (Auth, Organization)
-│   ├── hooks/               # Hooks customizados (12+)
-│   ├── pages/               # Paginas de rotas (40+)
-│   ├── integrations/        # Cliente Supabase e tipos
-│   ├── utils/               # Funcoes utilitarias
-│   └── lib/                 # Helpers
-├── supabase/
-│   ├── migrations/          # 40+ migracoes SQL
-│   └── functions/           # 19 Edge Functions (Deno)
-└── dist/                    # Build de producao
-```
+- **Frontend**: React 18 + Vite 5 + TypeScript 5 + Tailwind v3 + shadcn/ui + Framer Motion.
+- **Backend**: Lovable Cloud (Supabase gerenciado) — PostgreSQL + Auth + Storage + Edge Functions (Deno).
+- **IA**: Lovable AI Gateway (Gemini 2.5 / GPT-5 family).
+- **E-mail**: Resend (`RESEND_API_KEY`).
+- **Hosting**: Lovable (preview, staging e produção em `lexflowai.com.br`).
+- **CI/Testes**: Vitest + Testing Library + GitHub Actions (suite de pre-launch).
+
+Detalhes em `docs/framework/tech-stack.md`, `docs/framework/coding-standards.md`, `docs/framework/source-tree.md`.
 
 ---
 
-## 2. Banco de Dados - Tabelas Principais
+## 2. Modelo multi-tenant
 
-### Dados Core
-| Tabela | Descricao |
-|--------|-----------|
-| `organizations` | Organizacoes/empresas |
-| `organization_members` | Membros com roles |
-| `profiles` | Perfis de usuario |
-| `contratos` | Contratos |
-| `fornecedores` | Fornecedores |
-| `franquias` | Franquias |
-| `unidades` | Unidades/filiais |
+Multi-tenancy **estrito** baseado em `organization_id` + Row-Level Security.
 
-### Gestao de Contratos
-| Tabela | Descricao |
-|--------|-----------|
-| `contract_templates` | Modelos de contrato |
-| `contract_alerts` | Alertas de vencimento |
-| `contract_attachments` | Anexos |
-| `contract_analysis` | Analise IA |
-| `contract_obligations` | Obrigacoes |
-| `contract_signatures` | Assinaturas eletronicas |
-| `contract_history` | Historico de versoes |
+### 2.1 Entidades-chave
 
-### Seguranca
-| Tabela | Descricao |
-|--------|-----------|
-| `user_roles` | Roles de usuario |
-| `role_permissions` | Permissoes por role |
-| `mfa_requirements` | Exigencia de 2FA por role |
-| `audit_logs` | Log de auditoria completo |
-| `user_sessions` | Sessoes ativas |
+| Tabela | Função |
+|---|---|
+| `organizations` | Tenant. Campos: `nome`, `cnpj`, `plano` (free/pro/business/enterprise), `status` (ativa/suspensa), `max_usuarios`. |
+| `organization_members` | Vínculo `user_id ↔ organization_id` com `role_in_org` (owner/admin/membro/consultoria). |
+| `organization_invites` | Convites por e-mail com `token` e `expires_at`. |
+| `user_roles` | Papel de aplicação (`app_role`) por usuário e organização — usado pelas RLS. |
+| `super_admins` | Usuários globais da plataforma (operação LexFlow). |
+| `profiles` | Dados de perfil; criado via trigger `handle_new_user` no signup. |
+
+### 2.2 Funções SECURITY DEFINER
+
+- `current_user_org()` — retorna a organização ativa do usuário autenticado (a mais antiga ativa).
+- `has_role(user_id, role)` — checa papel dentro da org atual.
+- `has_permission(user_id, permission)` — via `role_permissions`.
+- `is_admin()`, `is_org_admin(user, org)`, `is_org_owner(user, org)`, `belongs_to_org(user, org)`.
+- `is_super_admin(user_id)` — global.
+- `accept_organization_invite(token)`, `check_pending_invite_for_user()`.
+- `approve_organization(org_id)`, `suspend_organization(org_id, motivo)`.
+- `promote_super_admin_by_email(email)`, `revoke_super_admin_by_email(email)`, `list_super_admins()`.
+
+### 2.3 RLS — padrão
+
+Todas as tabelas de domínio (contratos, fornecedores, serviços, franquias, obrigações, notifications, audit_logs, etc.):
+
+```sql
+USING (organization_id = current_user_org())
+```
+
+Para edge functions com service role, padrão de bypass:
+
+```sql
+USING (
+  organization_id = current_user_org()
+  OR auth.jwt() ->> 'role' = 'service_role'
+)
+```
+
+### 2.4 Triggers críticas
+
+- `handle_new_user` (auth.users → profiles) — criação automática de profile no signup.
+- `audit_trigger_func` — popula `audit_logs` com risk_level e event_category.
+- `create_contract_version` — versionamento automático de contratos em UPDATE.
+- `trg_novo_contrato_fn`, `trg_contrato_status_change_fn`, `trg_nova_obrigacao_fn` — notificações.
+- `sync_org_max_usuarios` — sincroniza limite de usuários ao mudar plano.
+- `generate_contract_request_number` — numeração `REQ-YYYY-NNNNNN`.
 
 ---
 
-## 3. Edge Functions (Backend)
+## 3. Autenticação
 
-### Comunicacao
-| Funcao | Porta | Descricao |
-|--------|-------|-----------|
-| `enviar-notificacao-email` | Resend API | Emails transacionais |
-| `enviar-notificacao-whatsapp` | WhatsApp API | Notificacoes WhatsApp |
-| `enviar-convite-organizacao` | Resend API | Convites de equipe |
-
-### Processamento de Contratos
-| Funcao | Descricao |
-|--------|-----------|
-| `analisar-contrato` | Analise IA de contratos |
-| `extrair-dados-pdf` | Extracao de dados de PDF |
-| `processar-requisicao-contrato` | Processamento de requisicoes |
-| `signature-webhook` | Webhooks de assinatura (DocuSign, Clicksign, D4Sign) |
-
-### Seguranca
-| Funcao | Descricao |
-|--------|-----------|
-| `totp-auth` | Geracao e verificacao 2FA |
-| `rate-limiter` | Rate limiting por role |
-| `security-alert-handler` | Tratamento de incidentes |
-| `security-metrics` | Metricas de seguranca |
-| `gdpr-handler` | Requisicoes LGPD/GDPR |
-
-### Automacao
-| Funcao | Descricao |
-|--------|-----------|
-| `verificar-alertas` | Verificacao automatica de alertas |
-| `anomaly-detector` | Deteccao de anomalias |
+- **Apenas e-mail + senha** (sem social login). Senha mínima 12 caracteres.
+- Sessão em `localStorage` (constraint conhecida do projeto).
+- Convites validados **no servidor** (`accept_organization_invite`) — token nunca decide vinculação no cliente.
+- 2FA opcional (`user_2fa_settings`); papéis com `mfa_requirements.is_required = true` são obrigados.
+- Rate-limit de tentativas em `login_attempts` + `is_login_blocked()`.
+- Reset de senha: tela detecta sessão de recuperação no mount.
 
 ---
 
-## 4. Autenticacao e Seguranca
+## 4. RBAC
 
-### Fluxo de Login
-```
-1. Usuario acessa /auth
-2. Supabase.auth.signIn()
-3. Se 2FA habilitado → TwoFactorVerification
-4. AuthContext carrega sessao
-5. OrganizationContext carrega organizacao
-6. Redirecionamento para Dashboard
-```
+Tabelas: `app_role` (enum), `user_roles`, `permissions`, `role_permissions`.
 
-### Roles Disponiveis
-- `administrador` - Acesso total
-- `consultoria_juridica` - Gestao juridica
-- `analista_juridico` - Analise de contratos
-- `financeiro_senior` - Gestao financeira
-- `operacional` - Operacoes basicas
+Papéis principais:
+- `administrador` — gestão completa da org.
+- `analista_juridico` — CRUD de contratos/fornecedores/obrigações.
+- (visualizador via `role_permissions`).
 
-### Seguranca Implementada
-- Row Level Security (RLS) em todas as tabelas
-- CORS validado em todas Edge Functions
-- Rate limiting por endpoint e role
-- 2FA com TOTP (SHA-256)
-- Audit logging completo
-- Sanitizacao HTML com DOMPurify
+Frontend usa hooks `useRoles` e `usePermissions`. Restrições de menu (`MainSidebar`) impedem itens admin-only para não-admins.
 
 ---
 
-## 5. Variaveis de Ambiente
+## 5. Edge Functions (resumo)
 
-### Frontend (.env)
-```bash
-VITE_SUPABASE_URL=https://xxx.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=eyJxxx
-```
+> 25+ funções. Pasta: `supabase/functions/`. Estilo: validação dentro retorna **HTTP 200** com `{ success: false, error }` para não quebrar o fluxo do cliente; somente erros realmente excepcionais retornam 4xx/5xx.
 
-> **Nota de seguranca:** mantenha `.env` apenas localmente e use `.env.example` como referencia sem valores reais.
+Categorias principais:
 
-### Supabase (Dashboard > Settings > Edge Functions)
-```bash
-ALLOWED_ORIGIN=https://seu-dominio.com
-CRON_SECRET=secret-para-jobs-agendados
-RESEND_API_KEY=re_xxx
-WEBHOOK_SECRET=whsec_xxx
-LOVABLE_API_KEY=xxx
-```
+- **Organização e onboarding**: `super-admin-create-client-org`, `create-organization-invite`, `accept-organization-invite`.
+- **Segurança**: `security-regression-runner`, `pre-launch-test-runner`.
+- **Notificações**: `send-finance-payment-report`, e-mails de convite/welcome.
+- **Integrações**: `gest10-compras-sync` (API Gest10).
+- **IA**: análise de contrato (Lovable AI Gateway).
+- **Cron**: `job_notificar_vencimentos` (chamada por scheduler externo com `CRON_SECRET`).
 
 ---
 
-## 6. Comandos Principais
+## 6. Storage
 
-```bash
-# Desenvolvimento
-npm install          # Instalar dependencias
-npm run dev          # Servidor de desenvolvimento (porta 8080)
-
-# Producao
-npm run build        # Gerar build de producao
-npm run preview      # Previsualizar build
-
-# Qualidade
-npm run lint         # Verificar codigo
-npm audit            # Verificar vulnerabilidades
-```
+- Bucket **privado** `contratos-documentos`.
+- Acesso via **URL assinada** de curta duração (nunca pública).
+- Path convencional: `{organization_id}/{contrato_id}/{filename}`.
+- Múltiplos anexos por contrato (ver memory `contract-multi-attachments`).
 
 ---
 
-## 7. Fluxos de Dados Principais
+## 7. Design system
 
-### Criacao de Contrato
-```
-Formulario → Validacao → requisicoes_compras →
-Workflow Aprovacao → contrato criado → Alertas gerados →
-Notificacoes enviadas
-```
-
-### Processamento de Documento
-```
-Upload PDF → extrair-dados-pdf → analisar-contrato (IA) →
-contract_analysis → Exibicao no UI
-```
-
-### Assinatura Eletronica
-```
-Contrato pronto → Integracao DocuSign/Clicksign →
-Envio para signatarios → Webhook atualiza status →
-Notificacao de conclusao
-```
+- Cores em **HSL** definidas em `src/index.css` e `tailwind.config.ts`.
+- Tokens semânticos: `--primary`, `--background`, `--accent`, etc. Verde/mustard como cores principais da marca.
+- Tipografia: Inter.
+- Grid 8pt, radius 20px.
+- Separação visual por módulo: mostarda para franquias, verde para contratos/serviços.
 
 ---
 
-## 8. Troubleshooting
+## 8. Branding e SEO
 
-### Erro de CORS
-- Verificar `ALLOWED_ORIGIN` no Supabase
-- Dominio deve incluir protocolo: `https://dominio.com`
-
-### Erro 401 em Edge Functions
-- Verificar se `CRON_SECRET` esta configurado
-- Token Bearer deve ser enviado no header Authorization
-
-### Erro de RLS (Row Level Security)
-- Usuario deve ter `organization_id` compativel
-- Verificar role do usuario em `user_roles`
-
-### Build Falha
-```bash
-# Limpar cache
-rm -rf node_modules dist
-npm install
-npm run build
-```
-
-### Erro de 2FA
-- Verificar se `user_2fa_settings` tem registro para o usuario
-- Token expira em 15 minutos
+- Domínio: `lexflowai.com.br` (com `www`).
+- Ícone da marca: `Scale` (lucide). Sem referências legadas a "Veridiana".
+- SEO: tags Open Graph + JSON-LD em `index.html` e landing.
+- `robots.txt` restringe rotas internas; CSP em `_headers`.
 
 ---
 
-## 9. Integracao com Servicos Externos
+## 9. Observabilidade
 
-| Servico | Uso | Configuracao |
-|---------|-----|--------------|
-| Resend | Email | `RESEND_API_KEY` |
-| DocuSign | Assinatura | Webhook URL + `WEBHOOK_SECRET` |
-| Clicksign | Assinatura | Webhook URL + `WEBHOOK_SECRET` |
-| D4Sign | Assinatura | Webhook URL + `WEBHOOK_SECRET` |
-| Lovable API | Analise IA | `LOVABLE_API_KEY` |
+- `audit_logs` — toda ação relevante (insert/update/delete) com `risk_level` e `event_category`.
+- `login_attempts` — para investigação de incidentes de auth.
+- `compliance_logs` — eventos LGPD.
+- Edge function logs via painel Lovable Cloud.
+- Status check do backend via `cloud_status`.
 
 ---
 
-## 10. Contatos e Recursos
+## 10. Pré-venda — automação de testes
 
-- **Repositorio**: GitHub (branch main)
-- **Supabase Dashboard**: https://app.supabase.com
-- **Logs Edge Functions**: Supabase > Edge Functions > Logs
-
----
-
-## 11. Checklist de Deploy
-
-- [ ] Variaveis de ambiente configuradas
-- [ ] `ALLOWED_ORIGIN` com dominio de producao
-- [ ] Buckets de storage com politicas corretas
-- [ ] DNS apontando para hosting
-- [ ] SSL/HTTPS habilitado
-- [ ] Backup de banco configurado
-- [ ] Monitoramento ativo
+- `pre-launch-test-runner` (edge function) + GitHub Actions semanal.
+- Persiste resultado em `pre_launch_test_runs`.
+- UI em `/security` → aba "Pré-Venda".
+- Especificação completa em `docs/PRE_LAUNCH_TEST_SPEC.md`.
 
 ---
 
-*Documento gerado em: 2026-02-01*
-*Versao do Sistema: 1.0.0*
+## 11. Segurança — referências
+
+- `SECURITY.md` — política e responsible disclosure.
+- `docs/security-checklist.md` — checklist contínuo.
+- `docs/security-readiness.md` — checklist pré-produção.
+- `docs/SECURITY_REPORT.md` — relatório atual.
+
+---
+
+## 12. Limitações conhecidas
+
+- PostgREST OpenAPI desativado (constraint de plataforma) — clientes consomem via SDK gerado.
+- Sessão em `localStorage` (não httpOnly) — mitigado por CSP e CSRF stateless.
+- NF-e ainda manual (na roadmap: NFE.io / eNotas).
+- Stripe/Paddle ainda não integrado — onboarding manual via Super Admin.
+
+---
+
+## 13. Roadmap técnico curto prazo
+
+1. Integração Stripe + webhook `super-admin-create-client-org`.
+2. Migração de e-mails para domínio `lexflowai.com.br` no Resend.
+3. NF-e automática.
+4. Status page pública.
+5. Documentação por edge function em `docs/api-docs/`.

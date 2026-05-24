@@ -1,5 +1,18 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://esm.sh/zod@3.23.8";
+
+// Permissive schema — webhook recebe payloads variados (DocuSign, ClickSign, ZapSign, D4Sign, custom).
+const PayloadSchema = z.object({
+  provider: z.string().max(60).optional(),
+  event: z.string().max(120).optional(),
+  status: z.string().max(120).optional(),
+  externalId: z.union([z.string(), z.number()]).optional(),
+  id: z.union([z.string(), z.number()]).optional(),
+  signedDocumentUrl: z.string().url().max(2000).optional(),
+  data: z.object({}).passthrough().optional(),
+  document: z.object({}).passthrough().optional(),
+}).passthrough();
 
 // Allowed origins for CORS - add your production domain here
 const ALLOWED_ORIGINS = [
@@ -119,6 +132,22 @@ async function verifyWebhookSignature(
         return { valid: true };
       }
       
+      case 'zapsign': {
+        // ZapSign envia chave compartilhada no header. Usamos WEBHOOK_SECRET para validar.
+        const signature = req.headers.get('x-zapsign-signature')
+          || req.headers.get('x-webhook-secret')
+          || req.headers.get('authorization');
+        if (!signature) {
+          return { valid: false, error: 'Missing ZapSign signature header' };
+        }
+        const isValid = timingSafeEqual(signature, webhookSecret) ||
+                        timingSafeEqual(signature, `Bearer ${webhookSecret}`);
+        if (!isValid) {
+          return { valid: false, error: 'Invalid ZapSign signature' };
+        }
+        return { valid: true };
+      }
+
       case 'd4sign': {
         const hash = req.headers.get('x-d4sign-hash');
         if (!hash) {
@@ -188,17 +217,27 @@ serve(async (req) => {
 
     // Read body as text for signature verification
     const bodyText = await req.text();
-    let payload: any;
-    
+    let rawPayload: unknown;
+
     try {
-      payload = JSON.parse(bodyText);
-    } catch (parseError) {
+      rawPayload = JSON.parse(bodyText);
+    } catch (_parseError) {
       console.error(`[${clientIP}] Invalid JSON payload`);
       return new Response(
         JSON.stringify({ error: 'Invalid JSON payload' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const parsedPayload = PayloadSchema.safeParse(rawPayload);
+    if (!parsedPayload.success) {
+      console.warn(`[${clientIP}] Payload com tipos inválidos`, parsedPayload.error.flatten().fieldErrors);
+      return new Response(
+        JSON.stringify({ error: 'Invalid payload shape', details: parsedPayload.error.flatten().fieldErrors }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const payload = parsedPayload.data as any;
 
     console.log(`[${clientIP}] Webhook received:`, JSON.stringify(payload, null, 2));
 
@@ -241,6 +280,17 @@ serve(async (req) => {
         metadata = {
           event: payload.event,
           signers: payload.document?.signers,
+        };
+        break;
+
+      case 'zapsign':
+        externalId = payload.token || payload.open_id || payload.doc_token;
+        status = mapZapSignStatus(payload.event_type || payload.status);
+        signedDocumentUrl = payload.signed_file || payload.original_file;
+        metadata = {
+          event_type: payload.event_type,
+          signers: payload.signers,
+          name: payload.name,
         };
         break;
 
@@ -374,6 +424,22 @@ function mapClicksignStatus(status: string): string {
     'signed': 'signed',
     'closed': 'completed',
     'canceled': 'cancelled',
+  };
+  return statusMap[status?.toLowerCase()] || 'pending';
+}
+
+function mapZapSignStatus(status: string): string {
+  const statusMap: Record<string, string> = {
+    'doc_created': 'sent',
+    'doc_sent': 'sent',
+    'doc_viewed': 'viewed',
+    'doc_signed': 'signed',
+    'doc_completed': 'completed',
+    'doc_refused': 'declined',
+    'doc_deleted': 'cancelled',
+    'doc_expired': 'expired',
+    'signed': 'signed',
+    'completed': 'completed',
   };
   return statusMap[status?.toLowerCase()] || 'pending';
 }

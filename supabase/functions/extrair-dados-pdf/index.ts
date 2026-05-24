@@ -69,6 +69,21 @@ serve(async (req) => {
       );
     }
 
+    // SECURITY: enforce that fileUrl belongs to caller's org folder or own user folder
+    const firstSegment = fileUrl.split('/')[0];
+    const { data: memberships } = await supabase
+      .from('organization_members')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .eq('is_active', true);
+    const allowedPrefixes = new Set<string>([user.id, ...((memberships || []).map((m: any) => m.organization_id))]);
+    if (!firstSegment || !allowedPrefixes.has(firstSegment)) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Acesso negado ao arquivo' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     console.log(`Extracting data from PDF: ${fileUrl}`);
 
     // Generate signed URL for the file

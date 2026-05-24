@@ -28,6 +28,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
+import { CnpjAutoFillInput } from "@/components/ui/cnpj-autofill-input";
 
 const formSchema = z.object({
   nome_completo: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
@@ -167,11 +168,14 @@ export function FranquiaForm({
                   <FormItem>
                     <FormLabel>CNPJ</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="00.000.000/0000-00"
-                        {...field}
-                        onChange={(e) => field.onChange(formatCNPJ(e.target.value))}
-                        maxLength={18}
+                      <CnpjAutoFillInput
+                        value={field.value || ""}
+                        onChange={field.onChange}
+                        onDataFetched={(data) => {
+                          if (data.nome && !form.getValues("nome_completo")) {
+                            form.setValue("nome_completo", data.nome);
+                          }
+                        }}
                       />
                     </FormControl>
                     <FormMessage />

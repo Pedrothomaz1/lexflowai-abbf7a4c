@@ -18,6 +18,8 @@ import { CalendarView, CalendarObligation } from "@/components/contracts/Calenda
 import { NovoContratoWizard } from "@/components/contracts/NovoContratoWizard";
 import { helpTexts } from "@/lib/help-texts";
 import { HelpTooltip } from "@/components/ui/help-tooltip";
+import { handleDbError } from "@/utils/dbErrorHandler";
+import { ContractRiskBadge } from "@/components/contracts/ContractRiskBadge";
 
 type Contrato = {
   id: string;
@@ -39,6 +41,7 @@ type Fornecedor = {
   nome: string;
   cnpj?: string | null;
   cpf?: string | null;
+  cnpj_status?: string | null;
 };
 
 const Contratos = () => {
@@ -47,6 +50,7 @@ const Contratos = () => {
   const { toast } = useToast();
   const { organization } = useOrganization();
   const [contratos, setContratos] = useState<Contrato[]>([]);
+  const [riskScores, setRiskScores] = useState<Record<string, number | null>>({});
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -152,10 +156,27 @@ const Contratos = () => {
       toast({
         variant: "destructive",
         title: "Erro ao carregar contratos",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } else {
       setContratos(data || []);
+      const ids = (data || []).map((c: any) => c.id);
+      if (ids.length > 0) {
+        const { data: analises } = await supabase
+          .from("contract_analysis")
+          .select("contrato_id, score_risco, analisado_em")
+          .in("contrato_id", ids)
+          .order("analisado_em", { ascending: false });
+        const map: Record<string, number | null> = {};
+        (analises || []).forEach((a: any) => {
+          if (!(a.contrato_id in map)) {
+            map[a.contrato_id] = a.score_risco !== null ? Number(a.score_risco) : null;
+          }
+        });
+        setRiskScores(map);
+      } else {
+        setRiskScores({});
+      }
     }
     setLoading(false);
   };
@@ -163,7 +184,7 @@ const Contratos = () => {
   const fetchFornecedores = async () => {
     const { data } = await supabase
       .from("fornecedores")
-      .select("id, nome, cnpj, cpf")
+      .select("id, nome, cnpj, cpf, cnpj_status")
       .order("nome");
     
     setFornecedores(data || []);
@@ -196,7 +217,7 @@ const Contratos = () => {
       toast({
         variant: "destructive",
         title: "Erro ao atualizar status",
-        description: error.message,
+        description: handleDbError(error).message,
       });
       fetchContratos();
     } else {
@@ -275,7 +296,7 @@ const Contratos = () => {
           toast({
             variant: "destructive",
             title: "Erro ao criar contrato",
-            description: error.message,
+            description: handleDbError(error).message,
           });
         }
         return;
@@ -296,15 +317,11 @@ const Contratos = () => {
             continue;
           }
 
-          const { data: { publicUrl } } = supabase.storage
-            .from('contratos-documentos')
-            .getPublicUrl(fileName);
-
           await supabase.from("contract_attachments").insert({
             organization_id: organization.id,
             contrato_id: data.id,
             nome_arquivo: file.name,
-            arquivo_url: publicUrl,
+            arquivo_url: fileName,
             tipo_documento: file.type,
             tamanho_bytes: file.size,
             uploaded_by: user.id,
@@ -382,6 +399,12 @@ const Contratos = () => {
       header: "Status",
       cell: (contrato) => <StatusBadge status={contrato.status} />,
       className: "w-[120px]",
+    },
+    {
+      key: "risco",
+      header: "Risco",
+      cell: (contrato) => <ContractRiskBadge score={riskScores[contrato.id] ?? null} />,
+      className: "w-[140px]",
     },
     {
       key: "valor_total",

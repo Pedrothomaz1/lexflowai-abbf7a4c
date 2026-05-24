@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Camera, Loader2, Trash2, Upload, X, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { handleDbError } from "@/utils/dbErrorHandler";
 
 interface AvatarUploadProps {
   userId: string;
@@ -133,7 +134,7 @@ export function AvatarUpload({
       toast({
         variant: "destructive",
         title: "Erro ao fazer upload",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } finally {
       // Cleanup preview
@@ -167,7 +168,7 @@ export function AvatarUpload({
       toast({
         variant: "destructive",
         title: "Erro ao remover foto",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } finally {
       setRemoving(false);

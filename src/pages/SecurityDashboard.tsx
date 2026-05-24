@@ -19,10 +19,13 @@ import { AuditSchedule } from "@/components/security/AuditSchedule";
 import { SuccessCriteria } from "@/components/security/SuccessCriteria";
 import { RiskMatrix } from "@/components/security/RiskMatrix";
 import { SecurityAppendices } from "@/components/security/SecurityAppendices";
+import { SecurityRegressionRunner } from "@/components/security/SecurityRegressionRunner";
+import { PreLaunchChecklist } from "@/components/security/PreLaunchChecklist";
 import {
   Shield,
   AlertTriangle,
   ShieldAlert,
+  ShieldCheck,
   Activity,
   Lock,
   Eye,
@@ -263,6 +266,14 @@ export default function SecurityDashboard() {
             <Eye className="h-4 w-4 mr-2" />
             PII
           </TabsTrigger>
+          <TabsTrigger value="regression">
+            <ShieldCheck className="h-4 w-4 mr-2" />
+            Regressão
+          </TabsTrigger>
+          <TabsTrigger value="prelaunch">
+            <Rocket className="h-4 w-4 mr-2" />
+            Pré-Venda
+          </TabsTrigger>
           <TabsTrigger value="appendices">
             <FileText className="h-4 w-4 mr-2" />
             Docs
@@ -303,6 +314,14 @@ export default function SecurityDashboard() {
 
         <TabsContent value="masking">
           <PIIMaskingDemo />
+        </TabsContent>
+
+        <TabsContent value="regression">
+          <SecurityRegressionRunner />
+        </TabsContent>
+
+        <TabsContent value="prelaunch">
+          <PreLaunchChecklist />
         </TabsContent>
 
         <TabsContent value="appendices">

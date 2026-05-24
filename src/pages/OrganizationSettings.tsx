@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/hooks/use-toast";
 import { Building2, Loader2, Save, ArrowLeft } from "lucide-react";
+import { CnpjAutoFillInput } from "@/components/ui/cnpj-autofill-input";
 
 const OrganizationSettings = () => {
   const navigate = useNavigate();
@@ -19,6 +20,7 @@ const OrganizationSettings = () => {
     nome: "",
     cnpj: "",
     email_contato: "",
+    email_financeiro: "",
     telefone: "",
     endereco: "",
     cidade: "",
@@ -28,10 +30,12 @@ const OrganizationSettings = () => {
 
   useEffect(() => {
     if (organization) {
+      const org = organization as typeof organization & { email_financeiro?: string | null };
       setFormData({
         nome: organization.nome || "",
         cnpj: organization.cnpj || "",
         email_contato: organization.email_contato || "",
+        email_financeiro: org.email_financeiro || "",
         telefone: organization.telefone || "",
         endereco: organization.endereco || "",
         cidade: organization.cidade || "",
@@ -66,6 +70,7 @@ const OrganizationSettings = () => {
           nome: formData.nome.trim(),
           cnpj: formData.cnpj.trim() || null,
           email_contato: formData.email_contato.trim() || null,
+          email_financeiro: formData.email_financeiro.trim() || null,
           telefone: formData.telefone.trim() || null,
           endereco: formData.endereco.trim() || null,
           cidade: formData.cidade.trim() || null,
@@ -137,12 +142,22 @@ const OrganizationSettings = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="cnpj">CNPJ</Label>
-                <Input
-                  id="cnpj"
+                <CnpjAutoFillInput
                   value={formData.cnpj}
-                  onChange={handleChange("cnpj")}
-                  placeholder="00.000.000/0000-00"
+                  onChange={(v) => setFormData((p) => ({ ...p, cnpj: v }))}
                   disabled={loading}
+                  onDataFetched={(data) => {
+                    setFormData((p) => ({
+                      ...p,
+                      nome: p.nome || data.nome || p.nome,
+                      email_contato: p.email_contato || data.email || p.email_contato,
+                      telefone: p.telefone || data.telefone || p.telefone,
+                      endereco: p.endereco || data.endereco || p.endereco,
+                      cidade: p.cidade || data.cidade || p.cidade,
+                      estado: p.estado || data.uf || p.estado,
+                      cep: p.cep || data.cep || p.cep,
+                    }));
+                  }}
                 />
               </div>
 
@@ -155,6 +170,21 @@ const OrganizationSettings = () => {
                   onChange={handleChange("email_contato")}
                   disabled={loading}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email_financeiro">E-mail do Financeiro</Label>
+                <Input
+                  id="email_financeiro"
+                  type="email"
+                  value={formData.email_financeiro}
+                  onChange={handleChange("email_financeiro")}
+                  placeholder="financeiro@empresa.com"
+                  disabled={loading}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Destinatário das notificações automáticas pós-assinatura.
+                </p>
               </div>
 
               <div className="space-y-2">

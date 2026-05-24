@@ -44,12 +44,13 @@ export const ProtectedRoute = ({
   requireOrg = true 
 }: ProtectedRouteProps) => {
   const { session, user, loading: authLoading } = useAuth();
-  const { hasOrganization, loading: orgLoading } = useOrganization();
+  const { hasOrganization, hasInactiveOrganization, orgStatus, loading: orgLoading } = useOrganization();
   const location = useLocation();
   const [mfaStatus, setMfaStatus] = useState<MFAStatus | null>(null);
   const [twoFAVerified, setTwoFAVerified] = useState(false);
   const [checkingMFA, setCheckingMFA] = useState(true);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
 
   const checkMFAStatus = useCallback(async () => {
     if (!user) {
@@ -157,6 +158,28 @@ export const ProtectedRoute = ({
     checkMFAStatus();
   }, [checkMFAStatus, user, session]);
 
+  // Onboarding status check (lightweight)
+  useEffect(() => {
+    if (!user) {
+      setOnboardingDone(null);
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .from("profiles")
+      .select("onboarding_completed_at, onboarding_skipped")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled) return;
+        const done = !!(data?.onboarding_completed_at || data?.onboarding_skipped);
+        setOnboardingDone(done);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
   const handleTwoFASuccess = async () => {
     if (!user || !session) return;
 
@@ -214,7 +237,6 @@ export const ProtectedRoute = ({
 
   // Check organization requirement (only after auth and MFA checks)
   if (requireOrg) {
-    // Still loading organization data
     if (orgLoading) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-background">
@@ -226,15 +248,33 @@ export const ProtectedRoute = ({
       );
     }
 
-    // User has no organization - redirect to waiting page
-    if (!hasOrganization) {
-      // Avoid redirect loops for onboarding pages
-      const onboardingPaths = ['/onboarding', '/waiting-for-invite'];
-      if (!onboardingPaths.includes(location.pathname)) {
+    // Org exists but is NOT active -> route to status screen
+    if (hasInactiveOrganization) {
+      const statusPaths = ['/aguardando-aprovacao', '/conta-suspensa'];
+      if (!statusPaths.includes(location.pathname)) {
+        if (orgStatus === 'suspensa' || orgStatus === 'cancelada') {
+          return <Navigate to="/conta-suspensa" replace />;
+        }
+        return <Navigate to="/aguardando-aprovacao" replace />;
+      }
+    } else if (!hasOrganization) {
+      // No organization at all -> waiting screen (orgs are created by super-admin)
+      const allowedPaths = ['/waiting-for-invite', '/aceitar-convite'];
+      if (!allowedPaths.includes(location.pathname)) {
         return <Navigate to="/waiting-for-invite" replace />;
       }
     }
+
+    // Onboarding redirect — only when org is active and user hasn't completed it
+    if (
+      hasOrganization &&
+      onboardingDone === false &&
+      location.pathname !== "/onboarding"
+    ) {
+      return <Navigate to="/onboarding" replace />;
+    }
   }
+
 
   // Check permission
   if (requiredPermission && hasPermission === false) {

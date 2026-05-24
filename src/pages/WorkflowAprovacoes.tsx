@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Edit, UserPlus, ArrowDown, ArrowRight } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { handleDbError } from "@/utils/dbErrorHandler";
 
 type ApprovalLevel = {
   nivel: number;
@@ -46,7 +47,7 @@ export default function WorkflowAprovacoes() {
   
   const [formData, setFormData] = useState({
     nome: "",
-    tipo_contrato: "prestacao_servico",
+    tipo_contrato: "prestacao_servicos",
     aprovacao_paralela: false,
     is_active: true,
   });
@@ -73,7 +74,7 @@ export default function WorkflowAprovacoes() {
       toast({
         variant: "destructive",
         title: "Erro ao carregar workflows",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } finally {
       setLoading(false);
@@ -156,7 +157,7 @@ export default function WorkflowAprovacoes() {
       toast({
         variant: "destructive",
         title: "Erro ao salvar workflow",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     }
   };
@@ -164,7 +165,7 @@ export default function WorkflowAprovacoes() {
   const resetForm = () => {
     setFormData({
       nome: "",
-      tipo_contrato: "prestacao_servico",
+      tipo_contrato: "prestacao_servicos",
       aprovacao_paralela: false,
       is_active: true,
     });
@@ -200,7 +201,7 @@ export default function WorkflowAprovacoes() {
       toast({
         variant: "destructive",
         title: "Erro ao excluir workflow",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     }
   };
@@ -234,8 +235,8 @@ export default function WorkflowAprovacoes() {
 
   const getTipoLabel = (tipo: string) => {
     const labels: Record<string, string> = {
-      prestacao_servico: "Prestação de Serviço",
-      compra_venda: "Compra e Venda",
+      prestacao_servicos: "Prestação de Serviços",
+      fornecimento: "Fornecimento",
       locacao: "Locação",
       parceria: "Parceria",
       confidencialidade: "Confidencialidade",
@@ -299,8 +300,8 @@ export default function WorkflowAprovacoes() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="prestacao_servico">Prestação de Serviço</SelectItem>
-                      <SelectItem value="compra_venda">Compra e Venda</SelectItem>
+                      <SelectItem value="prestacao_servicos">Prestação de Serviços</SelectItem>
+                      <SelectItem value="fornecimento">Fornecimento</SelectItem>
                       <SelectItem value="locacao">Locação</SelectItem>
                       <SelectItem value="parceria">Parceria</SelectItem>
                       <SelectItem value="confidencialidade">Confidencialidade</SelectItem>

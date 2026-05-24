@@ -2,31 +2,11 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
 import { Resend } from "https://esm.sh/resend@4.0.0";
 
-// Allowed origins for CORS - add your production domain here
-const ALLOWED_ORIGINS = [
-  'http://localhost:8080',
-  'http://localhost:5173',
-  'http://localhost:3000',
-  Deno.env.get('ALLOWED_ORIGIN') || '',
-].filter(Boolean);
-
-// Get CORS headers based on request origin
-function getCorsHeaders(req: Request): Record<string, string> | null {
-  const origin = req.headers.get('Origin') || '';
-  const isAllowedOrigin = ALLOWED_ORIGINS.includes(origin);
-  if (!isAllowedOrigin && origin) {
-    // Reject requests from unknown origins (except empty origin for same-origin requests)
-    return null;
-  }
-  const allowedOrigin = isAllowedOrigin ? origin : (ALLOWED_ORIGINS[0] || 'http://localhost:8080');
-
-  return {
-    'Access-Control-Allow-Origin': allowedOrigin,
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Max-Age': '86400',
-  };
-}
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
 
 interface InviteRequest {
   email: string;
@@ -35,16 +15,6 @@ interface InviteRequest {
 }
 
 serve(async (req) => {
-  const corsHeaders = getCorsHeaders(req);
-
-  // Reject requests from unauthorized origins
-  if (!corsHeaders) {
-    return new Response(
-      JSON.stringify({ error: 'Origin not allowed' }),
-      { status: 403, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -175,9 +145,8 @@ serve(async (req) => {
 
     // Send email
     const { error: emailError } = await resend.emails.send({
-      from: "LexFlow <alertas@porveri.com.br>",
+      from: "LexFlow <onboarding@resend.dev>",
       to: [email],
-      replyTo: "suporte@porveri.com.br",
       subject: `Convite para ${org.nome} - LexFlow`,
       html: `
 <!DOCTYPE html>
@@ -265,15 +234,23 @@ Se você não esperava este convite, pode ignorar este e-mail.
       `.trim(),
     });
 
+    let emailSent = true;
     if (emailError) {
       console.error("Email error:", emailError);
-      throw new Error("Failed to send invite email");
+      emailSent = false;
+    } else {
+      console.log("Invite email sent successfully to:", email);
     }
 
-    console.log("Invite email sent successfully to:", email);
-
     return new Response(
-      JSON.stringify({ success: true, message: "Convite enviado com sucesso" }),
+      JSON.stringify({
+        success: true,
+        email_sent: emailSent,
+        invite_url: emailSent ? undefined : inviteUrl,
+        message: emailSent
+          ? "Convite enviado com sucesso"
+          : "Convite criado. O email não pôde ser enviado, mas você pode compartilhar o link diretamente.",
+      }),
       {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },

@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { AvatarUpload } from "@/components/Settings/AvatarUpload";
 import { SettingsIntegracaoCard } from "@/components/Settings/SettingsIntegracaoCard";
+import { handleDbError } from "@/utils/dbErrorHandler";
 
 interface IntegracaoConfig {
   id: string;
@@ -41,7 +42,7 @@ interface IntegracaoConfig {
 
 const Settings = () => {
   const { toast } = useToast();
-  const { userRole, isAnalista, isConsultor, isAdmin } = useUserRole();
+  const { userRole, isAnalista, isAdmin } = useUserRole();
   const { organization } = useOrganization();
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
@@ -141,7 +142,7 @@ const Settings = () => {
       toast({
         variant: "destructive",
         title: "Erro ao atualizar perfil",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } else {
       toast({
@@ -206,7 +207,7 @@ const Settings = () => {
       toast({
         variant: "destructive",
         title: "Erro ao salvar",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } finally {
       setSavingIntegracao(false);
@@ -260,7 +261,6 @@ const Settings = () => {
   const getRoleBadge = () => {
     const config: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
       analista_juridico: { label: "Analista Jurídico", variant: "secondary" },
-      consultoria_juridica: { label: "Consultoria Jurídica", variant: "default" },
       administrador: { label: "Administrador", variant: "outline" },
     };
 
@@ -388,7 +388,7 @@ const Settings = () => {
                   Editar apenas contratos em rascunho criados por você
                 </li>
               )}
-              {(isConsultor || isAdmin) && (
+              {isAdmin && (
                 <>
                   <li className="flex items-center gap-2 text-sm">
                     <CheckCircle2 className="h-4 w-4 text-primary" />

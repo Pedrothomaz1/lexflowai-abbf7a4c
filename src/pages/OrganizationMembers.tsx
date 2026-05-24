@@ -44,8 +44,8 @@ interface Member {
   is_active: boolean;
   joined_at: string;
   profile: {
-    full_name: string;
-    email: string;
+    full_name: string | null;
+    email: string | null;
   } | null;
 }
 
@@ -94,30 +94,37 @@ const OrganizationMembers = () => {
     try {
       setLoading(true);
 
-      const { data, error } = await supabase
+      const { data: membersData, error: membersError } = await supabase
         .from("organization_members")
-        .select(`
-          id,
-          user_id,
-          role_in_org,
-          is_active,
-          joined_at,
-          profiles:user_id (
-            full_name,
-            email
-          )
-        `)
+        .select("id, user_id, role_in_org, is_active, joined_at")
         .eq("organization_id", organization.id)
         .order("joined_at", { ascending: true });
 
-      if (error) throw error;
+      if (membersError) throw membersError;
+
+      const userIds = [...new Set((membersData || []).map((member) => member.user_id).filter(Boolean))];
+      const profilesById = new Map<string, { full_name: string | null; email: string | null }>();
+
+      if (userIds.length > 0) {
+        const { data: profilesData, error: profilesError } = await supabase
+          .from("profiles_safe")
+          .select("id, full_name, email")
+          .in("id", userIds);
+
+        if (profilesError) throw profilesError;
+
+        for (const profile of profilesData || []) {
+          profilesById.set(profile.id, {
+            full_name: profile.full_name,
+            email: profile.email,
+          });
+        }
+      }
 
       setMembers(
-        (data || []).map((m) => ({
-          ...m,
-          profile: Array.isArray(m.profiles) 
-            ? (m.profiles[0] as { full_name: string; email: string } | undefined) || null
-            : m.profiles as { full_name: string; email: string } | null,
+        (membersData || []).map((member) => ({
+          ...member,
+          profile: profilesById.get(member.user_id) || null,
         }))
       );
     } catch (err) {
@@ -222,10 +229,27 @@ const OrganizationMembers = () => {
         throw new Error(data?.error || "Erro ao enviar convite");
       }
 
-      toast({
-        title: "Convite enviado!",
-        description: `Um email de convite foi enviado para ${emailLower}`,
-      });
+      if (data.email_sent) {
+        toast({
+          title: "Convite enviado!",
+          description: `Um email de convite foi enviado para ${emailLower}`,
+        });
+      } else {
+        // Email failed but invite was created - show link
+        const inviteLink = data.invite_url;
+        if (inviteLink) {
+          await navigator.clipboard.writeText(inviteLink);
+          toast({
+            title: "Convite criado!",
+            description: "O email não pôde ser enviado. O link do convite foi copiado para a área de transferência.",
+          });
+        } else {
+          toast({
+            title: "Convite criado!",
+            description: "O convite foi registrado, mas o email não pôde ser enviado.",
+          });
+        }
+      }
 
       setInviteEmail("");
       setInviteRole("member");

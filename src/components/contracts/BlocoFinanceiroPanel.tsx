@@ -1,0 +1,247 @@
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2, Save, Banknote, Lock, Send, CheckCircle2 } from "lucide-react";
+
+interface Props {
+  contratoId: string;
+  intakeStatus?: string | null;
+  contratoStatus?: string | null;
+  emailFinanceiroNotificadoEm?: string | null;
+  onSaved?: () => void;
+}
+
+type Financeiro = {
+  forma_pagamento: string;
+  condicao_pagamento: string;
+  numero_parcelas: string;
+  valor_parcela: string;
+  dia_vencimento: string;
+  indice_reajuste: string;
+  periodicidade_reajuste: string;
+  multa_atraso_pct: string;
+  juros_mora_pct: string;
+  banco: string;
+  agencia: string;
+  conta: string;
+  pix: string;
+};
+
+const EMPTY: Financeiro = {
+  forma_pagamento: "", condicao_pagamento: "", numero_parcelas: "", valor_parcela: "",
+  dia_vencimento: "", indice_reajuste: "", periodicidade_reajuste: "",
+  multa_atraso_pct: "", juros_mora_pct: "", banco: "", agencia: "", conta: "", pix: "",
+};
+
+export function BlocoFinanceiroPanel({
+  contratoId,
+  intakeStatus,
+  contratoStatus,
+  emailFinanceiroNotificadoEm,
+  onSaved,
+}: Props) {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [data, setData] = useState<Financeiro>(EMPTY);
+
+  const locked = intakeStatus !== "liberado";
+  const camposMinimos = !!(data.forma_pagamento && data.condicao_pagamento && data.dia_vencimento);
+  const podeEnviar = !locked && contratoStatus === "assinado" && camposMinimos;
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      const { data: c, error } = await supabase
+        .from("contratos")
+        .select(
+          "forma_pagamento,condicao_pagamento,numero_parcelas,valor_parcela,dia_vencimento,indice_reajuste,periodicidade_reajuste,multa_atraso_pct,juros_mora_pct,dados_bancarios",
+        )
+        .eq("id", contratoId)
+        .maybeSingle();
+      if (error) {
+        toast({ title: "Erro ao carregar dados financeiros", description: error.message, variant: "destructive" });
+      } else if (c) {
+        const db = (c.dados_bancarios as Record<string, string> | null) ?? {};
+        setData({
+          forma_pagamento: c.forma_pagamento ?? "",
+          condicao_pagamento: c.condicao_pagamento ?? "",
+          numero_parcelas: c.numero_parcelas?.toString() ?? "",
+          valor_parcela: c.valor_parcela?.toString() ?? "",
+          dia_vencimento: c.dia_vencimento?.toString() ?? "",
+          indice_reajuste: c.indice_reajuste ?? "",
+          periodicidade_reajuste: c.periodicidade_reajuste ?? "",
+          multa_atraso_pct: c.multa_atraso_pct?.toString() ?? "",
+          juros_mora_pct: c.juros_mora_pct?.toString() ?? "",
+          banco: db.banco ?? "",
+          agencia: db.agencia ?? "",
+          conta: db.conta ?? "",
+          pix: db.pix ?? "",
+        });
+      }
+      setLoading(false);
+    })();
+  }, [contratoId, toast]);
+
+  const set = (k: keyof Financeiro) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setData((p) => ({ ...p, [k]: e.target.value }));
+
+  const handleSave = async () => {
+    setSaving(true);
+    const payload = {
+      forma_pagamento: data.forma_pagamento || null,
+      condicao_pagamento: data.condicao_pagamento || null,
+      numero_parcelas: data.numero_parcelas ? Number(data.numero_parcelas) : null,
+      valor_parcela: data.valor_parcela ? Number(data.valor_parcela) : null,
+      dia_vencimento: data.dia_vencimento ? Number(data.dia_vencimento) : null,
+      indice_reajuste: data.indice_reajuste || null,
+      periodicidade_reajuste: data.periodicidade_reajuste || null,
+      multa_atraso_pct: data.multa_atraso_pct ? Number(data.multa_atraso_pct) : null,
+      juros_mora_pct: data.juros_mora_pct ? Number(data.juros_mora_pct) : null,
+      dados_bancarios: {
+        banco: data.banco || null, agencia: data.agencia || null,
+        conta: data.conta || null, pix: data.pix || null,
+      },
+    };
+    const { error } = await supabase.from("contratos").update(payload).eq("id", contratoId).select().maybeSingle();
+    setSaving(false);
+    if (error) {
+      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Dados financeiros salvos" });
+      onSaved?.();
+    }
+  };
+
+  const handleSendToFinance = async () => {
+    if (emailFinanceiroNotificadoEm) {
+      const ok = window.confirm("Esse contrato já foi enviado ao financeiro. Deseja reenviar?");
+      if (!ok) return;
+    }
+    setSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("enviar-notificacao-financeiro", {
+        body: { contratoId },
+      });
+      if (error || !data?.ok) {
+        toast({
+          title: "Não foi possível enviar",
+          description: data?.error || error?.message || "Verifique se o e-mail do financeiro está configurado.",
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: "Enviado ao financeiro", description: "A tesouraria foi notificada por e-mail." });
+        onSaved?.();
+      }
+    } finally {
+      setSending(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="py-8 flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" /> Carregando…
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="relative">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Banknote className="h-5 w-5" /> Bloco Financeiro
+        </CardTitle>
+      </CardHeader>
+
+      {locked && (
+        <div className="absolute inset-0 z-10 rounded-lg bg-background/85 backdrop-blur-sm grid place-items-center p-6 text-center">
+          <div className="max-w-sm space-y-2">
+            <Lock className="h-7 w-7 mx-auto text-muted-foreground" />
+            <p className="font-medium">Disponível após liberação do contrato</p>
+            <p className="text-xs text-muted-foreground">
+              O preenchimento financeiro é desbloqueado quando o contrato passa pelos gates de Intake (validação legal, compliance e risco).
+            </p>
+          </div>
+        </div>
+      )}
+
+      <CardContent className="space-y-4">
+        <div className="grid gap-4 md:grid-cols-2">
+          <Field label="Forma de pagamento" value={data.forma_pagamento} onChange={set("forma_pagamento")} placeholder="boleto, pix, transferência…" disabled={locked} />
+          <Field label="Condição de pagamento" value={data.condicao_pagamento} onChange={set("condicao_pagamento")} placeholder="à vista, 30/60/90…" disabled={locked} />
+          <Field label="Qtd. parcelas" value={data.numero_parcelas} onChange={set("numero_parcelas")} type="number" disabled={locked} />
+          <Field label="Valor da parcela (R$)" value={data.valor_parcela} onChange={set("valor_parcela")} type="number" disabled={locked} />
+          <Field label="Dia de vencimento" value={data.dia_vencimento} onChange={set("dia_vencimento")} type="number" placeholder="1-31" disabled={locked} />
+          <Field label="Índice de reajuste" value={data.indice_reajuste} onChange={set("indice_reajuste")} placeholder="IPCA, IGPM, INPC…" disabled={locked} />
+          <Field label="Periodicidade de reajuste" value={data.periodicidade_reajuste} onChange={set("periodicidade_reajuste")} placeholder="anual, semestral…" disabled={locked} />
+          <Field label="Multa por atraso (%)" value={data.multa_atraso_pct} onChange={set("multa_atraso_pct")} type="number" disabled={locked} />
+          <Field label="Juros de mora (%)" value={data.juros_mora_pct} onChange={set("juros_mora_pct")} type="number" disabled={locked} />
+        </div>
+
+        <div className="pt-2">
+          <h4 className="text-sm font-semibold mb-2">Dados bancários</h4>
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="Banco" value={data.banco} onChange={set("banco")} disabled={locked} />
+            <Field label="Agência" value={data.agencia} onChange={set("agencia")} disabled={locked} />
+            <Field label="Conta" value={data.conta} onChange={set("conta")} disabled={locked} />
+            <Field label="Chave PIX" value={data.pix} onChange={set("pix")} disabled={locked} />
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+          <div className="text-xs text-muted-foreground">
+            {emailFinanceiroNotificadoEm ? (
+              <span className="inline-flex items-center gap-1.5 text-emerald-600">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Enviado ao financeiro em {new Date(emailFinanceiroNotificadoEm).toLocaleString("pt-BR")}
+              </span>
+            ) : (
+              <span>Envio ao financeiro disponível após assinatura e preenchimento dos campos mínimos (forma, condição e dia de vencimento).</span>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              onClick={handleSendToFinance}
+              disabled={sending || !podeEnviar}
+              title={!podeEnviar ? "Disponível apenas com contrato assinado e campos mínimos preenchidos" : ""}
+            >
+              {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+              {emailFinanceiroNotificadoEm ? "Reenviar ao financeiro" : "Enviar ao financeiro"}
+            </Button>
+            <Button onClick={handleSave} disabled={saving || locked}>
+              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+              Salvar
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function Field({
+  label, value, onChange, type, placeholder, disabled,
+}: {
+  label: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  type?: string;
+  placeholder?: string;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs">{label}</Label>
+      <Input value={value} onChange={onChange} type={type} placeholder={placeholder} disabled={disabled} />
+    </div>
+  );
+}

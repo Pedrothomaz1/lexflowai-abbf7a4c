@@ -3,8 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, CheckCircle, XCircle, LogIn } from "lucide-react";
-import logoVeridiana from "@/assets/logo-veridiana.png";
+import { Loader2, CheckCircle, XCircle, LogIn, Scale } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type InviteStatus = "loading" | "valid" | "invalid" | "expired" | "accepted" | "error";
@@ -41,21 +40,14 @@ const AcceptInvite = () => {
       const { data: { session } } = await supabase.auth.getSession();
       setIsAuthenticated(!!session);
 
-      // Fetch invite details
+      // Fetch invite details - query without join to avoid relationship issues
       const { data: invite, error } = await supabase
         .from("organization_invites")
-        .select(`
-          id,
-          email,
-          role_in_org,
-          expires_at,
-          accepted_at,
-          organizations!inner (
-            nome
-          )
-        `)
+        .select("id, email, role_in_org, expires_at, accepted_at, organization_id")
         .eq("token", token)
         .maybeSingle();
+
+      console.log("Invite lookup result:", { invite, error });
 
       if (error || !invite) {
         setStatus("invalid");
@@ -88,8 +80,15 @@ const AcceptInvite = () => {
         }
       }
 
+      // Fetch organization name separately
+      const { data: org } = await supabase
+        .from("organizations")
+        .select("nome")
+        .eq("id", invite.organization_id)
+        .single();
+
       setInviteDetails({
-        organization_name: (invite.organizations as any)?.nome || "Organização",
+        organization_name: org?.nome || "Organização",
         role: invite.role_in_org,
         expires_at: invite.expires_at,
       });
@@ -154,7 +153,7 @@ const AcceptInvite = () => {
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
             <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-primary/10">
-              <img src={logoVeridiana} alt="LexFlow" className="h-10 w-10 object-contain" />
+              <Scale className="h-8 w-8 text-primary" />
             </div>
           </div>
           <CardTitle className="text-2xl">Convite de Organização</CardTitle>

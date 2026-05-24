@@ -33,6 +33,11 @@ export function use2FA() {
       throw new Error(response.error.message || "Erro na operação");
     }
 
+    // Check for business logic errors in the response body
+    if (response.data?.error) {
+      throw new Error(response.data.error);
+    }
+
     return response.data;
   };
 

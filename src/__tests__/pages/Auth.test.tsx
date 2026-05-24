@@ -74,8 +74,9 @@ describe("Auth page", () => {
     const Auth = (await import("@/pages/Auth")).default;
     const { container } = renderWithProviders(<Auth />);
     await waitFor(() => {
-      const btn = container.querySelector("button");
-      expect(btn || container).toBeTruthy();
+const btns = screen.queryAllByRole("button");
+expect(btns.length).toBeGreaterThan(0);
+
     }, { timeout: 3000 });
   });
 });

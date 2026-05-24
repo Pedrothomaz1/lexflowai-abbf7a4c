@@ -10,7 +10,7 @@ import {
   GitBranch,
   ChevronDown,
   ChevronRight,
-  HelpCircle,
+  
   Building2,
   Cog,
   Plus,
@@ -58,8 +58,13 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { useModulo, ModuloAtivo } from "@/contexts/ModuloContext";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { cn } from "@/lib/utils";
-import logoVeridiana from "@/assets/logo-veridiana.png";
+import { Scale } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { handleDbError } from "@/utils/dbErrorHandler";
+import { SuperAdminGate } from "@/components/auth/Can";
+import { ShieldAlert } from "lucide-react";
+import { Sparkles } from "lucide-react";
+import { useAprovacoesPendentesCount } from "@/hooks/useAprovacoes";
 
 // Interface para itens com submenus
 interface MenuItemType {
@@ -78,7 +83,7 @@ interface MenuSectionType {
   defaultOpen?: boolean;
 }
 
-// Menu sections para módulo de Contratos - Hierarquia Gestor-First
+// Menu sections para módulo de Contratos — Hierarquia enterprise CLM
 const contratosMenuSections: MenuSectionType[] = [
   {
     id: "principal",
@@ -86,26 +91,25 @@ const contratosMenuSections: MenuSectionType[] = [
     icon: LayoutDashboard,
     defaultOpen: true,
     items: [
-      { title: "Visão Geral", url: "/dashboard", icon: LayoutDashboard, roles: ["all"] },
-      { 
-        title: "Contratos de Serviço", 
-        url: "/contratos", 
-        icon: FileText, 
-        roles: ["all"],
-        subItems: [
-          { title: "Novo Contrato", url: "/contratos?novo=true", icon: Plus },
-        ]
-      },
-      { 
-        title: "Franquias", 
-        url: "/franquias", 
-        icon: Building2, 
-        roles: ["all"],
-        subItems: [
-          { title: "Nova Franquia", url: "/franquias?nova=true", icon: Plus },
-        ]
-      },
+      { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: ["all"] },
       { title: "Requisições", url: "/requisicoes", icon: FileInput, roles: ["all"] },
+      {
+        title: "Contratos",
+        url: "/contratos",
+        icon: FileText,
+        roles: ["all"],
+        subItems: [{ title: "Novo Contrato", url: "/contratos?novo=true", icon: Plus }],
+      },
+      {
+        title: "Franquias",
+        url: "/franquias",
+        icon: Building2,
+        roles: ["all"],
+        subItems: [{ title: "Nova Franquia", url: "/franquias?nova=true", icon: Plus }],
+      },
+      { title: "Minhas Aprovações", url: "/aprovacoes", icon: ShieldCheck, roles: ["all"] },
+      { title: "Aprovações", url: "/workflows", icon: ShieldCheck, roles: ["all"] },
+      { title: "Obrigações", url: "/obrigacoes", icon: Activity, roles: ["all"] },
       { title: "Alertas e Prazos", url: "/alertas", icon: Bell, roles: ["all"] },
     ],
   },
@@ -116,8 +120,8 @@ const contratosMenuSections: MenuSectionType[] = [
     defaultOpen: false,
     items: [
       { title: "Fornecedores", url: "/fornecedores", icon: Users, roles: ["all"] },
-      { title: "Unidades", url: "/unidades", icon: Building2, roles: ["all"] },
-      { title: "Modelos de Contrato", url: "/templates", icon: FileStack, roles: ["all"] },
+      { title: "Unidades", url: "/unidades", icon: Building2, roles: ["administrador"] },
+      { title: "Modelos de Contrato", url: "/templates", icon: FileStack, roles: ["administrador"] },
     ],
   },
   {
@@ -126,34 +130,58 @@ const contratosMenuSections: MenuSectionType[] = [
     icon: Workflow,
     defaultOpen: false,
     items: [
-      { title: "Fluxos de Aprovação", url: "/workflows", icon: GitBranch, roles: ["all"] },
+      { title: "Fluxos de Aprovação", url: "/workflows", icon: GitBranch, roles: ["administrador"] },
+      { title: "Construtor de Workflows", url: "/workflows/builder", icon: GitBranch, roles: ["administrador"] },
+      { title: "Construtor de Formulários", url: "/forms/builder", icon: GitBranch, roles: ["administrador"] },
     ],
   },
   {
-    id: "governanca",
-    title: "Governança",
-    icon: Shield,
+    id: "relatorios",
+    title: "Relatórios & Governança",
+    icon: BarChart3,
     defaultOpen: false,
     items: [
-      { title: "Relatórios", url: "/relatorios", icon: BarChart3, roles: ["all"] },
+      { title: "Relatórios", url: "/relatorios", icon: BarChart3, roles: ["administrador"] },
+      { title: "Dashboard IA", url: "/dashboard-ia", icon: Sparkles, roles: ["administrador"] },
+      { title: "Calendário", url: "/calendario", icon: Monitor, roles: ["all"] },
       { title: "Histórico de Ações", url: "/audit-logs", icon: Activity, roles: ["administrador"] },
       { title: "Segurança", url: "/security", icon: Shield, roles: ["administrador"] },
       { title: "Proteção de Dados", url: "/compliance", icon: ShieldCheck, roles: ["administrador"] },
     ],
   },
   {
-    id: "configuracoes",
-    title: "Configurações",
-    icon: Settings,
+    id: "portal",
+    title: "Portal Externo",
+    icon: Briefcase,
     defaultOpen: false,
     items: [
-      { title: "Usuários e Permissões", url: "/usuarios", icon: UserCog, roles: ["administrador"] },
-      { title: "Membros", url: "/organization/members", icon: Users, roles: ["org_admin"] },
-      { title: "Organização", url: "/organization/settings", icon: Building, roles: ["org_admin"] },
-      { title: "Notificações", url: "/notification-settings", icon: Bell, roles: ["all"] },
-      { title: "Preferências", url: "/settings", icon: Settings, roles: ["all"] },
+      { title: "Link Público de Requisição", url: "/requisicao", icon: FileInput, roles: ["administrador"] },
     ],
   },
+  {
+    id: "administracao",
+    title: "Administração",
+    icon: Cog,
+    defaultOpen: false,
+    items: [
+      { title: "Usuários & Papéis", url: "/usuarios", icon: UserCog, roles: ["administrador"] },
+      { title: "Permissões", url: "/admin/permissoes", icon: ShieldCheck, roles: ["administrador"] },
+      { title: "Organização", url: "/organization/settings", icon: Building, roles: ["administrador"] },
+      { title: "Membros", url: "/organization/members", icon: Users, roles: ["administrador"] },
+    ],
+  },
+];
+
+// Items do menu do usuário (dropdown no footer) - padrão Vektor Flow
+const userSettingsItems = [
+  { title: "Meu Perfil", url: "/settings", icon: Settings },
+  { title: "Autenticação 2FA", url: "/settings/2fa", icon: Shield },
+];
+
+const adminSettingsItems = [
+  { title: "Usuários & Papéis", url: "/usuarios", icon: UserCog },
+  { title: "Permissões", url: "/admin/permissoes", icon: ShieldCheck },
+  { title: "Logs de Auditoria", url: "/audit-logs", icon: Activity },
 ];
 
 // Menu sections para módulo de Serviços - Hierarquia Gestor-First
@@ -184,24 +212,11 @@ const servicosMenuSections: MenuSectionType[] = [
       },
     ],
   },
-  {
-    id: "configuracoes",
-    title: "Configurações",
-    icon: Settings,
-    defaultOpen: false,
-    items: [
-      { title: "Usuários e Permissões", url: "/usuarios", icon: UserCog, roles: ["administrador"] },
-      { title: "Membros", url: "/organization/members", icon: Users, roles: ["org_admin"] },
-      { title: "Organização", url: "/organization/settings", icon: Building, roles: ["org_admin"] },
-      { title: "Preferências", url: "/settings", icon: Settings, roles: ["all"] },
-    ],
-  },
 ];
 
 const roleLabels: Record<string, string> = {
   administrador: "Administrador",
   analista_juridico: "Analista Jurídico",
-  consultoria_juridica: "Consultoria Jurídica",
 };
 
 export function AppSidebar() {
@@ -267,7 +282,7 @@ export function AppSidebar() {
       toast({
         variant: "destructive",
         title: "Erro ao sair",
-        description: error.message,
+        description: handleDbError(error).message,
       });
     } else {
       navigate("/auth");
@@ -307,9 +322,7 @@ export function AppSidebar() {
     return location.pathname === baseUrl;
   };
 
-  const accentColor = moduloAtivo === "contratos" 
-    ? "hsl(var(--lexflow-verde-principal))" 
-    : "hsl(var(--lexflow-mostarda))";
+  const accentColor = "hsl(var(--lexflow-verde-principal))";
 
   return (
     <Sidebar className={cn("border-r-0", collapsed ? "w-16" : "w-64")}>
@@ -317,7 +330,7 @@ export function AppSidebar() {
       <SidebarHeader className="border-b border-sidebar-border px-4 py-4">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[hsl(var(--lexflow-off-white)/0.1)]">
-            <img src={logoVeridiana} alt="Veridiana" className="h-6 w-6 object-contain" />
+            <Scale className="h-5 w-5 text-sidebar-foreground" />
           </div>
           {!collapsed && (
             <div className="flex flex-col gap-1.5">
@@ -331,7 +344,7 @@ export function AppSidebar() {
                     "hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
                     moduloAtivo === "contratos"
                       ? "bg-[hsl(var(--lexflow-verde-principal))] text-white focus-visible:ring-[hsl(var(--lexflow-verde-principal))]"
-                      : "bg-[hsl(var(--lexflow-mostarda))] text-white focus-visible:ring-[hsl(var(--lexflow-mostarda))]"
+                      : "bg-[hsl(var(--lexflow-verde-principal))] text-white focus-visible:ring-[hsl(var(--lexflow-verde-principal))]"
                   )}
                 >
                   <span className="text-[10px] opacity-80 uppercase tracking-wide">Módulo:</span>
@@ -343,7 +356,7 @@ export function AppSidebar() {
                     "text-xs w-fit",
                     moduloAtivo === "contratos" 
                       ? "bg-[hsl(var(--lexflow-verde-principal)/0.2)] text-[hsl(var(--lexflow-verde-principal))]" 
-                      : "bg-[hsl(var(--lexflow-mostarda)/0.2)] text-[hsl(var(--lexflow-mostarda))]"
+                      : "bg-[hsl(var(--lexflow-verde-principal)/0.2)] text-[hsl(var(--lexflow-verde-principal))]"
                   )}
                 >
                   {moduloAtivo === "contratos" ? "Jurídico" : "Operacional"}
@@ -381,7 +394,7 @@ export function AppSidebar() {
                     <SectionIcon className={cn(
                       "h-4 w-4 shrink-0 transition-colors",
                       hasActiveItem && moduloAtivo === "contratos" && "text-[hsl(var(--lexflow-verde-principal))]",
-                      hasActiveItem && moduloAtivo === "servicos" && "text-[hsl(var(--lexflow-mostarda))]"
+                      hasActiveItem && moduloAtivo === "servicos" && "text-[hsl(var(--lexflow-verde-principal))]"
                     )} />
                     {!collapsed && (
                       <>
@@ -494,14 +507,30 @@ export function AppSidebar() {
               <p className="text-xs text-muted-foreground">{userEmail}</p>
             </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate("/settings")}>
-              <Settings className="mr-2 h-4 w-4" />
-              Preferências
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/ajuda")}>
-              <HelpCircle className="mr-2 h-4 w-4" />
-              Central de Ajuda
-            </DropdownMenuItem>
+            {userSettingsItems.map((item) => (
+              <DropdownMenuItem key={item.url + item.title} onClick={() => navigate(item.url)}>
+                <item.icon className="mr-2 h-4 w-4" />
+                {item.title}
+              </DropdownMenuItem>
+            ))}
+            {userRole === "administrador" && (
+              <>
+                <DropdownMenuSeparator />
+                {adminSettingsItems.map((item) => (
+                  <DropdownMenuItem key={item.url} onClick={() => navigate(item.url)}>
+                    <item.icon className="mr-2 h-4 w-4" />
+                    {item.title}
+                  </DropdownMenuItem>
+                ))}
+              </>
+            )}
+            <SuperAdminGate>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate("/super-admin")}>
+                <ShieldAlert className="mr-2 h-4 w-4" />
+                Super Admin
+              </DropdownMenuItem>
+            </SuperAdminGate>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
               <LogOut className="mr-2 h-4 w-4" />
@@ -532,13 +561,8 @@ interface MenuItemProps {
 function MenuItem({ item, collapsed, isActive, moduloAtivo }: MenuItemProps) {
   const Icon = item.icon;
 
-  const activeStyles = moduloAtivo === "contratos"
-    ? "bg-[hsl(var(--lexflow-verde-principal)/0.15)] text-[hsl(var(--lexflow-verde-principal))]"
-    : "bg-[hsl(var(--lexflow-mostarda)/0.15)] text-[hsl(var(--lexflow-mostarda))]";
-
-  const iconActiveColor = moduloAtivo === "contratos"
-    ? "text-[hsl(var(--lexflow-verde-principal))]"
-    : "text-[hsl(var(--lexflow-mostarda))]";
+  const activeStyles = "bg-[hsl(var(--lexflow-verde-principal)/0.15)] text-[hsl(var(--lexflow-verde-principal))]";
+  const iconActiveColor = "text-[hsl(var(--lexflow-verde-principal))]";
 
   return (
     <SidebarMenuItem>
@@ -557,9 +581,20 @@ function MenuItem({ item, collapsed, isActive, moduloAtivo }: MenuItemProps) {
         >
           <Icon className={cn("h-4 w-4 shrink-0", isActive && iconActiveColor)} />
           {!collapsed && <span className="flex-1">{item.title}</span>}
+          {!collapsed && item.url === "/aprovacoes" && <AprovacoesBadge />}
         </NavLink>
       </SidebarMenuButton>
     </SidebarMenuItem>
+  );
+}
+
+function AprovacoesBadge() {
+  const { data: count } = useAprovacoesPendentesCount();
+  if (!count) return null;
+  return (
+    <Badge className="h-5 min-w-5 px-1.5 text-[10px] bg-[hsl(var(--lexflow-mostarda))] text-black hover:bg-[hsl(var(--lexflow-mostarda))]">
+      {count}
+    </Badge>
   );
 }
 
@@ -575,13 +610,9 @@ function CollapsibleMenuItem({ item, collapsed, isActive, moduloAtivo }: Collaps
   const Icon = item.icon;
   const navigate = useNavigate();
 
-  const activeStyles = moduloAtivo === "contratos"
-    ? "bg-[hsl(var(--lexflow-verde-principal)/0.15)] text-[hsl(var(--lexflow-verde-principal))]"
-    : "bg-[hsl(var(--lexflow-mostarda)/0.15)] text-[hsl(var(--lexflow-mostarda))]";
+  const activeStyles = "bg-[hsl(var(--lexflow-verde-principal)/0.15)] text-[hsl(var(--lexflow-verde-principal))]";
 
-  const iconActiveColor = moduloAtivo === "contratos"
-    ? "text-[hsl(var(--lexflow-verde-principal))]"
-    : "text-[hsl(var(--lexflow-mostarda))]";
+  const iconActiveColor = "text-[hsl(var(--lexflow-verde-principal))]";
 
   if (!item.subItems || item.subItems.length === 0) {
     return <MenuItem item={item} collapsed={collapsed} isActive={isActive} moduloAtivo={moduloAtivo} />;

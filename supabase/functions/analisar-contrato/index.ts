@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
+import { Buffer } from "node:buffer";
+import pdfParse from "npm:pdf-parse@1.1.1/lib/pdf-parse.js";
 
 // CORS: use wildcard since this endpoint is already protected by JWT auth
 const corsHeaders = {
@@ -40,10 +42,25 @@ serve(async (req) => {
 
     const { fileUrl } = await req.json();
 
-    if (!fileUrl) {
+    if (!fileUrl || typeof fileUrl !== 'string') {
       return new Response(
         JSON.stringify({ error: 'URL do arquivo não fornecida' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // SECURITY: enforce that fileUrl belongs to caller's org folder or own user folder
+    const firstSegment = fileUrl.split('/')[0];
+    const { data: memberships } = await supabase
+      .from('organization_members')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .eq('is_active', true);
+    const allowedPrefixes = new Set<string>([user.id, ...((memberships || []).map((m: any) => m.organization_id))]);
+    if (!firstSegment || !allowedPrefixes.has(firstSegment)) {
+      return new Response(
+        JSON.stringify({ error: 'Acesso negado ao arquivo' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -54,104 +71,38 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY não configurada");
     }
 
-    // Obter URL pública do arquivo
-    const { data: urlData } = await supabase
+    const { data: fileBlob, error: downloadError } = await supabase
       .storage
       .from('contratos-documentos')
-      .createSignedUrl(fileUrl, 60); // URL válida por 60 segundos
+      .download(fileUrl);
 
-    if (!urlData?.signedUrl) {
-      console.error('Erro ao gerar URL do arquivo');
+    if (downloadError || !fileBlob) {
+      console.error('Erro ao baixar arquivo do storage:', downloadError);
       return new Response(
         JSON.stringify({ error: 'Erro ao acessar arquivo do storage' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('URL gerada para análise');
+    const fileBytes = new Uint8Array(await fileBlob.arrayBuffer());
+    const detectedMimeType = detectMimeType(fileUrl);
+    const mimeType = !fileBlob.type || fileBlob.type === 'application/octet-stream' ? detectedMimeType : fileBlob.type;
+    const nativeText = await extractNativeText(fileBytes, mimeType);
+    const input = hasGoodText(nativeText)
+      ? { kind: 'text' as const, text: nativeText }
+      : { kind: 'file' as const, base64: toBase64(fileBytes), mimeType };
 
-    // Chamar Lovable AI para analisar o documento
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: "Analise este documento de contrato e extraia a data de início (vigência inicial) e a data de término (vigência final) do contrato. Procure por termos como 'vigência', 'prazo', 'início', 'término', 'validade', etc. Retorne as datas no formato YYYY-MM-DD."
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: urlData.signedUrl
-                }
-              }
-            ]
-          }
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "extract_contract_dates",
-              description: "Extrai as datas de início e término de um contrato",
-              parameters: {
-                type: "object",
-                properties: {
-                  data_inicio: {
-                    type: "string",
-                    description: "Data de início da vigência do contrato no formato YYYY-MM-DD"
-                  },
-                  data_fim: {
-                    type: "string",
-                    description: "Data de término da vigência do contrato no formato YYYY-MM-DD"
-                  }
-                },
-                required: ["data_inicio", "data_fim"],
-                additionalProperties: false
-              }
-            }
-          }
-        ],
-        tool_choice: { type: "function", function: { name: "extract_contract_dates" } }
-      }),
+    console.log(`Método de extração: ${input.kind === 'text' ? 'texto nativo' : 'arquivo multimodal/OCR'}; caracteres nativos=${nativeText.length}`);
+
+    const { payload: extractedData, usage } = await callExtractionAI({
+      apiKey: LOVABLE_API_KEY,
+      input,
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Erro na API Lovable:', response.status, errorText);
-      
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Limite de requisições excedido. Tente novamente mais tarde." }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Créditos insuficientes. Adicione fundos ao seu workspace Lovable AI." }),
-          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      throw new Error('Erro na API de IA');
-    }
-
-    const aiResponse = await response.json();
-    console.log('Resposta da IA:', JSON.stringify(aiResponse));
-
     // Capturar tokens utilizados
-    const tokensUsados = aiResponse.usage?.total_tokens || 0;
-    const promptTokens = aiResponse.usage?.prompt_tokens || 0;
-    const completionTokens = aiResponse.usage?.completion_tokens || 0;
+    const tokensUsados = usage.total;
+    const promptTokens = usage.prompt;
+    const completionTokens = usage.completion;
 
     console.log(`Tokens utilizados: ${tokensUsados} (prompt: ${promptTokens}, completion: ${completionTokens})`);
 
@@ -180,16 +131,18 @@ serve(async (req) => {
       }
     }
 
-    // Extrair dados do tool call
-    const toolCall = aiResponse.choices?.[0]?.message?.tool_calls?.[0];
-    if (toolCall && toolCall.function?.arguments) {
-      const extractedData = JSON.parse(toolCall.function.arguments);
-      
+    if (extractedData) {
       return new Response(
         JSON.stringify({
           success: true,
           data_inicio: extractedData.data_inicio || null,
-          data_fim: extractedData.data_fim || null
+          data_fim: extractedData.data_fim || null,
+          titulo: extractedData.titulo || null,
+          descricao: extractedData.descricao || null,
+          tipo: extractedData.tipo || null,
+          valor_total: extractedData.valor_total || null,
+          moeda: extractedData.moeda || null,
+          fornecedor_nome: extractedData.fornecedor_nome || null,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );

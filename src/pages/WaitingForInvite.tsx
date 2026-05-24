@@ -2,8 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mail, LogOut, RefreshCw, Building2, Loader2 } from "lucide-react";
-import logoVeridiana from "@/assets/logo-veridiana.png";
+import { Mail, LogOut, RefreshCw, Loader2, Scale } from "lucide-react";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -75,9 +74,6 @@ const WaitingForInvite = () => {
     }
   };
 
-  const handleCreateOrg = () => {
-    navigate("/onboarding");
-  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -85,7 +81,7 @@ const WaitingForInvite = () => {
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
             <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-primary/10">
-              <img src={logoVeridiana} alt="LexFlow" className="h-10 w-10 object-contain" />
+              <Scale className="h-8 w-8 text-primary" />
             </div>
           </div>
           <CardTitle className="text-2xl">Aguardando Convite</CardTitle>
@@ -106,25 +102,13 @@ const WaitingForInvite = () => {
             </div>
           </div>
 
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">ou</span>
-            </div>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground text-center">
+              Sua conta está aguardando a criação da empresa pela equipe LexFlow. Você receberá um e-mail quando o acesso for liberado.
+            </p>
           </div>
 
           <div className="space-y-3">
-            <Button 
-              variant="outline" 
-              className="w-full gap-2"
-              onClick={handleCreateOrg}
-            >
-              <Building2 className="h-4 w-4" />
-              Criar Nova Organização
-            </Button>
-
             <Button 
               variant="ghost" 
               className="w-full gap-2"
