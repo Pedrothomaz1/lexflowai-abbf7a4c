@@ -1,1 +1,0 @@
-REVOKE EXECUTE ON FUNCTION public.trigger_notify_finance_on_signature() FROM PUBLIC, anon, authenticated;
