@@ -287,6 +287,8 @@ async function processAnalysis(params: {
 }) {
   const { supabase, contratoId, contrato, conteudo, skillReq, userId, apiKey } = params;
 
+  try {
+
   // Tentar enriquecer com o texto do documento anexado (preferir o original)
   let docText = "";
   try {
