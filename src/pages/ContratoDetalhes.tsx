@@ -98,6 +98,9 @@ type Contrato = {
   observacoes: string | null;
   versao: number;
   tags: string[] | null;
+  analise_status?: string | null;
+  analise_error?: string | null;
+  analise_iniciada_em?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -277,15 +280,10 @@ const ContratoDetalhes = () => {
     if (!contrato) return;
 
     setIsAnalyzing(true);
-    try {
-      const { data: previousAnalysis } = await supabase
-        .from("contract_analysis")
-        .select("id")
-        .eq("contrato_id", contrato.id)
-        .order("analisado_em", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+    // Otimista: refletir processing imediatamente até o realtime chegar
+    setContrato((prev) => (prev ? { ...prev, analise_status: "processing", analise_error: null } : prev));
 
+    try {
       const conteudo = `
         Contrato: ${contrato.numero_contrato}
         Título: ${contrato.titulo}
@@ -295,97 +293,74 @@ const ContratoDetalhes = () => {
         Observações: ${contrato.observacoes || ""}
       `;
 
+      const { data, error } = await supabase.functions.invoke("analisar-contrato-ia", {
+        body: { contratoId: contrato.id, conteudo, skill, async: true },
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "Erro ao iniciar análise");
+
       toast({
         title: "Análise iniciada",
-        description: "Você pode continuar na tela; o resultado será carregado automaticamente.",
+        description: "Pode continuar usando o sistema; o resultado aparecerá aqui automaticamente.",
       });
-
-      const startedAt = Date.now();
-      const timeoutMs = 180000;
-      let latestAnalysis: typeof analise = null;
-      let invokeFinished = false;
-      let invokeError: unknown = null;
-
-      const invokePromise = supabase.functions
-        .invoke("analisar-contrato-ia", {
-          body: { contratoId: contrato.id, conteudo, skill },
-        })
-        .then(({ data, error }) => {
-          invokeFinished = true;
-          if (error) {
-            invokeError = error;
-            return null;
-          }
-          if (!data?.success) {
-            invokeError = new Error(data?.error || "Erro na análise");
-            return null;
-          }
-          return data.analise ?? null;
-        })
-        .catch((error) => {
-          invokeFinished = true;
-          invokeError = error;
-          return null;
-        });
-
-      while (Date.now() - startedAt < timeoutMs) {
-        const directResult = !invokeFinished
-          ? await Promise.race([
-              invokePromise,
-              new Promise<null>((resolve) => window.setTimeout(() => resolve(null), 5000)),
-            ])
-          : (await new Promise<null>((resolve) => window.setTimeout(() => resolve(null), 5000)));
-
-        if (directResult && directResult.id !== previousAnalysis?.id) {
-          latestAnalysis = directResult;
-          break;
-        }
-
-        const { data: polledAnalysis } = await supabase
-          .from("contract_analysis")
-          .select("*")
-          .eq("contrato_id", contrato.id)
-          .order("analisado_em", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (polledAnalysis && polledAnalysis.id !== previousAnalysis?.id) {
-          latestAnalysis = polledAnalysis;
-          break;
-        }
-
-        const isConnectionAbort = invokeError instanceof Error && invokeError.message === "Failed to send a request to the Edge Function";
-        if (invokeFinished && invokeError && !isConnectionAbort && Date.now() - startedAt > 30000) break;
-      }
-
-      if (latestAnalysis) {
-        toast({
-          title: "Análise concluída",
-          description: "O resultado foi salvo e carregado abaixo.",
-        });
-        setAnalise(latestAnalysis);
-        setShowAnalise(true);
-      } else if (invokeError) {
-        throw invokeError;
-      } else {
-        toast({
-          title: "Análise em processamento",
-          description: "A análise continua em segundo plano. Reabra este contrato em instantes para carregar o resultado.",
-        });
-      }
     } catch (error: unknown) {
-      const isConnectionAbort = error instanceof Error && error.message === "Failed to send a request to the Edge Function";
+      setIsAnalyzing(false);
+      setContrato((prev) => (prev ? { ...prev, analise_status: "failed" } : prev));
       toast({
-        title: "Erro na análise",
-        description: isConnectionAbort
-          ? "A análise foi iniciada, mas a conexão caiu antes da confirmação. Aguarde alguns instantes e atualize o contrato."
-          : handleDbError(error).message,
+        title: "Erro ao iniciar análise",
+        description: handleDbError(error).message,
         variant: "destructive",
       });
-    } finally {
-      setIsAnalyzing(false);
     }
   };
+
+  // Realtime: acompanhar status da análise via mudanças em contratos
+  useEffect(() => {
+    if (!id) return;
+
+    const channel = supabase
+      .channel(`contrato-analise-${id}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "contratos", filter: `id=eq.${id}` },
+        (payload) => {
+          const next = payload.new as any;
+          setContrato((prev) => (prev ? { ...prev, ...next } : prev));
+
+          if (next.analise_status === "done") {
+            setIsAnalyzing(false);
+            fetchAnalise().then(() => {
+              setShowAnalise(true);
+              toast({ title: "Análise concluída", description: "O resultado foi salvo e carregado." });
+            });
+          } else if (next.analise_status === "failed") {
+            setIsAnalyzing(false);
+            toast({
+              title: "Falha na análise",
+              description: next.analise_error || "Tente novamente.",
+              variant: "destructive",
+            });
+          } else if (next.analise_status === "processing") {
+            setIsAnalyzing(true);
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id]);
+
+  // Sincroniza isAnalyzing com o status persistido ao carregar o contrato
+  useEffect(() => {
+    if (contrato?.analise_status === "processing") {
+      setIsAnalyzing(true);
+    }
+  }, [contrato?.analise_status]);
+
+
 
 
   const handleAddAprovacao = async () => {

@@ -287,6 +287,8 @@ async function processAnalysis(params: {
 }) {
   const { supabase, contratoId, contrato, conteudo, skillReq, userId, apiKey } = params;
 
+  try {
+
   // Tentar enriquecer com o texto do documento anexado (preferir o original)
   let docText = "";
   try {
@@ -449,8 +451,23 @@ async function processAnalysis(params: {
     });
   }
 
-  return { saved, skillAplicada, results };
+    await supabase
+      .from("contratos")
+      .update({ analise_status: "done", analise_error: null })
+      .eq("id", contratoId);
+
+    return { saved, skillAplicada, results };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("processAnalysis falhou:", msg);
+    await supabase
+      .from("contratos")
+      .update({ analise_status: "failed", analise_error: msg.slice(0, 500) })
+      .eq("id", contratoId);
+    throw err;
+  }
 }
+
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -536,6 +553,17 @@ serve(async (req) => {
 
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) throw new Error("LOVABLE_API_KEY não configurada");
+
+    // Marca status processing antes de iniciar (cobre F5/refresh e desabilita botão)
+    await supabase
+      .from("contratos")
+      .update({
+        analise_status: "processing",
+        analise_error: null,
+        analise_iniciada_em: new Date().toISOString(),
+      })
+      .eq("id", contratoId);
+
 
     const analysisPromise = processAnalysis({
       supabase,
