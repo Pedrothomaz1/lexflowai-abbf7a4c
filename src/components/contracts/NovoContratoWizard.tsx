@@ -108,6 +108,19 @@ export function NovoContratoWizard({
     onOpenChange(false);
   }, [reset, onOpenChange]);
 
+  const handleDialogOpenChange = useCallback((nextOpen: boolean) => {
+    if (nextOpen) {
+      onOpenChange(true);
+      return;
+    }
+
+    if (uploading || extracting || submitting) {
+      return;
+    }
+
+    handleClose();
+  }, [extracting, handleClose, onOpenChange, submitting, uploading]);
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -226,9 +239,11 @@ export function NovoContratoWizard({
         console.error("[NovoContratoWizard] Extraction returned no data:", data);
         setExtractionFailed(true);
       }
+      setStep("revisao");
     } catch (err) {
       console.error("[NovoContratoWizard] Exception during extraction:", err);
       setExtractionFailed(true);
+      setStep("revisao");
     } finally {
       setUploading(false);
       setExtracting(false);
@@ -294,8 +309,11 @@ export function NovoContratoWizard({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
+      <DialogContent
+        className="max-w-2xl max-h-[90vh] overflow-y-auto"
+        onInteractOutside={(event) => event.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>Novo Contrato</DialogTitle>
           <DialogDescription>{subtitle[step]}</DialogDescription>
