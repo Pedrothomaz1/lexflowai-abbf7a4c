@@ -119,8 +119,9 @@ const ContratoDetalhes = () => {
   const { organization } = useOrganization();
   const [contrato, setContrato] = useState<Contrato | null>(null);
   const [aprovacoes, setAprovacoes] = useState<Aprovacao[]>([]);
+  const [mainDocument, setMainDocument] = useState<{ file_path: string; file_name: string } | null>(null);
+  const [openingDoc, setOpeningDoc] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
   const [novaAprovacao, setNovaAprovacao] = useState({
     status: "aprovado",
     comentario: "",
