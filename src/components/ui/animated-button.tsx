@@ -49,6 +49,8 @@ const AnimatedButton = React.forwardRef<HTMLButtonElement, AnimatedButtonProps>(
         <Slot
           className={cn(buttonVariants({ variant, size, className }))}
           ref={ref as React.Ref<HTMLElement>}
+          onClick={onClick as any}
+          {...props}
         >
           {children}
         </Slot>
@@ -65,6 +67,7 @@ const AnimatedButton = React.forwardRef<HTMLButtonElement, AnimatedButtonProps>(
         disabled={disabled}
         type={type}
         onClick={onClick}
+        {...props}
       >
         {children}
       </motion.button>
