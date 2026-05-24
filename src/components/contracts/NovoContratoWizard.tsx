@@ -281,15 +281,24 @@ export function NovoContratoWizard({
       if (error) throw error;
 
       if (uploadedPath && newContrato?.id) {
-        await supabase.from("contract_documents").insert({
+        const { error: attachErr } = await supabase.from("contract_attachments").insert({
           contrato_id: newContrato.id,
-          file_name: file?.name || "documento.pdf",
-          file_path: uploadedPath,
-          file_size: file?.size || 0,
-          mime_type: file?.type || "application/pdf",
+          organization_id: organization.id,
           uploaded_by: user.id,
-        }).then(() => null);
+          nome_arquivo: file?.name || "documento.pdf",
+          arquivo_url: uploadedPath,
+          tamanho_bytes: file?.size || 0,
+          mime_type: file?.type || "application/pdf",
+          tipo_documento: "contrato_original",
+          is_original: true,
+          versao: 1,
+        });
+        if (attachErr) {
+          console.error("Falha ao registrar anexo:", attachErr);
+          toast.error("Contrato criado, mas falhou ao registrar o anexo: " + attachErr.message);
+        }
       }
+
 
       toast.success("Contrato criado com sucesso!");
       onSuccess();
