@@ -5051,6 +5051,7 @@ export type Database = {
       user_2fa_settings: {
         Row: {
           backup_codes: string[] | null
+          backup_codes_hash: string[] | null
           created_at: string
           id: string
           is_enabled: boolean
@@ -5061,6 +5062,7 @@ export type Database = {
         }
         Insert: {
           backup_codes?: string[] | null
+          backup_codes_hash?: string[] | null
           created_at?: string
           id?: string
           is_enabled?: boolean
@@ -5071,6 +5073,7 @@ export type Database = {
         }
         Update: {
           backup_codes?: string[] | null
+          backup_codes_hash?: string[] | null
           created_at?: string
           id?: string
           is_enabled?: boolean

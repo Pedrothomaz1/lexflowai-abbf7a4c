@@ -145,6 +145,15 @@ function generateBackupCodes(count = 10): string[] {
   return codes;
 }
 
+// SHA-256 hex digest used to store backup codes at rest.
+async function hashBackupCode(code: string): Promise<string> {
+  const data = new TextEncoder().encode(code.trim().toUpperCase());
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(digest))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -160,21 +169,30 @@ serve(async (req) => {
       );
     }
 
-    const supabase = createClient(
+    // Auth client: validates the user's JWT (anon key + user bearer).
+    const authClient = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_ANON_KEY')!,
       { global: { headers: { Authorization: authHeader } } }
     );
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabase.auth.getUser(token);
-    
+    const { data: claimsData, error: claimsError } = await authClient.auth.getUser(token);
+
     if (claimsError || !claimsData?.user) {
       return new Response(
         JSON.stringify({ error: 'Token inválido' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Data client: service role, used to read/write totp_secret and backup_codes_hash
+    // (those columns are revoked from authenticated to prevent direct PostgREST reads).
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
+
 
     const userId = claimsData.user.id;
     const userEmail = claimsData.user.email || '';
@@ -187,18 +205,22 @@ serve(async (req) => {
         // Generate new TOTP secret (20 bytes = 32 Base32 chars)
         const secret = generateSecret();
         const backupCodes = generateBackupCodes(10);
-        
+        const backupCodesHash = await Promise.all(backupCodes.map(hashBackupCode));
+
         // Generate otpauth URL for QR code
         const issuer = 'LexFlow';
         const otpauthUrl = `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(userEmail)}?secret=${secret}&issuer=${encodeURIComponent(issuer)}&algorithm=SHA1&digits=6&period=30`;
-        
-        // Store secret temporarily (not enabled yet)
+
+        // Store secret temporarily (not enabled yet). Only the hashes of the
+        // backup codes are persisted; the plaintext set is returned exactly
+        // once in this response.
         const { error: upsertError } = await supabase
           .from('user_2fa_settings')
           .upsert({
             user_id: userId,
             totp_secret: secret,
-            backup_codes: backupCodes,
+            backup_codes: null,
+            backup_codes_hash: backupCodesHash,
             is_enabled: false,
             verified_at: null
           }, { onConflict: 'user_id' });
@@ -287,7 +309,7 @@ serve(async (req) => {
 
         const { data: settings, error: fetchError } = await supabase
           .from('user_2fa_settings')
-          .select('totp_secret, is_enabled, backup_codes')
+          .select('totp_secret, is_enabled, backup_codes, backup_codes_hash')
           .eq('user_id', userId)
           .single();
 
@@ -305,18 +327,29 @@ serve(async (req) => {
           );
         }
 
-        // Check if it's a backup code
+        // Check if it's a backup code (hashed lookup, plaintext fallback for legacy rows)
         const cleanCode = code.toUpperCase().replace(/[^A-F0-9-]/g, '');
         if (cleanCode.length === 9 && cleanCode.includes('-')) {
-          const backupCodes = settings.backup_codes || [];
-          const codeIndex = backupCodes.indexOf(cleanCode);
-          
-          if (codeIndex !== -1) {
-            // Remove used backup code
-            const newBackupCodes = backupCodes.filter((_: string, i: number) => i !== codeIndex);
+          const hashes: string[] = settings.backup_codes_hash || [];
+          const candidateHash = await hashBackupCode(cleanCode);
+          let hashIndex = hashes.indexOf(candidateHash);
+
+          // Legacy: still allow plaintext match while migrating, then upgrade row.
+          const legacy: string[] = settings.backup_codes || [];
+          let legacyIndex = -1;
+          if (hashIndex === -1 && legacy.length > 0) {
+            legacyIndex = legacy.indexOf(cleanCode);
+          }
+
+          if (hashIndex !== -1 || legacyIndex !== -1) {
+            const newHashes = hashes.filter((_: string, i: number) => i !== hashIndex);
+            const newLegacy = legacy.filter((_: string, i: number) => i !== legacyIndex);
             await supabase
               .from('user_2fa_settings')
-              .update({ backup_codes: newBackupCodes })
+              .update({
+                backup_codes_hash: newHashes,
+                backup_codes: newLegacy.length > 0 ? newLegacy : null,
+              })
               .eq('user_id', userId);
 
             return new Response(
