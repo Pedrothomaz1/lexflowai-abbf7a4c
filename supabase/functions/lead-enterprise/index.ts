@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
 
     if (error) {
       console.error("[lead-enterprise] insert error", error);
-      return new Response(JSON.stringify({ ok: false, error: error.message }),
+      return new Response(JSON.stringify({ ok: false, error: "Não foi possível registrar a solicitação. Tente novamente." }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -101,7 +101,7 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err: any) {
     console.error("[lead-enterprise] fatal", err);
-    return new Response(JSON.stringify({ ok: false, error: err.message || "Erro inesperado" }),
+    return new Response(JSON.stringify({ ok: false, error: "Erro inesperado. Tente novamente." }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });

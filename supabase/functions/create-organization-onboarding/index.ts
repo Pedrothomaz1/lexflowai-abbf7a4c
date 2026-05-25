@@ -159,7 +159,7 @@ Deno.serve(async (req) => {
         console.error("[create-organization-onboarding] organization insert error", orgError);
         const message = orgError.code === "23505"
           ? "Este CNPJ já está cadastrado. Peça convite ao administrador da empresa."
-          : orgError.message;
+          : "Não foi possível criar a organização. Tente novamente.";
         return new Response(JSON.stringify({ ok: false, error: message }), {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -181,7 +181,7 @@ Deno.serve(async (req) => {
 
     if (memberError) {
       console.error("[create-organization-onboarding] member upsert error", memberError);
-      return new Response(JSON.stringify({ ok: false, error: memberError.message }), {
+      return new Response(JSON.stringify({ ok: false, error: "Não foi possível vincular o usuário à organização." }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -200,7 +200,7 @@ Deno.serve(async (req) => {
 
     if (roleError) {
       console.error("[create-organization-onboarding] role upsert error", roleError);
-      return new Response(JSON.stringify({ ok: false, error: roleError.message }), {
+      return new Response(JSON.stringify({ ok: false, error: "Não foi possível atribuir o papel do usuário." }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
