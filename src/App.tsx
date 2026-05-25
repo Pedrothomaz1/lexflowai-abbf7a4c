@@ -165,6 +165,7 @@ function App() {
                     <Route path="/requisicao/form/:formId" element={<RequisicaoFormPublica />} />
                     <Route path="/reset-password" element={<ResetPassword />} />
                     <Route path="/portal/:token" element={<PortalExterno />} />
+                    <Route path="/unsubscribe" element={<Unsubscribe />} />
 
                     {/* Organization status routes (no public onboarding — orgs are created by super-admin) */}
                     <Route path="/waiting-for-invite" element={<ProtectedRoute requireOrg={false}><WaitingForInvite /></ProtectedRoute>} />
