@@ -84,7 +84,7 @@ serve(async (req) => {
     });
     if (orgErr) {
       console.error("[super-admin-create-client-org] org insert", orgErr);
-      return json({ ok: false, error: orgErr.message });
+      return json({ ok: false, error: "Falha ao criar organização." });
     }
 
     await admin.from("organization_invites").delete().eq("organization_id", orgId).eq("email", ownerEmail);
