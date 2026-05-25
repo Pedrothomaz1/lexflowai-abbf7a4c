@@ -169,20 +169,29 @@ serve(async (req) => {
       );
     }
 
-    const supabase = createClient(
+    // Auth client: validates the user's JWT (anon key + user bearer).
+    const authClient = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_ANON_KEY')!,
       { global: { headers: { Authorization: authHeader } } }
     );
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabase.auth.getUser(token);
-    
+    const { data: claimsData, error: claimsError } = await authClient.auth.getUser(token);
+
     if (claimsError || !claimsData?.user) {
       return new Response(
         JSON.stringify({ error: 'Token inválido' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Data client: service role, used to read/write totp_secret and backup_codes_hash
+    // (those columns are revoked from authenticated to prevent direct PostgREST reads).
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
     }
 
     const userId = claimsData.user.id;
