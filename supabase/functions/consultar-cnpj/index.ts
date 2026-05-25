@@ -163,8 +163,27 @@ Deno.serve(async (req) => {
     };
 
     if (fornecedorId) {
-      await admin.from("fornecedores").update(payload).eq("id", fornecedorId);
+      if (!organizationId) {
+        return new Response(JSON.stringify({ error: "Sem organização ativa" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: updated, error: upErr } = await admin
+        .from("fornecedores")
+        .update(payload)
+        .eq("id", fornecedorId)
+        .eq("organization_id", organizationId)
+        .select("id")
+        .maybeSingle();
+      if (upErr || !updated) {
+        return new Response(JSON.stringify({ error: "Fornecedor não encontrado" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
+
 
     if (organizationId) {
       await admin.from("cnpj_verification_log").insert({
