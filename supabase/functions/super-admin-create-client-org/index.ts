@@ -144,8 +144,8 @@ serve(async (req) => {
       email_sent: emailSent, email_error: emailError,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Erro inesperado";
-    console.error("[super-admin-create-client-org] fatal", message);
-    return json({ ok: false, error: message });
+    console.error("[super-admin-create-client-org] fatal", err);
+    return json({ ok: false, error: "Erro interno. Tente novamente." });
   }
+
 });
