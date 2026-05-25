@@ -1,111 +1,75 @@
 project_id = "dxllojjazxizuylbmezc"
 
-[functions.analisar-contrato]
-verify_jwt = true
-
-[functions.analisar-contrato-ia]
-verify_jwt = true
-
-[functions.enviar-notificacao-whatsapp]
-verify_jwt = true
-
-[functions.enviar-notificacao-email]
-verify_jwt = true
-
-[functions.enviar-valores-contrato]
-verify_jwt = true
-
-[functions.verificar-alertas]
-verify_jwt = false
-
-[functions.signature-webhook]
-verify_jwt = false
-
-[functions.enviar-solicitacao-compras]
-verify_jwt = false
-
-[functions.enviar-notificacao-financeiro]
-verify_jwt = false
-
-[functions.extrair-dados-pdf]
-verify_jwt = true
-
-[functions.totp-auth]
-verify_jwt = false
-
-[functions.validate-password]
-verify_jwt = false
-
-[functions.rate-limiter]
-verify_jwt = false
-
-[functions.anomaly-detector]
-verify_jwt = false
-
-[functions.security-alert-handler]
-verify_jwt = true
-
-[functions.gdpr-handler]
-verify_jwt = false
-
-[functions.security-metrics]
-verify_jwt = true
-
-[functions.processar-requisicao-contrato]
-verify_jwt = false
-
-[functions.enviar-convite-organizacao]
-verify_jwt = true
-
-[functions.registrar-aceite-lgpd]
-verify_jwt = false
-
-[functions.consultar-cnpj]
-verify_jwt = true
-
-[functions.create-organization-onboarding]
-verify_jwt = true
-
-[functions.cron-verificar-cnpjs]
-verify_jwt = false
-
-[functions.security-regression-runner]
-verify_jwt = false
-
-[functions.cron-lexflow-diario]
-verify_jwt = false
-
-[functions.portal-externo-publico]
-verify_jwt = false
-
-[functions.ia-resumo-executivo]
-verify_jwt = true
-
-[functions.ia-sugerir-clausulas]
-verify_jwt = true
-
-[functions.criar-portal-contraparte]
-verify_jwt = true
-
-[functions.zapsign-criar-envelope]
-verify_jwt = true
-
-[functions.zapsign-cancelar-envelope]
-verify_jwt = true
-
-[functions.zapsign-lembrar-signatarios]
-verify_jwt = true
-
-[functions.zapsign-webhook]
-verify_jwt = false
-
-[functions.lead-novo-plano]
-verify_jwt = false
-
-
-
-
-
-[functions.auto-notificar-financeiro]
-verify_jwt = false
-
+[functions]
+  [functions.analisar-contrato]
+    verify_jwt = true
+  [functions.analisar-contrato-ia]
+    verify_jwt = true
+  [functions.anomaly-detector]
+    verify_jwt = false
+  [functions.auth-email-hook]
+    verify_jwt = false
+  [functions.auto-notificar-financeiro]
+    verify_jwt = false
+  [functions.consultar-cnpj]
+    verify_jwt = true
+  [functions.create-organization-onboarding]
+    verify_jwt = true
+  [functions.criar-portal-contraparte]
+    verify_jwt = true
+  [functions.cron-lexflow-diario]
+    verify_jwt = false
+  [functions.cron-verificar-cnpjs]
+    verify_jwt = false
+  [functions.enviar-convite-organizacao]
+    verify_jwt = true
+  [functions.enviar-notificacao-email]
+    verify_jwt = true
+  [functions.enviar-notificacao-financeiro]
+    verify_jwt = false
+  [functions.enviar-notificacao-whatsapp]
+    verify_jwt = true
+  [functions.enviar-solicitacao-compras]
+    verify_jwt = false
+  [functions.enviar-valores-contrato]
+    verify_jwt = true
+  [functions.extrair-dados-pdf]
+    verify_jwt = true
+  [functions.gdpr-handler]
+    verify_jwt = false
+  [functions.ia-resumo-executivo]
+    verify_jwt = true
+  [functions.ia-sugerir-clausulas]
+    verify_jwt = true
+  [functions.lead-novo-plano]
+    verify_jwt = false
+  [functions.portal-externo-publico]
+    verify_jwt = false
+  [functions.processar-requisicao-contrato]
+    verify_jwt = false
+  [functions.rate-limiter]
+    verify_jwt = false
+  [functions.registrar-aceite-lgpd]
+    verify_jwt = false
+  [functions.security-alert-handler]
+    verify_jwt = true
+  [functions.security-metrics]
+    verify_jwt = true
+  [functions.security-regression-runner]
+    verify_jwt = false
+  [functions.signature-webhook]
+    verify_jwt = false
+  [functions.totp-auth]
+    verify_jwt = false
+  [functions.validate-password]
+    verify_jwt = false
+  [functions.verificar-alertas]
+    verify_jwt = false
+  [functions.zapsign-cancelar-envelope]
+    verify_jwt = true
+  [functions.zapsign-criar-envelope]
+    verify_jwt = true
+  [functions.zapsign-lembrar-signatarios]
+    verify_jwt = true
+  [functions.zapsign-webhook]
+    verify_jwt = false
