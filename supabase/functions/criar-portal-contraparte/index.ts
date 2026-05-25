@@ -105,7 +105,9 @@ serve(async (req) => {
     return json({ ok: true, token: saved, url, email: emailStatus });
   } catch (e) {
     console.error(e);
-    return json({ ok: false, error: e instanceof Error ? e.message : 'Erro' }, 500);
+    console.error('criar-portal-contraparte error', e);
+    return json({ ok: false, error: 'Erro interno. Tente novamente.' }, 500);
+
   }
 });
 
