@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.1";
-import { Resend } from "https://esm.sh/resend@4.0.0";
 import { z } from "https://esm.sh/zod@3.23.8";
 
 const corsHeaders = {
@@ -22,16 +21,13 @@ const BodySchema = z.object({
 }).strict();
 
 const cleanCnpj = (v?: string | null) => (v || "").replace(/\D/g, "");
-
 const slugify = (v: string) =>
-  v.toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  v.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "empresa";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    status, headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
 serve(async (req) => {
@@ -39,14 +35,11 @@ serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return json({ ok: false, error: "Sessão expirada" });
-    }
+    if (!authHeader?.startsWith("Bearer ")) return json({ ok: false, error: "Sessão expirada" });
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const resendKey = Deno.env.get("RESEND_API_KEY");
 
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
@@ -57,7 +50,6 @@ serve(async (req) => {
 
     const admin = createClient(supabaseUrl, serviceKey);
 
-    // Verify caller is super_admin
     const { data: isSA } = await admin.rpc("is_super_admin", { _user_id: user.id });
     if (!isSA) return json({ ok: false, error: "Acesso negado: apenas super-admins" });
 
@@ -77,53 +69,31 @@ serve(async (req) => {
 
     if (cnpj && cnpj.length !== 14) return json({ ok: false, error: "CNPJ inválido" });
 
-    // Check duplicate CNPJ
     if (cnpj) {
-      const { data: existing } = await admin
-        .from("organizations").select("id, nome").eq("cnpj", cnpj).maybeSingle();
-      if (existing) {
-        return json({ ok: false, error: `CNPJ já cadastrado em "${existing.nome}"` });
-      }
+      const { data: existing } = await admin.from("organizations")
+        .select("id, nome").eq("cnpj", cnpj).maybeSingle();
+      if (existing) return json({ ok: false, error: `CNPJ já cadastrado em "${existing.nome}"` });
     }
 
-    // Create organization as ATIVA
     const orgId = crypto.randomUUID();
     const slug = `${slugify(nome)}-${orgId.slice(0, 6)}`;
     const { error: orgErr } = await admin.from("organizations").insert({
-      id: orgId,
-      nome,
-      slug,
-      cnpj,
-      telefone,
-      cidade,
-      estado,
-      plano,
-      status: "ativa",
-      created_by: user.id,
-      aprovada_em: new Date().toISOString(),
-      aprovada_por: user.id,
+      id: orgId, nome, slug, cnpj, telefone, cidade, estado, plano,
+      status: "ativa", created_by: user.id,
+      aprovada_em: new Date().toISOString(), aprovada_por: user.id,
     });
     if (orgErr) {
       console.error("[super-admin-create-client-org] org insert", orgErr);
       return json({ ok: false, error: orgErr.message });
     }
 
-    // Clean any old invites for this email/org and create a fresh one (14 days)
-    await admin.from("organization_invites")
-      .delete().eq("organization_id", orgId).eq("email", ownerEmail);
+    await admin.from("organization_invites").delete().eq("organization_id", orgId).eq("email", ownerEmail);
 
     const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
-    const { data: invite, error: invErr } = await admin
-      .from("organization_invites")
-      .insert({
-        organization_id: orgId,
-        email: ownerEmail,
-        role_in_org: "owner",
-        invited_by: user.id,
-        expires_at: expiresAt,
-      })
-      .select("token")
-      .single();
+    const { data: invite, error: invErr } = await admin.from("organization_invites").insert({
+      organization_id: orgId, email: ownerEmail, role_in_org: "owner",
+      invited_by: user.id, expires_at: expiresAt,
+    }).select("token").single();
     if (invErr || !invite) {
       console.error("[super-admin-create-client-org] invite insert", invErr);
       return json({ ok: false, error: invErr?.message || "Falha ao criar convite" });
@@ -134,72 +104,44 @@ serve(async (req) => {
 
     let emailSent = false;
     let emailError: string | null = null;
-
-    if (resendKey) {
-      try {
-        const resend = new Resend(resendKey);
-        const { error: mailErr } = await resend.emails.send({
-          from: "LexFlow <onboarding@resend.dev>",
-          to: [ownerEmail],
-          subject: `Sua conta LexFlow está pronta — ${nome}`,
-          html: `<!DOCTYPE html><html><body style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f4f4f5;margin:0;padding:40px 20px">
-<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
-<table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#fff;border-radius:12px;box-shadow:0 4px 6px rgba(0,0,0,.08)">
-<tr><td style="padding:32px;text-align:center;border-bottom:1px solid #e4e4e7">
-<h1 style="margin:0;font-size:24px;color:#18181b">LexFlow</h1>
-</td></tr>
-<tr><td style="padding:32px">
-<h2 style="margin:0 0 16px;font-size:20px;color:#18181b">Bem-vindo${ownerNome ? ", " + ownerNome : ""}! 🎉</h2>
-<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#52525b">
-Sua conta no LexFlow para <strong>${nome}</strong> está liberada e pronta para uso.
-</p>
-<p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#52525b">
-Clique no botão abaixo para definir sua senha e acessar o sistema. A partir daí você poderá convidar sua equipe, cadastrar contratos e configurar fornecedores.
-</p>
-<table width="100%"><tr><td align="center" style="padding:8px 0 24px">
-<a href="${inviteUrl}" style="display:inline-block;background:#18181b;color:#fff;font-size:15px;font-weight:600;text-decoration:none;padding:14px 32px;border-radius:8px">Acessar LexFlow</a>
-</td></tr></table>
-<p style="margin:24px 0 0;font-size:13px;color:#a1a1aa;text-align:center">Este link expira em 14 dias.</p>
-</td></tr>
-<tr><td style="padding:20px 32px;background:#fafafa;border-top:1px solid #e4e4e7;border-radius:0 0 12px 12px">
-<p style="margin:0;font-size:12px;color:#a1a1aa;text-align:center">Plano contratado: ${plano.toUpperCase()} • LexFlow — Gestão de contratos</p>
-</td></tr>
-</table></td></tr></table></body></html>`,
-          text: `Bem-vindo ao LexFlow!\n\nSua conta para ${nome} está pronta. Acesse: ${inviteUrl}\n\nEste link expira em 14 dias.`,
-        });
-        if (mailErr) {
-          emailError = String(mailErr.message || mailErr);
-          console.error("[super-admin-create-client-org] resend error", mailErr);
-        } else {
-          emailSent = true;
-        }
-      } catch (e) {
-        emailError = e instanceof Error ? e.message : "erro desconhecido";
-        console.error("[super-admin-create-client-org] resend throw", e);
+    try {
+      const { error: invokeErr } = await admin.functions.invoke('send-transactional-email', {
+        body: {
+          templateName: 'client-account-ready',
+          recipientEmail: ownerEmail,
+          idempotencyKey: `client-account-ready-${orgId}`,
+          templateData: {
+            ownerNome,
+            organizationName: nome,
+            plano,
+            inviteUrl,
+            expiresInDays: 14,
+          },
+        },
+      });
+      if (invokeErr) {
+        emailError = invokeErr.message ?? String(invokeErr);
+        console.error("[super-admin-create-client-org] lovable email error", invokeErr);
+      } else {
+        emailSent = true;
       }
-    } else {
-      emailError = "RESEND_API_KEY não configurado";
+    } catch (e) {
+      emailError = e instanceof Error ? e.message : "erro desconhecido";
+      console.error("[super-admin-create-client-org] lovable email throw", e);
     }
 
-    // Registra D+0 da sequência de onboarding (idempotente via UNIQUE org+step)
     try {
       await admin.from("onboarding_email_log").insert({
-        organization_id: orgId,
-        email: ownerEmail,
-        step: 0,
-        status: emailSent ? "sent" : "failed",
-        error_message: emailError,
+        organization_id: orgId, email: ownerEmail, step: 0,
+        status: emailSent ? "sent" : "failed", error_message: emailError,
       });
     } catch (e) {
       console.warn("[super-admin-create-client-org] onboarding log skipped", e);
     }
 
     return json({
-      ok: true,
-      organization_id: orgId,
-      invite_url: inviteUrl,
-      email_sent: emailSent,
-      email_error: emailError,
+      ok: true, organization_id: orgId, invite_url: inviteUrl,
+      email_sent: emailSent, email_error: emailError,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erro inesperado";
