@@ -20,6 +20,7 @@ const PortalExterno = React.lazy(() => import("./pages/PortalExterno"));
 const Auth = React.lazy(() => import("./pages/Auth"));
 const Privacidade = React.lazy(() => import("./pages/Privacidade"));
 const AuthCallback = React.lazy(() => import("./pages/AuthCallback"));
+const Unsubscribe = React.lazy(() => import("./pages/Unsubscribe"));
 const Dashboard = React.lazy(() => import("./pages/Dashboard"));
 const Contratos = React.lazy(() => import("./pages/Contratos"));
 const ContratoDetalhes = React.lazy(() => import("./pages/ContratoDetalhes"));
@@ -164,6 +165,7 @@ function App() {
                     <Route path="/requisicao/form/:formId" element={<RequisicaoFormPublica />} />
                     <Route path="/reset-password" element={<ResetPassword />} />
                     <Route path="/portal/:token" element={<PortalExterno />} />
+                    <Route path="/unsubscribe" element={<Unsubscribe />} />
 
                     {/* Organization status routes (no public onboarding — orgs are created by super-admin) */}
                     <Route path="/waiting-for-invite" element={<ProtectedRoute requireOrg={false}><WaitingForInvite /></ProtectedRoute>} />
