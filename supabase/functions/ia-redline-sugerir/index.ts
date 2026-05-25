@@ -196,6 +196,7 @@ REGRAS:
     });
   } catch (e) {
     console.error("ia-redline-sugerir error", e);
-    return json({ ok: false, error: e instanceof Error ? e.message : "Erro interno" }, 500);
+    return json({ ok: false, error: "Erro interno. Tente novamente." }, 500);
   }
+
 });
