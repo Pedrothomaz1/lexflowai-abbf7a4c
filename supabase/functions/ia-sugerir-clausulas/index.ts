@@ -83,9 +83,10 @@ serve(async (req) => {
 
     return json({ ok: true, insight: saved });
   } catch (e) {
-    console.error(e);
-    return json({ ok: false, error: e instanceof Error ? e.message : 'Erro' }, 500);
+    console.error('ia-sugerir-clausulas error', e);
+    return json({ ok: false, error: 'Erro interno. Tente novamente.' }, 500);
   }
+
 });
 
 function json(b: unknown, status = 200) {
