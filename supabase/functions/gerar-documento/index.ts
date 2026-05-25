@@ -94,8 +94,10 @@ Deno.serve(async (req) => {
       contrato_id: contrato_id ?? null,
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
-    return new Response(JSON.stringify({ ok: false, error: (e as Error).message }), {
+    console.error('gerar-documento error', e);
+    return new Response(JSON.stringify({ ok: false, error: 'Erro interno. Tente novamente.' }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+
 });

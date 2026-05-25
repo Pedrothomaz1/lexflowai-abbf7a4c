@@ -23,8 +23,18 @@ serve(async (req) => {
     if (!contratoId || !UUID_REGEX.test(contratoId)) return json({ ok: false, error: 'contratoId inválido' });
     if (!conteudo || typeof conteudo !== 'string') return json({ ok: false, error: 'conteudo obrigatório' });
 
-    const { data: contrato } = await supabase.from('contratos').select('id, organization_id, tipo').eq('id', contratoId).maybeSingle();
+    const { data: contrato } = await supabase.from('contratos').select('id, organization_id, tipo, created_by').eq('id', contratoId).maybeSingle();
     if (!contrato) return json({ ok: false, error: 'Contrato não encontrado' }, 404);
+
+    let canAccess = contrato.created_by === user.id;
+    if (!canAccess) {
+      const { data: membership } = await supabase.from('organization_members')
+        .select('id').eq('user_id', user.id).eq('organization_id', contrato.organization_id).eq('is_active', true).maybeSingle();
+      canAccess = !!membership;
+    }
+    if (!canAccess) return json({ ok: false, error: 'Forbidden' }, 403);
+
+
 
     const sanitized = conteudo.replace(/[\x00-\x1F\x7F-\x9F]/g, '').substring(0, MAX_LEN);
     const apiKey = Deno.env.get('GEMINI_API_KEY');
@@ -73,9 +83,10 @@ serve(async (req) => {
 
     return json({ ok: true, insight: saved });
   } catch (e) {
-    console.error(e);
-    return json({ ok: false, error: e instanceof Error ? e.message : 'Erro' }, 500);
+    console.error('ia-sugerir-clausulas error', e);
+    return json({ ok: false, error: 'Erro interno. Tente novamente.' }, 500);
   }
+
 });
 
 function json(b: unknown, status = 200) {

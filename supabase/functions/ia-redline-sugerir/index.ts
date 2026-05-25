@@ -73,9 +73,18 @@ serve(async (req) => {
     }
 
     const { data: contrato } = await supabase
-      .from("contratos").select("id, organization_id, tipo, titulo")
+      .from("contratos").select("id, organization_id, tipo, titulo, created_by")
       .eq("id", contratoId).maybeSingle();
     if (!contrato) return json({ ok: false, error: "Contrato não encontrado" }, 404);
+
+    let canAccess = contrato.created_by === user.id;
+    if (!canAccess) {
+      const { data: membership } = await supabase.from("organization_members")
+        .select("id").eq("user_id", user.id).eq("organization_id", contrato.organization_id).eq("is_active", true).maybeSingle();
+      canAccess = !!membership;
+    }
+    if (!canAccess) return json({ ok: false, error: "Forbidden" }, 403);
+
 
     const sanitized = conteudo.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "").substring(0, MAX_LEN);
     const apiKey = Deno.env.get("GEMINI_API_KEY");
@@ -187,6 +196,7 @@ REGRAS:
     });
   } catch (e) {
     console.error("ia-redline-sugerir error", e);
-    return json({ ok: false, error: e instanceof Error ? e.message : "Erro interno" }, 500);
+    return json({ ok: false, error: "Erro interno. Tente novamente." }, 500);
   }
+
 });

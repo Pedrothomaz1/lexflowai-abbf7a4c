@@ -91,13 +91,26 @@ Deno.serve(async (req) => {
     // Onboarding: usuário ainda sem organização pode consultar CNPJ (sem log/cache)
 
 
-    // Cache 24h se não forçado
+    // Cache 24h se não forçado — sempre com scope de organização
     if (fornecedorId && !force) {
+      if (!organizationId) {
+        return new Response(JSON.stringify({ error: "Sem organização ativa" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       const { data: f } = await admin
         .from("fornecedores")
         .select("cnpj_status, cnpj_situacao_data, cnpj_verificado_em, cnpj_dados_receita")
         .eq("id", fornecedorId)
+        .eq("organization_id", organizationId)
         .maybeSingle();
+      if (!f) {
+        return new Response(JSON.stringify({ error: "Fornecedor não encontrado" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       if (f?.cnpj_verificado_em) {
         const age = Date.now() - new Date(f.cnpj_verificado_em).getTime();
         if (age < 24 * 60 * 60 * 1000 && f.cnpj_status && f.cnpj_status !== "nao_verificado") {
@@ -108,6 +121,7 @@ Deno.serve(async (req) => {
         }
       }
     }
+
 
     const result = await consultarReceitaWS(cnpj);
 
@@ -149,8 +163,27 @@ Deno.serve(async (req) => {
     };
 
     if (fornecedorId) {
-      await admin.from("fornecedores").update(payload).eq("id", fornecedorId);
+      if (!organizationId) {
+        return new Response(JSON.stringify({ error: "Sem organização ativa" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: updated, error: upErr } = await admin
+        .from("fornecedores")
+        .update(payload)
+        .eq("id", fornecedorId)
+        .eq("organization_id", organizationId)
+        .select("id")
+        .maybeSingle();
+      if (upErr || !updated) {
+        return new Response(JSON.stringify({ error: "Fornecedor não encontrado" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
+
 
     if (organizationId) {
       await admin.from("cnpj_verification_log").insert({

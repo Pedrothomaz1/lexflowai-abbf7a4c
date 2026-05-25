@@ -136,8 +136,8 @@ serve(async (req) => {
       log_id: log?.id || null,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Erro inesperado";
-    console.error("[super-admin-impersonate] fatal", message);
-    return json({ ok: false, error: message });
+    console.error("[super-admin-impersonate] fatal", err);
+    return json({ ok: false, error: "Erro interno. Tente novamente." });
   }
+
 });
