@@ -20,6 +20,7 @@ const PortalExterno = React.lazy(() => import("./pages/PortalExterno"));
 const Auth = React.lazy(() => import("./pages/Auth"));
 const Privacidade = React.lazy(() => import("./pages/Privacidade"));
 const AuthCallback = React.lazy(() => import("./pages/AuthCallback"));
+const Unsubscribe = React.lazy(() => import("./pages/Unsubscribe"));
 const Dashboard = React.lazy(() => import("./pages/Dashboard"));
 const Contratos = React.lazy(() => import("./pages/Contratos"));
 const ContratoDetalhes = React.lazy(() => import("./pages/ContratoDetalhes"));
