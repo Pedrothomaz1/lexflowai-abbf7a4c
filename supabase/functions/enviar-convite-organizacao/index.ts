@@ -127,7 +127,7 @@ serve(async (req) => {
     }
 
     const baseUrl =
-      Deno.env.get("SITE_URL") || "https://lexflowai.com.br";
+      Deno.env.get("SITE_URL") || "https://lexflowai.lovable.app";
     const inviteUrl = `${baseUrl}/aceitar-convite?token=${inviteToken}`;
 
     // Send via Lovable Emails (queued, branded, with retry + suppression)
