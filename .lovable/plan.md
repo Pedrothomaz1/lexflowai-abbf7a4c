@@ -1,27 +1,29 @@
 ## Objetivo
-Confirmar o tipo de registro DNS certo para o e-mail e destravar a configuração sem depender de adivinhação com Hostinger.
+Fazer o domínio de e-mail sair de Pending e começar a validar no backend.
 
-## O que está acontecendo
-- O projeto tem domínio web `lexflowai.com.br` configurado.
-- No espaço de e-mails, existe apenas `www.lexflowai.com.br` iniciado.
-- `notify.lexflowai.com.br` ainda não existe no setup de e-mail do projeto.
-- Por isso, a Lovable ainda não te entregou um `hostname`/IP/CNAME para esse subdomínio específico.
+## Situação atual
+- `notify.lexflowai.com.br` está em `Pending`
+- `notify.www.lexflowai.com.br` também está em `Pending`
+- O segundo parece ser um domínio duplicado/incorreto e pode estar gerando confusão
 
-## Próximos passos
-1. Abrir a configuração de domínio de e-mail dentro de **Cloud → Emails**.
-2. Cadastrar o domínio remetente correto como `notify.lexflowai.com.br`.
-3. Deixar a plataforma gerar os registros DNS exatos exigidos para esse subdomínio.
-4. Só então copiar esses valores e aplicar na Hostinger do jeito certo.
+## Plano
+1. Conferir no painel de e-mails quais são exatamente os registros exigidos para `notify.lexflowai.com.br`.
+2. Comparar esses registros com o que foi criado no Cloudflare, validando nome/host, tipo e valor sem adaptações.
+3. Remover o domínio duplicado `notify.www.lexflowai.com.br` e manter apenas `notify.lexflowai.com.br`.
+4. Verificar no Cloudflare se não existe registro conflitante para `notify` (A, AAAA, CNAME ou proxy ativado onde não deveria).
+5. Forçar uma nova checagem em **Cloud → Emails** usando a opção de verificar novamente.
+6. Se continuar travado, refazer apenas a delegação do subdomínio `notify` do zero com base nos registros exibidos no painel.
 
-## Resultado esperado
-Depois desse passo, vamos saber com precisão se a configuração pedida será:
-- delegação por nameservers, ou
-- outro tipo de registro DNS específico exibido pela própria plataforma.
+## O que eu espero encontrar
+- Host criado errado (`notify.www` em vez de `notify`)
+- Registro duplicado ou conflitante no Cloudflare
+- Valor copiado parcialmente ou com ponto final/host incorreto
+- Proxy do Cloudflare ativado em um registro que precisa ficar direto
 
-## Observação importante
-Com o estado atual, a resposta para a Hostinger é: **ainda não existe hostname/IP final para eu te passar**, porque o subdomínio `notify.lexflowai.com.br` nem foi criado no setup de e-mail do projeto.
+## Detalhes técnicos
+- Para esse fluxo, o subdomínio válido é `notify.lexflowai.com.br`.
+- `notify.www.lexflowai.com.br` não deveria ser necessário.
+- Duas horas ainda podem estar dentro da propagação, mas quando os registros estão 100% corretos normalmente já vemos algum avanço antes disso.
 
-## Como eu seguiria ao implementar
-- validar o domínio de e-mail atual
-- abrir o fluxo correto de setup do remetente
-- orientar exatamente quais registros copiar para a Hostinger após a tela mostrar os valores
+## Próxima ação sugerida
+Abrir os detalhes de `notify.lexflowai.com.br` em **Cloud → Emails** e conferir registro por registro contra o Cloudflare, depois apagar o `notify.www.lexflowai.com.br`. Se você quiser, no próximo passo eu te conduzo numa checklist de 1 minuto para validar cada campo exato no Cloudflare.
