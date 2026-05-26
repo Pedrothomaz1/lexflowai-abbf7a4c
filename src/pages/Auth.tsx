@@ -76,10 +76,22 @@ const Auth = () => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
+      const code = (error as any).code || "";
+      const msg = error.message || "";
+      let description = handleDbError(error).message;
+
+      if (code === "email_not_confirmed" || /not confirmed/i.test(msg)) {
+        description = "Confirme seu email antes de entrar. Verifique sua caixa de entrada (e a pasta de spam).";
+      } else if (code === "invalid_credentials" || /invalid login credentials/i.test(msg)) {
+        description = "Email ou senha incorretos.";
+      } else if (/over_email_send_rate_limit|rate limit/i.test(code + msg)) {
+        description = "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
+      }
+
       toast({
         variant: "destructive",
         title: "Erro ao fazer login",
-        description: handleDbError(error).message,
+        description,
       });
     } else if (data.user) {
       // Register LGPD consent after successful login
@@ -88,6 +100,7 @@ const Auth = () => {
 
     setLoading(false);
   };
+
 
   const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
