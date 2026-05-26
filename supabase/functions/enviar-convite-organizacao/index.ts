@@ -177,7 +177,7 @@ serve(async (req) => {
   } catch (error: any) {
     console.error("Error in enviar-convite-organizacao:", error);
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ success: false, error: "Erro interno. Tente novamente." }),
       {
         status: 400,
         headers: { "Content-Type": "application/json", ...corsHeaders },
