@@ -40,13 +40,12 @@ const AcceptInvite = () => {
       const { data: { session } } = await supabase.auth.getSession();
       setIsAuthenticated(!!session);
 
-      // Fetch invite details - query without join to avoid relationship issues
-      const { data: invite, error } = await supabase
-        .from("organization_invites")
-        .select("id, email, role_in_org, expires_at, accepted_at, organization_id")
-        .eq("token", token)
-        .maybeSingle();
+      // Fetch invite details via SECURITY DEFINER RPC (bypasses RLS header requirement)
+      const { data: rows, error } = await supabase.rpc("get_invite_by_token", {
+        invite_token: token,
+      });
 
+      const invite = Array.isArray(rows) ? rows[0] : null;
       console.log("Invite lookup result:", { invite, error });
 
       if (error || !invite) {
@@ -80,15 +79,8 @@ const AcceptInvite = () => {
         }
       }
 
-      // Fetch organization name separately
-      const { data: org } = await supabase
-        .from("organizations")
-        .select("nome")
-        .eq("id", invite.organization_id)
-        .single();
-
       setInviteDetails({
-        organization_name: org?.nome || "Organização",
+        organization_name: invite.organization_name || "Organização",
         role: invite.role_in_org,
         expires_at: invite.expires_at,
       });
