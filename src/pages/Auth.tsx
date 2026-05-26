@@ -76,10 +76,22 @@ const Auth = () => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
+      const code = (error as any).code || "";
+      const msg = error.message || "";
+      let description = handleDbError(error).message;
+
+      if (code === "email_not_confirmed" || /not confirmed/i.test(msg)) {
+        description = "Confirme seu email antes de entrar. Verifique sua caixa de entrada (e a pasta de spam).";
+      } else if (code === "invalid_credentials" || /invalid login credentials/i.test(msg)) {
+        description = "Email ou senha incorretos.";
+      } else if (/over_email_send_rate_limit|rate limit/i.test(code + msg)) {
+        description = "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
+      }
+
       toast({
         variant: "destructive",
         title: "Erro ao fazer login",
-        description: handleDbError(error).message,
+        description,
       });
     } else if (data.user) {
       // Register LGPD consent after successful login
@@ -88,6 +100,7 @@ const Auth = () => {
 
     setLoading(false);
   };
+
 
   const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -120,10 +133,22 @@ const Auth = () => {
     });
 
     if (error) {
+      const code = (error as any).code || "";
+      const msg = error.message || "";
+      let description = handleDbError(error).message;
+
+      if (code === "user_already_exists" || /already registered|already exists/i.test(msg)) {
+        description = "Este email já está cadastrado. Faça login ou redefina sua senha.";
+      } else if (code === "weak_password" || /pwned|weak password|leaked/i.test(msg)) {
+        description = "Esta senha aparece em vazamentos públicos. Escolha uma senha diferente e mais incomum.";
+      } else if (/over_email_send_rate_limit|rate limit/i.test(code + msg)) {
+        description = "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
+      }
+
       toast({
         variant: "destructive",
         title: "Erro ao criar conta",
-        description: handleDbError(error).message,
+        description,
       });
     } else {
       // Register LGPD consent only if signup created an active session
@@ -133,9 +158,10 @@ const Auth = () => {
       }
       toast({
         title: "Conta criada com sucesso!",
-        description: "Você já pode fazer login.",
+        description: "Verifique seu email para confirmar a conta antes de fazer login.",
       });
     }
+
 
     setLoading(false);
   };
