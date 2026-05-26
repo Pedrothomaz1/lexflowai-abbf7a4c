@@ -114,6 +114,7 @@ Deno.serve(async (req) => {
       total_new_members: members.length,
     });
   } catch (e) {
-    return json({ error: (e as Error).message }, 200);
+    console.error("[monitor-org-members] unexpected error", e);
+    return json({ error: "Erro interno. Tente novamente." }, 200);
   }
 });
