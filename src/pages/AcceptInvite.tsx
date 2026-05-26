@@ -152,6 +152,7 @@ const AcceptInvite = () => {
             {status === "invalid" && "Convite inválido"}
             {status === "expired" && "Convite expirado"}
             {status === "accepted" && "Convite já aceito"}
+            {status === "email_mismatch" && "Email da sessão não corresponde"}
             {status === "error" && "Erro ao verificar convite"}
           </CardDescription>
         </CardHeader>
