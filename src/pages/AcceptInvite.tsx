@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2, CheckCircle, XCircle, LogIn, Scale } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-type InviteStatus = "loading" | "valid" | "invalid" | "expired" | "accepted" | "error";
+type InviteStatus = "loading" | "valid" | "invalid" | "expired" | "accepted" | "error" | "email_mismatch";
 
 interface InviteDetails {
   organization_name: string;
