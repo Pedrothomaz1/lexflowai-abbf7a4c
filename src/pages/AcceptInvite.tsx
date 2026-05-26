@@ -279,9 +279,10 @@ const AcceptInvite = () => {
             </div>
           )}
 
-
+          {status === "error" && (
             <div className="text-center space-y-4">
               <div className="flex justify-center">
+
                 <XCircle className="h-12 w-12 text-destructive" />
               </div>
               <p className="text-muted-foreground">
