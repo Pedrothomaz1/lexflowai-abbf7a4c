@@ -5817,6 +5817,17 @@ export type Database = {
         Returns: number
       }
       gdpr_delete_user: { Args: { user_uuid: string }; Returns: Json }
+      get_invite_by_token: {
+        Args: { invite_token: string }
+        Returns: {
+          accepted_at: string
+          email: string
+          expires_at: string
+          organization_id: string
+          organization_name: string
+          role_in_org: string
+        }[]
+      }
       get_user_organization_status: { Args: never; Returns: Json }
       has_any_role: {
         Args: {
