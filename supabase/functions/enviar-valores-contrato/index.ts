@@ -134,7 +134,7 @@ serve(async (req) => {
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error: any) {
     console.error("Erro na função enviar-valores-contrato:", error);
-    return new Response(JSON.stringify({ error: error.message }),
+    return new Response(JSON.stringify({ error: "Erro interno. Tente novamente." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
