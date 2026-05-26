@@ -25,6 +25,7 @@ import {
   DollarSign
 } from "lucide-react";
 import { AvatarUpload } from "@/components/Settings/AvatarUpload";
+import { ChangePasswordCard } from "@/components/Settings/ChangePasswordCard";
 import { SettingsIntegracaoCard } from "@/components/Settings/SettingsIntegracaoCard";
 import { handleDbError } from "@/utils/dbErrorHandler";
 
@@ -416,6 +417,10 @@ const Settings = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Change Password */}
+      <ChangePasswordCard />
+
 
       {/* Two-Factor Authentication */}
       <Card>
