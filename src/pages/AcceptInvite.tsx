@@ -250,7 +250,36 @@ const AcceptInvite = () => {
             </div>
           )}
 
-          {status === "error" && (
+          {status === "email_mismatch" && mismatchInfo && (
+            <div className="text-center space-y-4">
+              <div className="flex justify-center">
+                <XCircle className="h-12 w-12 text-destructive" />
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Você está logado como
+                </p>
+                <p className="font-medium break-all">{mismatchInfo.currentEmail}</p>
+                <p className="text-sm text-muted-foreground pt-2">
+                  Mas este convite foi enviado para
+                </p>
+                <p className="font-medium break-all text-primary">{mismatchInfo.inviteEmail}</p>
+              </div>
+              <Button
+                className="w-full"
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  sessionStorage.setItem("pendingInviteToken", token!);
+                  navigate(`/auth?redirect=/aceitar-convite?token=${token}`);
+                }}
+              >
+                <LogIn className="mr-2 h-4 w-4" />
+                Sair e entrar com o email correto
+              </Button>
+            </div>
+          )}
+
+
             <div className="text-center space-y-4">
               <div className="flex justify-center">
                 <XCircle className="h-12 w-12 text-destructive" />
