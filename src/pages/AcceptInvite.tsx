@@ -70,12 +70,8 @@ const AcceptInvite = () => {
         const inviteEmail = invite.email.toLowerCase();
 
         if (userEmail !== inviteEmail) {
-          toast({
-            variant: "destructive",
-            title: "Email diferente",
-            description: `Este convite foi enviado para ${invite.email}. Faça login com esse email.`,
-          });
-          setStatus("invalid");
+          setMismatchInfo({ inviteEmail: invite.email, currentEmail: session.user.email || "" });
+          setStatus("email_mismatch");
           return;
         }
       }
