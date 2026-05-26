@@ -269,6 +269,7 @@ Deno.serve(async (req) => {
       regra_aplicada: regraAplicada,
     });
   } catch (e) {
-    return json(200, { ok: false, error: (e as Error).message });
+    console.error("[workflow-advance] unexpected error", e);
+    return json(200, { ok: false, error: "Erro interno. Tente novamente." });
   }
 });

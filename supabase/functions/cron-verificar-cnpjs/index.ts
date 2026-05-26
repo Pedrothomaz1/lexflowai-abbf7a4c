@@ -96,7 +96,8 @@ Deno.serve(async (req) => {
     .order("cnpj_verificado_em", { ascending: true, nullsFirst: true }).limit(BATCH_SIZE);
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }),
+    console.error("[cron-verificar-cnpjs] fetch fornecedores error", error);
+    return new Response(JSON.stringify({ error: "Erro interno. Tente novamente." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 

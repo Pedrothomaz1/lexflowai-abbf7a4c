@@ -173,7 +173,7 @@ Deno.serve(async (req) => {
       riscos_inseridos: riscosInseridos,
     });
   } catch (e) {
-    console.error(e);
-    return json(200, { ok: false, error: (e as Error).message });
+    console.error("[ia-extrair-campos] unexpected error", e);
+    return json(200, { ok: false, error: "Erro interno. Tente novamente." });
   }
 });

@@ -389,9 +389,9 @@ serve(async (req) => {
     }
 
   } catch (error: any) {
-    console.error(`Erro geral: ${error.message}`);
+    console.error(`[enviar-solicitacao-compras] erro geral:`, error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: "Erro interno. Tente novamente." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
