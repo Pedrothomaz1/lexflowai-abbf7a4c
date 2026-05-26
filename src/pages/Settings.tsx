@@ -418,6 +418,10 @@ const Settings = () => {
         </CardContent>
       </Card>
 
+      {/* Change Password */}
+      <ChangePasswordCard />
+
+
       {/* Two-Factor Authentication */}
       <Card>
         <CardHeader>
