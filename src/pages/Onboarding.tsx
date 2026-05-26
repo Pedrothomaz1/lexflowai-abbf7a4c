@@ -106,14 +106,15 @@ export default function Onboarding() {
           }
         }
       } else if (step === 3) {
-        if (contratoTitulo.trim() && contratoNumero.trim() && organization) {
+        if (contratoNumero.trim() && organization) {
+          const titulo = contratoTitulo.trim() || `Contrato ${contratoNumero.trim()}`;
           const { error } = await supabase
             .from("contratos")
             .insert({
-              titulo: contratoTitulo.trim(),
+              titulo,
               numero_contrato: contratoNumero.trim(),
               status: "rascunho",
-              tipo: "outros",
+              tipo: "outro",
               organization_id: organization.id,
               created_by: user.id,
             })
@@ -124,7 +125,7 @@ export default function Onboarding() {
             setBusy(false);
             return;
           }
-          await markStep("contrato", { titulo: contratoTitulo.trim() });
+          await markStep("contrato", { titulo });
           toast.success("Contrato criado! Você pode editá-lo depois.");
         }
       }
