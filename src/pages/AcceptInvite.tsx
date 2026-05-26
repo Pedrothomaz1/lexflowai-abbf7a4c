@@ -24,6 +24,7 @@ const AcceptInvite = () => {
   const [inviteDetails, setInviteDetails] = useState<InviteDetails | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [accepting, setAccepting] = useState(false);
+  const [mismatchInfo, setMismatchInfo] = useState<{ inviteEmail: string; currentEmail: string } | null>(null);
 
   useEffect(() => {
     checkInviteAndAuth();
