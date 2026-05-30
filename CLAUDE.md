@@ -39,7 +39,7 @@ Outermost-in: `QueryClientProvider` → `TooltipProvider` → `AuthProvider` →
 
 ### Routing & access control
 - `react-router-dom`, all routes declared centrally in `src/App.tsx`. Pages are `lazy()`-loaded except `Index`/`Auth`.
-- `ProtectedRoute` (`src/components/ProtectedRoute.tsx`) gates auth + org status. Prop `requireOrg` (default `true`); pass `requireOrg={false}` for routes reachable before the user has an active org (`/super-admin`, `/settings/2fa`, the "waiting/pending/suspended" status pages). It redirects based on `orgStatus` from `OrganizationContext`. Super-admin authorization is checked at the page level (`useSuperAdmin`), not by a route prop.
+- `ProtectedRoute` (`src/components/ProtectedRoute.tsx`) is a heavy gate that enforces, in order: auth → **2FA/MFA** (TOTP; can be required per-role via `mfa_requirements`, fails *closed* on error) → org status → optional `requiredPermission` (RPC `has_permission`) → onboarding completion. Props: `requireOrg` (default `true`; pass `false` for routes reachable before an active org — `/super-admin`, `/settings/2fa`, the waiting/pending/suspended status pages) and `requiredPermission`. Org redirects derive from `orgStatus`/`hasOrganization` in `OrganizationContext`. Super-admin authorization is checked at the page level (`useSuperAdmin` → RPC `is_super_admin`), not via a route prop.
 - Authenticated app pages render inside `DashboardLayout`. Path alias `@/*` → `src/*` (set in `vite.config.ts` and `vitest.config.ts`).
 
 ### Multi-tenancy is the core invariant
@@ -56,7 +56,7 @@ Supabase RLS enforces isolation server-side, but the client filter is still requ
 > Note: there is also a standalone `src/hooks/useOrganization.ts` that **duplicates** part of the context and exists only for super-admin org listing. For current-org state always use the context hook, not the standalone one.
 
 ### Data access (important — no single repository layer)
-Data fetching is **not** uniformly funneled through hooks. **Most pages (~43 of 54) import the `supabase` client directly** and query with `useState`/`useEffect`. Only a handful of domains have dedicated react-query hooks (`useAprovacoes`, `useNegociacoes`, `useVersioning`, `useSavedViews`, `useDashboardKPIs`). When adding a feature, follow the convention of the surrounding code: extend an existing react-query hook if one exists for that domain, otherwise the direct-`supabase`-in-component pattern is the established norm. Always scope by `organization.id`, surface errors with a toast, and prefer `dbErrorHandler` (`src/utils/dbErrorHandler.ts`) for Supabase error messages.
+Data fetching is **not** funneled through a repository or hook layer. **Nearly every page imports the `supabase` client directly** and queries with `useState`/`useEffect` (see `src/pages/Contratos.tsx`). Only a few domains have dedicated react-query hooks (`useAprovacoes`, `useNegociacoes`, `useDashboardKPIs`, `useSavedViews`, `useRoles`, `useDashboardRealtime`). When adding a feature, follow the surrounding code: extend an existing react-query hook if one exists for that domain, otherwise the direct-`supabase`-in-component pattern is the established norm. Always scope by `organization.id`, surface errors with a toast (`useToast`), and route Supabase errors through `handleDbError` (`src/utils/dbErrorHandler.ts`).
 
 ### Supabase integration
 - Client singleton: `src/integrations/supabase/client.ts` (custom 10s fetch timeout, realtime heartbeat config). The generated `Database` type is currently **not** wired into the client (import is commented out), so queries are loosely typed.
@@ -70,7 +70,7 @@ Privileged / server-only logic. Naming is Portuguese: contract AI (`analisar-con
 - shadcn/ui (Radix) primitives in `src/components/ui/` — don't edit these directly; build feature components in the domain folders under `src/components/` (e.g. `Fornecedores/`, `compliance/`, `workflow/`, `SuperAdmin/`).
 - Styling: Tailwind (`tailwind.config.ts`) + `cn()` from `src/lib/utils.ts`.
 - Toasts: two coexist — Radix `useToast` (`src/hooks/use-toast.ts`) and `sonner`; both `<Toaster/>`s are mounted in `App.tsx`. Forms: `react-hook-form` + `zod`. Icons: `lucide-react`. Charts: `recharts`. Kanban DnD: `@dnd-kit`. PDF/Excel export: `jspdf` / `exceljs` (helpers in `src/utils/`).
-- **Logging:** use `logger` from `@/lib/logger` (`src/lib/logger/`), the primary logger (~45 imports). A legacy `@/utils/logger` also exists (~8 imports) — prefer `@/lib/logger` in new code. Avoid raw `console.*` (stripped from prod builds and bypasses logger gating).
+- **Logging:** use `logger` from `@/utils/logger` (`src/utils/logger.ts`). Raw `console.*` is stripped from production builds by esbuild, so it's unreliable for diagnostics — prefer the logger.
 - Shared domain constants: `src/lib/lexflow-constants.ts` and `src/constants/`.
 
 ## Gotchas
