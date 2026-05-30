@@ -144,8 +144,9 @@ export default function Relatorios() {
       }
 
       const filtros = {
-        status: filterStatus || undefined,
-        tipo: filterTipo || undefined,
+        // "all" is the "Todos" option in the Select — treat it as no filter
+        status: filterStatus && filterStatus !== "all" ? filterStatus : undefined,
+        tipo: filterTipo && filterTipo !== "all" ? filterTipo : undefined,
         data_inicio: filterDataInicio || undefined,
         data_fim: filterDataFim || undefined,
       };

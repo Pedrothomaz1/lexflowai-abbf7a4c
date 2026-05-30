@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
 import { Calendar as CalendarIcon, CheckCircle2, Clock, AlertCircle } from "lucide-react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, getDay } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, getDay, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -74,7 +74,10 @@ const Calendario = () => {
 
   const getObligationsForDate = (date: Date) => {
     return obligations.filter((obl) =>
-      isSameDay(new Date(obl.data_vencimento), date)
+      // data_vencimento is a DATE ("2026-05-30"); parseISO reads it as local time
+      // so the obligation lands on the correct calendar day (new Date() would parse
+      // it as UTC midnight and shift it a day back in BR timezone).
+      isSameDay(parseISO(obl.data_vencimento), date)
     );
   };
 

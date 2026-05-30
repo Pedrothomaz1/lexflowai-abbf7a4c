@@ -106,7 +106,7 @@ const statusBadge = (s: string) => {
 
 const WorkflowBuilder = () => {
   const { toast } = useToast();
-  const { currentOrg } = useOrganization() as any;
+  const { organization } = useOrganization();
   const [tab, setTab] = useState("definicoes");
   const [defs, setDefs] = useState<Definition[]>([]);
   const [runs, setRuns] = useState<Run[]>([]);
@@ -228,7 +228,7 @@ const WorkflowBuilder = () => {
       if (!user) throw new Error("Sessão expirada");
 
       const orgId =
-        currentOrg?.id ||
+        organization?.id ||
         (await supabase.rpc("current_user_org" as any)).data;
       if (!orgId) throw new Error("Organização não encontrada");
 
